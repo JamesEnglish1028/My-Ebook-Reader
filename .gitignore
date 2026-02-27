@@ -11,6 +11,18 @@ node_modules
 dist
 dist-ssr
 *.local
+proxy_local.pid
+proxy_local.log
+*.pid
+
+# Local debug artifacts
+direct_body.json
+direct_headers.txt
+proxied_body.json
+proxied_headers.txt
+COMMIT_MESSAGE.txt
+check-storage.js
+debug-collection-parsing.cjs
 
 # Editor directories and files
 .vscode/*

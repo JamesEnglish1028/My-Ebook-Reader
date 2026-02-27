@@ -12,6 +12,7 @@
     "lint:fix": "eslint . --ext .ts,.tsx --fix",
     "lint:report": "eslint . --ext .ts,.tsx --format json --output-file eslint-report.json",
     "type-check": "tsc --noEmit",
+    "type-check:strict": "tsc -p tsconfig.strict.json --noEmit",
     "validate": "npm run type-check && npm run lint"
   },
   "dependencies": {
@@ -36,6 +37,7 @@
     "@typescript-eslint/eslint-plugin": "^8.46.1",
     "@typescript-eslint/parser": "^8.46.1",
     "@vitejs/plugin-react": "^4.0.0",
+    "baseline-browser-mapping": "^2.9.14",
     "eslint": "^9.37.0",
     "eslint-plugin-import": "^2.32.0",
     "eslint-plugin-jsx-a11y": "^6.10.2",

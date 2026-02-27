@@ -6,10 +6,6 @@ A local-first, browser-based ebook reader that supports EPUB and PDF. MeBooks is
 
 <!-- Trigger Pages rebuild: 2025-10-18T21:40:00Z -->
 
-# MeBooks
-
-A local-first, browser-based ebook reader that supports EPUB and PDF. MeBooks is built as a Single Page Application using React + TypeScript and focuses on a smooth reading experience, per-book persistence, and offline-first behavior.
-
 This README summarizes the current state (features implemented), developer setup, build instructions, and a short changelog for this release.
 
 ## Current features (highlight)
@@ -22,6 +18,7 @@ This README summarizes the current state (features implemented), developer setup
 - Persistence: per-book last-read positions, per-book view state (PDF zoom / EPUB font-size), bookmarks, and citations saved in LocalStorage and IndexedDB.
 - **Book Details Page**: Restored and enhanced layout with two-column design, top-aligned cover and title, accessible font sizes and spacing, format badges (EPUB, PDF, Audiobook) matching catalog views, and citation format support (APA, MLA, Chicago). Includes backup and type updates for reliability.
 - **Palace Registry Integration**: Automatic OPDS catalog import when launched from registry applications. Supports URL parameters `?import=<catalogUrl>&name=<catalogName>` for seamless catalog discovery and addition with user feedback and error handling.
+- **OPDS 2.0 Full Support**: Complete implementation of OPDS 2.0 specification with work/edition relationships, comprehensive accessibility metadata, series organization, and advanced filtering. See [OPDS2_IMPLEMENTATION_SUMMARY.md](OPDS2_IMPLEMENTATION_SUMMARY.md) for details.
 # Book Details Page
 
 The Book Details page provides a visually clear, accessible, and feature-rich view for each book:
@@ -31,10 +28,41 @@ The Book Details page provides a visually clear, accessible, and feature-rich vi
   - Badges are only shown if the relevant metadata (e.g., format, publicationTypeLabel) is present in the book object. Imported books may not display badges if metadata is missing.
 - **Accessibility**: Font sizes, spacing, and color contrast are chosen for readability. Title font is large but balanced, and all interactive elements have clear focus states.
 - **Citation Format Support**: Citations can be created and exported in APA or MLA style, with the format tracked per citation.
-- **Backup**: The original BookDetailView.tsx is backed up for reference and rollback.
- - **Publisher ID (ISBN)**: If the book's metadata includes an ISBN, it is displayed as the Publisher ID directly under the Publication Date for clear provenance and cataloging.
+- **Backup**: The original BookDetailView.tsx is archived for reference and rollback.
+- **Publisher ID (ISBN)**: If the book's metadata includes an ISBN, it is displayed as the Publisher ID directly under the Publication Date for clear provenance and cataloging.
+- **Edition Switching**: When multiple editions of the same work are available (different formats, languages, or publishers), users can switch between them using the EditionSelector component. Preferred editions are highlighted.
 
-See `components/BookDetailView.tsx` and `components/BookDetailView.tsx.backup` for implementation and backup. Type updates for citations are in `domain/reader/types.ts` and service logic in `domain/reader/citation-service.ts`.
+See `components/BookDetailView.tsx` and `archive/backups/components/BookDetailView.tsx.backup` for implementation and backup. Type updates for citations are in `domain/reader/types.ts` and service logic in `domain/reader/citation-service.ts`.
+
+# OPDS 2.0 Features
+
+MeBooks provides comprehensive OPDS 2.0 support with advanced metadata display and filtering capabilities:
+
+## Catalog Features
+
+- **Accessibility Metadata**: Display of 25+ accessibility features including alternative text, audio descriptions, bookmarks, braille support, captions, and more. WCAG conformance levels are tracked and displayed. Accessibility hazards are also shown with visual warnings.
+- **Language Support**: Books can be filtered by language, with 15+ languages mapped to user-friendly labels (English, Spanish, French, German, Italian, Portuguese, Russian, Japanese, Chinese, Arabic, Korean, Dutch, Polish, Turkish, Vietnamese).
+- **Acquisition Types**: Books are categorized by access type (open-access/free, borrow, buy, sample) with color-coded badges for easy identification.
+- **Availability Status**: For borrowable books, copy availability is displayed with color coding (green for >5 copies, yellow for 1-5 copies, red for 0 copies). Borrow periods and hold counts are also shown.
+- **Series Organization**: Books in series are grouped together with position indicators, sorted by series position. Series lanes provide visual organization and links to series landing pages.
+- **Advanced Filtering**: Comprehensive filtering by language, accessibility features, acquisition type, and availability status. Filter results update in real-time with active filter count display.
+
+## Work & Edition Features
+
+- **Work Relationships**: Track parent/child works, editions, translations, adaptations, and alternate versions. Books can reference related works for enhanced discovery.
+- **Edition Tracking**: Multiple editions of the same work (different formats, languages, publication dates) are tracked separately with edition-specific metadata (format, language, publisher, description).
+- **Preferred Editions**: Editions can be marked as preferred for default display. Users can switch between editions seamlessly.
+- **Edition Discovery**: When viewing a book, available editions are displayed in an EditionSelector component, showing format, language, year, and description for each edition.
+
+## Metadata Enhancements
+
+- **Publisher Information**: Publisher names, URIs, and countries are captured and displayed.
+- **Identifiers**: Multiple identifier schemes are supported (ISBN, ISSN, UUID, URI, DOI) with automatic scheme inference for unknown identifiers.
+- **Contributors**: Contributor roles (author, editor, translator, illustrator, narrator) are extracted and displayed.
+- **Subjects**: Publication subjects are preserved with scheme and code information for enhanced categorization.
+- **Duration & Extent**: Audiobook duration and book extent (page count) are captured for media-specific metadata.
+
+See [OPDS2_IMPLEMENTATION_SUMMARY.md](OPDS2_IMPLEMENTATION_SUMMARY.md) for complete implementation details and [OPDS2_QUICK_REFERENCE.md](OPDS2_QUICK_REFERENCE.md) for developer reference.
 
 ## Notable implementation details
 
@@ -100,8 +128,6 @@ Run the test suite:
 npm run test
 ```
 
-- **Test Status**: ✅ All tests passing locally (200 passed, 0 failed)
-
 Current test coverage:
 - OPDS 1 & 2 parsing
 - Collection detection and organization
@@ -118,6 +144,13 @@ Linting:
 ```bash
 npm run lint        # Check for issues
 npm run lint:fix    # Auto-fix issues
+```
+
+Type checking:
+
+```bash
+npm run type-check         # Current baseline
+npm run type-check:strict  # Stricter profile for migration
 ```
 
 ## Architecture (Phase 2 - Service Layer)

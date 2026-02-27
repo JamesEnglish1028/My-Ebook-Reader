@@ -18,7 +18,7 @@ This document explains how to run the ConfirmModal E2E accessibility test notebo
    - Ensure the app is accessible at `http://localhost:3000` (or update the notebook if using a different port).
 
 2. **Open the Notebook**
-   - Open `ConfirmModalE2E.ipynb` in Jupyter or VS Code.
+   - Open `docs/experiments/e2e-notebooks/ConfirmModalE2E.ipynb` in Jupyter or VS Code.
 
 3. **Install Playwright**
    - Run the first code cell to install Playwright and its browsers:
