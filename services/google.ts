@@ -5,7 +5,12 @@ import { logger } from './logger';
 
 const GOOGLE_CLIENT_ID = ((import.meta as any)?.env?.VITE_GOOGLE_CLIENT_ID || '').trim();
 const GOOGLE_INIT_TIMEOUT_MS = Number((import.meta as any)?.env?.VITE_GOOGLE_INIT_TIMEOUT_MS || 12000);
-const DRIVE_API_SCOPE = 'https://www.googleapis.com/auth/drive.file';
+const GOOGLE_SCOPES = [
+  'https://www.googleapis.com/auth/drive.file',
+  'openid',
+  'profile',
+  'email',
+].join(' ');
 const APP_FOLDER_NAME = 'Custom Ebook Reader Library';
 const BOOKS_SUBFOLDER_NAME = 'books';
 const METADATA_FILE_NAME = 'library.json';
@@ -168,7 +173,7 @@ export const initGoogleClient = (callback: (resp: any) => void): Promise<any> =>
         if (!gisInited) {
           tokenClient = window.google.accounts.oauth2.initTokenClient({
             client_id: GOOGLE_CLIENT_ID,
-            scope: DRIVE_API_SCOPE,
+            scope: GOOGLE_SCOPES,
             callback,
           });
           gisInited = true;
