@@ -16,7 +16,7 @@ jobs:
           node-version: 20
       - name: Install dependencies
         run: npm ci
-      - name: Debug: inspect proxy and secrets (temporary)
+      - name: "Debug: inspect proxy and secrets (temporary)"
         run: |
           echo "--- proxy directory listing ---"
           ls -la proxy || true
