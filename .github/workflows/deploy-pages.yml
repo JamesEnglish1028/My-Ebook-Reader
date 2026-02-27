@@ -29,8 +29,6 @@ jobs:
       - name: Install dependencies
         run: npm ci
       - name: Build
-        env:
-          GEMINI_API_KEY: ""
         run: npm run build
       - name: Inspect dist output
         run: |
