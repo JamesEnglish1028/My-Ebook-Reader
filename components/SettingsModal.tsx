@@ -31,10 +31,9 @@ const GoogleIcon: React.FC<{ className?: string }> = ({ className }) => (
 );
 
 const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose, onUploadToDrive, onDownloadFromDrive, syncStatus, setSyncStatus }) => {
-  const { user, isLoggedIn, signIn, signOut, isInitialized } = useAuth();
+  const { user, isLoggedIn, signIn, signOut, isInitialized, authStatus, authError } = useAuth();
 
   const handleClose = () => {
-    // Only allow closing if not in the middle of a sync
     if (syncStatus.state !== 'syncing') {
       setSyncStatus({ state: 'idle', message: '' });
       onClose();
@@ -52,6 +51,15 @@ const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose, onUpload
   const lastSyncString = lastSyncDate ? new Date(lastSyncDate).toLocaleString() : 'Never';
   const isSyncing = syncStatus.state === 'syncing';
 
+  const signInLabel = (() => {
+    if (!isInitialized || authStatus === 'initializing') return 'Initializing...';
+    if (authStatus === 'not_configured') return 'Google Sync Not Configured';
+    if (authStatus === 'error') return 'Retry Google Setup';
+    return 'Sign in with Google';
+  })();
+
+  const signInDisabled = !isInitialized || authStatus === 'initializing' || authStatus === 'not_configured';
+
   return (
     <div className="fixed inset-0 bg-black/60 z-50 flex items-center justify-center p-4" onClick={handleClose} aria-modal="true" role="dialog">
       <div ref={modalRef} className="bg-slate-800 rounded-lg shadow-xl w-full max-w-lg p-6 text-white" onClick={(e) => e.stopPropagation()}>
@@ -63,36 +71,45 @@ const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose, onUpload
         </div>
 
         <div className="space-y-6">
-          {/* Account Section */}
           <div className="bg-slate-900/50 p-4 rounded-lg">
             <h3 className="text-lg font-semibold mb-4 text-slate-200">Account & Sync</h3>
             {isLoggedIn && user ? (
-              <div className="flex items-center gap-4">
-                <img src={user.picture} alt="User" className="w-12 h-12 rounded-full" />
-                <div className="flex-grow">
-                  <p className="font-semibold">{user.name}</p>
-                  <p className="text-sm text-slate-400">{user.email}</p>
+              <div className="space-y-3">
+                <div className="flex items-center gap-4">
+                  <img src={user.picture} alt="User" className="w-12 h-12 rounded-full" />
+                  <div className="flex-grow">
+                    <p className="font-semibold">{user.name}</p>
+                    <p className="text-sm text-slate-400">{user.email}</p>
+                  </div>
+                  <button onClick={signOut} className="py-2 px-4 rounded-md bg-slate-600 hover:bg-slate-500 transition-colors font-semibold text-sm">
+                    Sign Out
+                  </button>
                 </div>
-                <button onClick={signOut} className="py-2 px-4 rounded-md bg-slate-600 hover:bg-slate-500 transition-colors font-semibold text-sm">
-                  Sign Out
-                </button>
+                {authError && (
+                  <p className="text-xs text-amber-300" role="status">{authError}</p>
+                )}
               </div>
             ) : (
               <div>
                 <p className="text-sm text-slate-400 mb-3">Sign in with your Google account to back up and sync your library across devices using Google Drive.</p>
+                {authStatus === 'not_configured' && (
+                  <p className="text-xs text-amber-300 mb-3" role="status">Google sync is not configured for this deployment. Set `VITE_GOOGLE_CLIENT_ID` and redeploy.</p>
+                )}
+                {authStatus === 'error' && authError && (
+                  <p className="text-xs text-amber-300 mb-3" role="status">{authError}</p>
+                )}
                 <button
                   onClick={signIn}
-                  disabled={!isInitialized}
+                  disabled={signInDisabled}
                   className="w-full flex items-center justify-center gap-3 py-2.5 px-4 rounded-md bg-white text-slate-700 hover:bg-slate-200 transition-colors font-semibold disabled:opacity-70 disabled:cursor-not-allowed"
                 >
                   <GoogleIcon className="w-5 h-5" />
-                  {isInitialized ? 'Sign in with Google' : 'Initializing...'}
+                  {signInLabel}
                 </button>
               </div>
             )}
           </div>
 
-          {/* Sync Controls */}
           {isLoggedIn && (
             <div className="bg-slate-900/50 p-4 rounded-lg">
               <h3 className="text-lg font-semibold mb-2 text-slate-200">Google Drive Sync</h3>

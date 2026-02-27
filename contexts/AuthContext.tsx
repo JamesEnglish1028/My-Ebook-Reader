@@ -1,7 +1,10 @@
-import React, { createContext, useState, useEffect, useContext, useCallback } from 'react';
+import React, { createContext, useState, useEffect, useContext, useCallback, useRef } from 'react';
 
 import { initGoogleClient, revokeToken } from '../services/google';
 import type { GoogleUser } from '../types';
+
+type AuthStatus = 'initializing' | 'ready' | 'error' | 'not_configured';
+type TokenRequestMode = 'none' | 'restore_silent' | 'interactive_silent' | 'interactive_consent';
 
 interface AuthContextType {
   user: GoogleUser | null;
@@ -10,7 +13,12 @@ interface AuthContextType {
   signIn: () => void;
   signOut: () => void;
   isInitialized: boolean;
+  authStatus: AuthStatus;
+  authError: string | null;
 }
+
+const TOKEN_KEY = 'g_access_token';
+const TOKEN_EXPIRY_KEY = 'g_access_token_expires_at';
 
 const AuthContext = createContext<AuthContextType | null>(null);
 
@@ -18,23 +26,62 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const [user, setUser] = useState<GoogleUser | null>(null);
   const [tokenClient, setTokenClient] = useState<any | null>(null);
   const [isInitialized, setIsInitialized] = useState(false);
+  const [authStatus, setAuthStatus] = useState<AuthStatus>('initializing');
+  const [authError, setAuthError] = useState<string | null>(null);
+
+  const tokenRequestModeRef = useRef<TokenRequestMode>('none');
+  const tokenClientRef = useRef<any | null>(null);
   const isLoggedIn = !!user;
 
+  const clearStoredToken = useCallback(() => {
+    localStorage.removeItem(TOKEN_KEY);
+    localStorage.removeItem(TOKEN_EXPIRY_KEY);
+  }, []);
+
   const signOut = useCallback(() => {
-    const token = localStorage.getItem('g_access_token');
+    const token = localStorage.getItem(TOKEN_KEY);
     if (token) {
-        revokeToken(token);
+      revokeToken(token);
     }
     setUser(null);
-    localStorage.removeItem('g_access_token');
-    // Also clear sync-related data
+    setAuthError(null);
+    clearStoredToken();
     localStorage.removeItem('ebook-reader-drive-folder-id');
     localStorage.removeItem('ebook-reader-drive-file-id');
     localStorage.removeItem('ebook-reader-last-sync');
     if (window.gapi?.client) {
       window.gapi.client.setToken(null);
     }
+  }, [clearStoredToken]);
+
+  const storeAccessToken = useCallback((response: any) => {
+    if (!response?.access_token) return;
+    localStorage.setItem(TOKEN_KEY, response.access_token);
+    if (typeof response.expires_in === 'number' && Number.isFinite(response.expires_in)) {
+      const expiresAt = Date.now() + (response.expires_in * 1000);
+      localStorage.setItem(TOKEN_EXPIRY_KEY, String(expiresAt));
+    }
   }, []);
+
+  const hasValidStoredToken = useCallback((): string | null => {
+    const token = localStorage.getItem(TOKEN_KEY);
+    const expiresRaw = localStorage.getItem(TOKEN_EXPIRY_KEY);
+    const expiresAt = expiresRaw ? Number(expiresRaw) : NaN;
+
+    if (!token) return null;
+    if (!Number.isFinite(expiresAt)) {
+      clearStoredToken();
+      return null;
+    }
+
+    // 60-second safety buffer to avoid using about-to-expire tokens.
+    if (expiresAt <= Date.now() + 60000) {
+      clearStoredToken();
+      return null;
+    }
+
+    return token;
+  }, [clearStoredToken]);
 
   const fetchUserProfile = useCallback(async (accessToken: string) => {
     try {
@@ -45,64 +92,111 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         throw new Error(`Failed to fetch user profile, status: ${userInfoResponse.status}`);
       }
       const profile = await userInfoResponse.json();
-      
+
       if (window.gapi?.client) {
-          window.gapi.client.setToken({ access_token: accessToken });
-      } else {
-          console.warn('gapi.client not ready when fetching profile.');
+        window.gapi.client.setToken({ access_token: accessToken });
       }
-      
+
       setUser({
         name: profile.name,
         email: profile.email,
         picture: profile.picture,
       });
-
+      setAuthError(null);
+      setAuthStatus('ready');
     } catch (error) {
       console.error('Token validation/profile fetch failed:', error);
-      signOut(); // If profile fetch fails, the token is invalid/expired. Sign out.
+      signOut();
+      setAuthStatus('ready');
+      setAuthError('Google session is invalid or expired. Please sign in again.');
     }
   }, [signOut]);
 
+  const requestAccessToken = useCallback((mode: TokenRequestMode) => {
+    if (!tokenClientRef.current) return;
+    tokenRequestModeRef.current = mode;
+    const prompt = mode === 'interactive_consent' ? 'consent' : '';
+    tokenClientRef.current.requestAccessToken({ prompt });
+  }, []);
+
   const handleCredentialResponse = useCallback(async (response: any) => {
-    if (response.access_token) {
-      localStorage.setItem('g_access_token', response.access_token);
+    const requestMode = tokenRequestModeRef.current;
+    tokenRequestModeRef.current = 'none';
+
+    if (response?.error) {
+      if (requestMode === 'interactive_silent') {
+        requestAccessToken('interactive_consent');
+        return;
+      }
+
+      const message = response.error_description || response.error || 'Google sign-in failed.';
+      setAuthError(message);
+      return;
+    }
+
+    if (response?.access_token) {
+      storeAccessToken(response);
       await fetchUserProfile(response.access_token);
     }
-  }, [fetchUserProfile]);
+  }, [fetchUserProfile, requestAccessToken, storeAccessToken]);
 
   useEffect(() => {
     const initialize = async () => {
+      setAuthStatus('initializing');
+      setAuthError(null);
       try {
         const client = await initGoogleClient(handleCredentialResponse);
+        tokenClientRef.current = client;
         setTokenClient(client);
-        setIsInitialized(true); // Signal that client and GAPI are ready
+        setAuthStatus('ready');
       } catch (error) {
-        console.error('Error initializing Google Client:', error);
-        setIsInitialized(true); // Still mark as initialized to not block app
+        const message = error instanceof Error ? error.message : 'Google initialization failed.';
+        if (message.includes('VITE_GOOGLE_CLIENT_ID')) {
+          setAuthStatus('not_configured');
+        } else {
+          setAuthStatus('error');
+        }
+        setAuthError(message);
+      } finally {
+        setIsInitialized(true);
       }
     };
     initialize();
   }, [handleCredentialResponse]);
 
-  // Session Restoration Effect
   useEffect(() => {
-    if (isInitialized) {
-      const storedToken = localStorage.getItem('g_access_token');
-      if (storedToken) {
-        fetchUserProfile(storedToken);
-      }
+    if (!isInitialized || authStatus !== 'ready') return;
+
+    const storedToken = hasValidStoredToken();
+    if (storedToken) {
+      void fetchUserProfile(storedToken);
+      return;
     }
-  }, [isInitialized, fetchUserProfile]);
+
+    if (tokenClient) {
+      requestAccessToken('restore_silent');
+    }
+  }, [authStatus, fetchUserProfile, hasValidStoredToken, isInitialized, requestAccessToken, tokenClient]);
 
   const signIn = useCallback(() => {
-    if (tokenClient) {
-      tokenClient.requestAccessToken({ prompt: '' });
-    }
-  }, [tokenClient]);
+    if (!tokenClientRef.current) return;
+    setAuthError(null);
+    requestAccessToken('interactive_silent');
+  }, [requestAccessToken]);
 
   return (
-    <AuthContext.Provider value={{ user, isLoggedIn, tokenClient, signIn, signOut, isInitialized }}>
+    <AuthContext.Provider
+      value={{
+        user,
+        isLoggedIn,
+        tokenClient,
+        signIn,
+        signOut,
+        isInitialized,
+        authStatus,
+        authError,
+      }}
+    >
       {children}
     </AuthContext.Provider>
   );

@@ -2,230 +2,359 @@ import type { SyncPayload, BookRecord } from '../types';
 
 import { logger } from './logger';
 
-// IMPORTANT: Replace with your actual Google Client ID from the Google Cloud Console.
-const GOOGLE_CLIENT_ID = '93993206222-19e48jq3thrh262a7kbq239j9212kdea.apps.googleusercontent.com';
+const GOOGLE_CLIENT_ID = ((import.meta as any)?.env?.VITE_GOOGLE_CLIENT_ID || '').trim();
+const GOOGLE_INIT_TIMEOUT_MS = Number((import.meta as any)?.env?.VITE_GOOGLE_INIT_TIMEOUT_MS || 12000);
 const DRIVE_API_SCOPE = 'https://www.googleapis.com/auth/drive.file';
 const APP_FOLDER_NAME = 'Custom Ebook Reader Library';
 const BOOKS_SUBFOLDER_NAME = 'books';
 const METADATA_FILE_NAME = 'library.json';
+const MAX_RETRIES = 3;
+const RETRY_BASE_DELAY_MS = 400;
 
 let gapiInited = false;
 let gisInited = false;
 let tokenClient: any = null;
 
-const waitForGlobal = (key: 'gapi' | 'google', subkey?: string): Promise<any> => {
-    return new Promise((resolve) => {
-        const interval = setInterval(() => {
-            if (window[key]) {
-                if (subkey) {
-                    if ((window[key] as any)[subkey]) {
-                        clearInterval(interval);
-                        resolve(window[key]);
-                    }
-                } else {
-                    clearInterval(interval);
-                    resolve(window[key]);
-                }
-            }
-        }, 100);
-    });
+const sleep = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
+
+const isRetriableStatus = (status?: number) => status === 429 || (typeof status === 'number' && status >= 500 && status < 600);
+
+const toStatus = (error: unknown): number | undefined => {
+  if (!error || typeof error !== 'object') return undefined;
+  const candidate = error as { status?: number; code?: number };
+  if (typeof candidate.status === 'number') return candidate.status;
+  if (typeof candidate.code === 'number') return candidate.code;
+  return undefined;
 };
 
-export const initGoogleClient = (callback: (resp: any) => void): Promise<any> => {
-    return new Promise((resolve, reject) => {
-        void (async () => {
-            try {
-                await Promise.all([waitForGlobal('gapi', 'client'), waitForGlobal('google', 'accounts')]);
+const toUserFacingError = (error: unknown, fallback: string): Error => {
+  const status = toStatus(error);
+  if (status === 401 || status === 403) {
+    return new Error('Google session expired or permission was revoked. Please sign in again.');
+  }
+  if (error instanceof Error) return error;
+  return new Error(fallback);
+};
 
-                if (gisInited) {
-                    resolve(tokenClient);
-                    return;
-                }
+async function withRetry<T>(label: string, op: () => Promise<T>): Promise<T> {
+  let attempt = 0;
 
-                tokenClient = window.google.accounts.oauth2.initTokenClient({
-                    client_id: GOOGLE_CLIENT_ID,
-                    scope: DRIVE_API_SCOPE,
-                    callback: callback,
-                });
-                gisInited = true;
+  while (attempt < MAX_RETRIES) {
+    try {
+      return await op();
+    } catch (error) {
+      attempt += 1;
+      const status = toStatus(error);
+      const shouldRetry = isRetriableStatus(status) || (error instanceof TypeError && error.message === 'Failed to fetch');
 
-                window.gapi.load('client', () => {
-                    void window.gapi.client.init({
-                        clientId: GOOGLE_CLIENT_ID,
-                        scope: DRIVE_API_SCOPE,
-                        discoveryDocs: ['https://www.googleapis.com/discovery/v1/apis/drive/v3/rest'],
-                    }).then(() => {
-                        gapiInited = true;
-                        resolve(tokenClient);
-                    }).catch((error: unknown) => {
-                        logger.error('Error during Google Client initialization:', error);
-                        reject(error);
-                    });
-                });
-            } catch (error) {
-                logger.error('Error during Google Client initialization:', error);
-                reject(error);
-            }
-        })();
+      if (!shouldRetry || attempt >= MAX_RETRIES) {
+        throw error;
+      }
+
+      const delay = RETRY_BASE_DELAY_MS * Math.pow(2, attempt - 1);
+      logger.warn(`[google] ${label} failed, retrying`, { attempt, delay, status, error });
+      await sleep(delay);
+    }
+  }
+
+  throw new Error(`[google] ${label} failed after retries`);
+}
+
+function ensureGoogleClientConfigured() {
+  if (!GOOGLE_CLIENT_ID) {
+    throw new Error('Google sync is not configured. Set VITE_GOOGLE_CLIENT_ID in your environment.');
+  }
+}
+
+const waitForGlobal = (key: 'gapi' | 'google', subkey?: string, timeoutMs = GOOGLE_INIT_TIMEOUT_MS): Promise<any> => {
+  return new Promise((resolve, reject) => {
+    const started = Date.now();
+    const interval = setInterval(() => {
+      const globalObj = window[key];
+      const ready = Boolean(globalObj && (!subkey || (globalObj as any)[subkey]));
+      if (ready) {
+        clearInterval(interval);
+        resolve(globalObj);
+        return;
+      }
+
+      if (Date.now() - started >= timeoutMs) {
+        clearInterval(interval);
+        reject(new Error(`Timed out waiting for Google SDK (${key}${subkey ? `.${subkey}` : ''}) after ${timeoutMs}ms.`));
+      }
+    }, 100);
+  });
+};
+
+const ensureGapiInitialized = async () => {
+  if (gapiInited) return;
+
+  await new Promise<void>((resolve, reject) => {
+    const timeout = setTimeout(() => {
+      reject(new Error(`Timed out loading gapi client after ${GOOGLE_INIT_TIMEOUT_MS}ms.`));
+    }, GOOGLE_INIT_TIMEOUT_MS);
+
+    window.gapi.load('client', () => {
+      void window.gapi.client.init({
+        clientId: GOOGLE_CLIENT_ID,
+        scope: DRIVE_API_SCOPE,
+        discoveryDocs: ['https://www.googleapis.com/discovery/v1/apis/drive/v3/rest'],
+      }).then(() => {
+        gapiInited = true;
+        clearTimeout(timeout);
+        resolve();
+      }).catch((error: unknown) => {
+        clearTimeout(timeout);
+        reject(error);
+      });
     });
+  });
+};
+
+const getAccessTokenOrThrow = () => {
+  const token = window.gapi?.client?.getToken?.();
+  const accessToken = token?.access_token;
+
+  if (!accessToken) {
+    throw new Error('Google session not available. Please sign in before syncing.');
+  }
+
+  if (typeof token?.expires_at === 'number' && token.expires_at <= Date.now()) {
+    throw new Error('Google session expired. Please sign in again.');
+  }
+
+  return accessToken;
+};
+
+async function driveList(params: Record<string, unknown>): Promise<any> {
+  return withRetry('drive.files.list', () => window.gapi.client.drive.files.list(params));
+}
+
+async function driveCreate(params: Record<string, unknown>): Promise<any> {
+  return withRetry('drive.files.create', () => window.gapi.client.drive.files.create(params));
+}
+
+async function driveGet(params: Record<string, unknown>): Promise<any> {
+  return withRetry('drive.files.get', () => window.gapi.client.drive.files.get(params));
+}
+
+async function fetchWithRetry(url: string, init: RequestInit, label: string): Promise<Response> {
+  return withRetry(label, async () => {
+    const response = await fetch(url, init);
+    if (!response.ok) {
+      const err: any = new Error(`${label} failed: ${response.status} ${response.statusText}`);
+      err.status = response.status;
+      throw err;
+    }
+    return response;
+  });
+}
+
+export const initGoogleClient = (callback: (resp: any) => void): Promise<any> => {
+  return new Promise((resolve, reject) => {
+    void (async () => {
+      try {
+        ensureGoogleClientConfigured();
+        await Promise.all([waitForGlobal('gapi', 'client'), waitForGlobal('google', 'accounts')]);
+
+        if (!gisInited) {
+          tokenClient = window.google.accounts.oauth2.initTokenClient({
+            client_id: GOOGLE_CLIENT_ID,
+            scope: DRIVE_API_SCOPE,
+            callback,
+          });
+          gisInited = true;
+        }
+
+        await ensureGapiInitialized();
+        resolve(tokenClient);
+      } catch (error) {
+        logger.error('Error during Google Client initialization:', error);
+        reject(toUserFacingError(error, 'Failed to initialize Google Client.'));
+      }
+    })();
+  });
 };
 
 export const revokeToken = (token: string) => {
-    window.google.accounts.oauth2.revoke(token, () => {
-        logger.info('Access token revoked.');
-    });
+  if (!window.google?.accounts?.oauth2) return;
+  window.google.accounts.oauth2.revoke(token, () => {
+    logger.info('Access token revoked.');
+  });
 };
 
-
 const findOrCreateFolder = async (folderName: string, parentId?: string): Promise<string> => {
-    const q = `mimeType='application/vnd.google-apps.folder' and name='${folderName}' and trashed=false` + (parentId ? ` and '${parentId}' in parents` : '');
-    
-    const response = await window.gapi.client.drive.files.list({ q });
-    
-    if (response.result.files && response.result.files.length > 0) {
-        return response.result.files[0].id;
-    } else {
-        const fileMetadata = {
-            name: folderName,
-            mimeType: 'application/vnd.google-apps.folder',
-            ...(parentId && { parents: [parentId] }),
-        };
-        const createResponse = await window.gapi.client.drive.files.create({
-            resource: fileMetadata,
-            fields: 'id',
-        });
-        return createResponse.result.id;
-    }
+  const q = `mimeType='application/vnd.google-apps.folder' and name='${folderName}' and trashed=false` + (parentId ? ` and '${parentId}' in parents` : '');
+
+  const response = await driveList({ q });
+
+  if (response.result.files && response.result.files.length > 0) {
+    return response.result.files[0].id;
+  }
+
+  const fileMetadata = {
+    name: folderName,
+    mimeType: 'application/vnd.google-apps.folder',
+    ...(parentId && { parents: [parentId] }),
+  };
+
+  const createResponse = await driveCreate({
+    resource: fileMetadata,
+    fields: 'id',
+  });
+
+  return createResponse.result.id;
 };
 
 const uploadFile = async (folderId: string, fileName: string, fileData: Blob | ArrayBuffer, mimeType: string): Promise<string> => {
-    const metadata = { name: fileName, parents: [folderId] };
-    const form = new FormData();
-    form.append('metadata', new Blob([JSON.stringify(metadata)], { type: 'application/json' }));
-    form.append('file', new Blob([fileData], { type: mimeType }));
+  const metadata = { name: fileName, parents: [folderId] };
+  const form = new FormData();
+  form.append('metadata', new Blob([JSON.stringify(metadata)], { type: 'application/json' }));
+  form.append('file', new Blob([fileData], { type: mimeType }));
 
-    const response = await fetch('https://www.googleapis.com/upload/drive/v3/files?uploadType=multipart', {
-        method: 'POST',
-        headers: new Headers({ Authorization: `Bearer ${window.gapi.client.getToken().access_token}` }),
-        body: form,
-    });
+  const accessToken = getAccessTokenOrThrow();
+  const response = await fetchWithRetry(
+    'https://www.googleapis.com/upload/drive/v3/files?uploadType=multipart',
+    {
+      method: 'POST',
+      headers: new Headers({ Authorization: `Bearer ${accessToken}` }),
+      body: form,
+    },
+    'drive.uploadFile',
+  );
 
-    const result = await response.json();
-    if (result.error) throw new Error(result.error.message);
-    return result.id;
+  const result = await response.json();
+  if (result.error) throw new Error(result.error.message);
+  return result.id;
 };
 
 const updateFile = async (fileId: string, fileData: Blob | ArrayBuffer, mimeType: string) => {
-     const response = await fetch(`https://www.googleapis.com/upload/drive/v3/files/${fileId}?uploadType=media`, {
-        method: 'PATCH',
-        headers: new Headers({ Authorization: `Bearer ${window.gapi.client.getToken().access_token}`, 'Content-Type': mimeType }),
-        body: fileData,
-    });
-    const result = await response.json();
-    if (result.error) throw new Error(result.error.message);
-    return result;
+  const accessToken = getAccessTokenOrThrow();
+  const response = await fetchWithRetry(
+    `https://www.googleapis.com/upload/drive/v3/files/${fileId}?uploadType=media`,
+    {
+      method: 'PATCH',
+      headers: new Headers({ Authorization: `Bearer ${accessToken}`, 'Content-Type': mimeType }),
+      body: fileData,
+    },
+    'drive.updateFile',
+  );
+
+  const result = await response.json();
+  if (result.error) throw new Error(result.error.message);
+  return result;
 };
 
-
 export const uploadLibraryToDrive = async (payload: SyncPayload, books: BookRecord[], onProgress: (message: string) => void) => {
+  try {
+    getAccessTokenOrThrow();
+
     const appFolderId = await findOrCreateFolder(APP_FOLDER_NAME);
     localStorage.setItem('ebook-reader-drive-folder-id', appFolderId);
-    
+
     onProgress(`Uploading ${books.length} book files...`);
     const booksFolderId = await findOrCreateFolder(BOOKS_SUBFOLDER_NAME, appFolderId);
 
     const bookFileUploads = books.map(async (book, index) => {
-        onProgress(`Uploading book ${index + 1}/${books.length}: ${book.title}`);
-        const format = (book.format || 'epub').toLowerCase();
-        const mimeType = format === 'pdf' ? 'application/pdf' : 'application/epub+zip';
-        const fileName = `${book.id}.${format}`;
-        await uploadFile(booksFolderId, fileName, book.epubData, mimeType);
+      onProgress(`Uploading book ${index + 1}/${books.length}: ${book.title}`);
+      const format = (book.format || 'epub').toLowerCase();
+      const mimeType = format === 'pdf' ? 'application/pdf' : 'application/epub+zip';
+      const fileName = `${book.id}.${format}`;
+      await uploadFile(booksFolderId, fileName, book.epubData, mimeType);
     });
     await Promise.all(bookFileUploads);
 
     onProgress('Uploading library metadata...');
     const metadataBlob = new Blob([JSON.stringify(payload, null, 2)], { type: 'application/json' });
 
-    // Check if metadata file already exists
     const q = `'${appFolderId}' in parents and name='${METADATA_FILE_NAME}' and trashed=false`;
-    const listResponse = await window.gapi.client.drive.files.list({ q });
+    const listResponse = await driveList({ q });
 
     if (listResponse.result.files && listResponse.result.files.length > 0) {
-        const fileId = listResponse.result.files[0].id;
-        await updateFile(fileId, metadataBlob, 'application/json');
+      const fileId = listResponse.result.files[0].id;
+      await updateFile(fileId, metadataBlob, 'application/json');
     } else {
-        await uploadFile(appFolderId, METADATA_FILE_NAME, metadataBlob, 'application/json');
+      await uploadFile(appFolderId, METADATA_FILE_NAME, metadataBlob, 'application/json');
     }
+
     onProgress('Upload complete!');
+  } catch (error) {
+    throw toUserFacingError(error, 'Upload failed.');
+  }
 };
 
-
 export const downloadLibraryFromDrive = async (onProgress: (message: string) => void): Promise<{ payload: SyncPayload; booksWithData: BookRecord[] } | null> => {
+  try {
+    getAccessTokenOrThrow();
+
     onProgress('Finding app folder in Drive...');
     const appFolderId = await findOrCreateFolder(APP_FOLDER_NAME);
-    
+
     onProgress('Downloading library metadata...');
     const q = `'${appFolderId}' in parents and name='${METADATA_FILE_NAME}' and trashed=false`;
-    const listResponse = await window.gapi.client.drive.files.list({ q });
+    const listResponse = await driveList({ q });
 
     if (!listResponse.result.files || listResponse.result.files.length === 0) {
-        return null; // No library file found
+      return null;
     }
 
     const metadataFileId = listResponse.result.files[0].id;
-    const fileResponse = await window.gapi.client.drive.files.get({
-        fileId: metadataFileId,
-        alt: 'media',
+    const fileResponse = await driveGet({
+      fileId: metadataFileId,
+      alt: 'media',
     });
 
     const payload: SyncPayload = JSON.parse(fileResponse.body);
-    
+
     onProgress('Finding books subfolder...');
     const booksFolderId = await findOrCreateFolder(BOOKS_SUBFOLDER_NAME, appFolderId);
 
     const booksWithData: BookRecord[] = [];
-    
+
     for (let i = 0; i < payload.library.length; i++) {
-        const bookMeta = payload.library[i];
-         if (!bookMeta.id) {
-            console.warn(`Book metadata for "${bookMeta.title}" is missing an ID, skipping download.`);
-            continue;
-        }
+      const bookMeta = payload.library[i];
+      if (!bookMeta.id) {
+        logger.warn(`Book metadata for "${bookMeta.title}" is missing an ID, skipping download.`);
+        continue;
+      }
 
-        onProgress(`Downloading book ${i + 1}/${payload.library.length}: ${bookMeta.title}`);
-        
-        const format = (bookMeta.format || 'epub').toLowerCase();
-        const fileName = `${bookMeta.id}.${format}`;
+      onProgress(`Downloading book ${i + 1}/${payload.library.length}: ${bookMeta.title}`);
 
-        // Search for the book file by name
-        const bookFileQ = `'${booksFolderId}' in parents and name='${fileName}' and trashed=false`;
-        const bookFileList = await window.gapi.client.drive.files.list({ q: bookFileQ });
+      const format = (bookMeta.format || 'epub').toLowerCase();
+      const fileName = `${bookMeta.id}.${format}`;
 
-        if (bookFileList.result.files && bookFileList.result.files.length > 0) {
-            const bookFileId = bookFileList.result.files[0].id;
-            
-            const accessToken = window.gapi.client.getToken().access_token;
-            const response = await fetch(`https://www.googleapis.com/drive/v3/files/${bookFileId}?alt=media`, {
-                headers: { 'Authorization': `Bearer ${accessToken}` },
-            });
+      const bookFileQ = `'${booksFolderId}' in parents and name='${fileName}' and trashed=false`;
+      const bookFileList = await driveList({ q: bookFileQ });
 
-            if (!response.ok) {
-                 console.warn(`Failed to download book file for "${bookMeta.title}" (ID: ${bookMeta.id}). Status: ${response.statusText}`);
-                continue; // Skip this book
-            }
-            const epubData = await response.arrayBuffer();
+      if (!(bookFileList.result.files && bookFileList.result.files.length > 0)) {
+        logger.warn(`Book file for "${bookMeta.title}" (ID: ${bookMeta.id}, filename: ${fileName}) not found in Drive.`);
+        continue;
+      }
 
-            const bookRecord: BookRecord = {
-                ...bookMeta,
-                epubData: epubData,
-            };
-            booksWithData.push(bookRecord);
+      const bookFileId = bookFileList.result.files[0].id;
 
-        } else {
-             console.warn(`Book file for "${bookMeta.title}" (ID: ${bookMeta.id}, filename: ${fileName}) not found in Drive.`);
-        }
+      try {
+        const accessToken = getAccessTokenOrThrow();
+        const response = await fetchWithRetry(
+          `https://www.googleapis.com/drive/v3/files/${bookFileId}?alt=media`,
+          { headers: { Authorization: `Bearer ${accessToken}` } },
+          'drive.downloadBookFile',
+        );
+        const epubData = await response.arrayBuffer();
+
+        const bookRecord: BookRecord = {
+          ...bookMeta,
+          epubData,
+        };
+        booksWithData.push(bookRecord);
+      } catch (error) {
+        logger.warn(`Failed to download book file for "${bookMeta.title}" (ID: ${bookMeta.id}).`, error);
+      }
     }
-    
+
     onProgress('Download complete!');
     return { payload, booksWithData };
+  } catch (error) {
+    throw toUserFacingError(error, 'Download failed.');
+  }
 };
