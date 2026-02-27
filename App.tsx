@@ -123,9 +123,20 @@ const AppInner: React.FC = () => {
   const {
     syncStatus,
     setSyncStatus,
+    driveSnapshots,
+    selectedSnapshotId,
+    setSelectedSnapshotId,
+    isLoadingSnapshots,
+    refreshDriveSnapshots,
     handleUploadToDrive,
     handleDownloadFromDrive,
   } = useSyncCoordinator({ tokenClient, confirm });
+
+  useEffect(() => {
+    if (isCloudSyncModalOpen) {
+      void refreshDriveSnapshots();
+    }
+  }, [isCloudSyncModalOpen, refreshDriveSnapshots]);
 
   useEffect(() => {
     db.init();
@@ -329,6 +340,11 @@ const AppInner: React.FC = () => {
         onCloseCloudSyncModal={() => setIsCloudSyncModalOpen(false)}
         onUploadToDrive={handleUploadToDrive}
         onDownloadFromDrive={handleDownloadFromDrive}
+        driveSnapshots={driveSnapshots}
+        selectedSnapshotId={selectedSnapshotId}
+        onSelectSnapshotId={setSelectedSnapshotId}
+        onRefreshSnapshots={refreshDriveSnapshots}
+        isLoadingSnapshots={isLoadingSnapshots}
         syncStatus={syncStatus}
         setSyncStatus={setSyncStatus}
         isLocalStorageModalOpen={isLocalStorageModalOpen}

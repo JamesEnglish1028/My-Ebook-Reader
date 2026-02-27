@@ -1,5 +1,5 @@
 import type { BookRecord } from '../domain/book/types';
-import type { SyncPayload } from '../domain/sync/types';
+import type { DriveSnapshot, SyncPayload } from '../domain/sync/types';
 
 import { logger } from './logger';
 
@@ -14,6 +14,8 @@ const GOOGLE_SCOPES = [
 const APP_FOLDER_NAME = 'Custom Ebook Reader Library';
 const BOOKS_SUBFOLDER_NAME = 'books';
 const METADATA_FILE_NAME = 'library.json';
+const LATEST_POINTER_FILE_NAME = 'latest.json';
+const SNAPSHOT_PREFIX = 'library-snapshot-';
 const TOKEN_EXPIRY_KEY = 'g_access_token_expires_at';
 const MAX_RETRIES = 3;
 const RETRY_BASE_DELAY_MS = 400;
@@ -163,6 +165,11 @@ async function driveGet(params: Record<string, unknown>): Promise<any> {
   return withRetry('drive.files.get', () => window.gapi.client.drive.files.get(params));
 }
 
+const toSnapshotFileName = (date: Date) => {
+  const safe = date.toISOString().replace(/[:.]/g, '-');
+  return `${SNAPSHOT_PREFIX}${safe}.json`;
+};
+
 async function fetchWithRetry(url: string, init: RequestInit, label: string): Promise<Response> {
   return withRetry(label, async () => {
     const response = await fetch(url, init);
@@ -231,6 +238,25 @@ const findOrCreateFolder = async (folderName: string, parentId?: string): Promis
   return createResponse.result.id;
 };
 
+const findFileByName = async (folderId: string, fileName: string): Promise<{ id: string; name: string } | null> => {
+  const q = `'${folderId}' in parents and name='${fileName}' and trashed=false`;
+  const listResponse = await driveList({ q, fields: 'files(id,name)' });
+  if (listResponse.result.files && listResponse.result.files.length > 0) {
+    return listResponse.result.files[0];
+  }
+  return null;
+};
+
+const upsertJsonFile = async (folderId: string, fileName: string, data: unknown): Promise<string> => {
+  const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
+  const existing = await findFileByName(folderId, fileName);
+  if (existing?.id) {
+    await updateFile(existing.id, blob, 'application/json');
+    return existing.id;
+  }
+  return uploadFile(folderId, fileName, blob, 'application/json');
+};
+
 const uploadFile = async (folderId: string, fileName: string, fileData: Blob | ArrayBuffer, mimeType: string): Promise<string> => {
   const metadata = { name: fileName, parents: [folderId] };
   const form = new FormData();
@@ -290,17 +316,20 @@ export const uploadLibraryToDrive = async (payload: SyncPayload, books: BookReco
     await Promise.all(bookFileUploads);
 
     onProgress('Uploading library metadata...');
-    const metadataBlob = new Blob([JSON.stringify(payload, null, 2)], { type: 'application/json' });
+    const snapshotDate = new Date();
+    const snapshotFileName = toSnapshotFileName(snapshotDate);
+    const snapshotFileId = await upsertJsonFile(appFolderId, snapshotFileName, payload);
 
-    const q = `'${appFolderId}' in parents and name='${METADATA_FILE_NAME}' and trashed=false`;
-    const listResponse = await driveList({ q });
+    // Keep legacy latest metadata file for backward compatibility.
+    await upsertJsonFile(appFolderId, METADATA_FILE_NAME, payload);
 
-    if (listResponse.result.files && listResponse.result.files.length > 0) {
-      const fileId = listResponse.result.files[0].id;
-      await updateFile(fileId, metadataBlob, 'application/json');
-    } else {
-      await uploadFile(appFolderId, METADATA_FILE_NAME, metadataBlob, 'application/json');
-    }
+    // Keep a pointer file to latest snapshot for deterministic restores.
+    await upsertJsonFile(appFolderId, LATEST_POINTER_FILE_NAME, {
+      latestSnapshotFileId: snapshotFileId,
+      latestSnapshotFileName: snapshotFileName,
+      updatedAt: snapshotDate.toISOString(),
+      version: 1,
+    });
 
     onProgress('Upload complete!');
   } catch (error) {
@@ -308,22 +337,103 @@ export const uploadLibraryToDrive = async (payload: SyncPayload, books: BookReco
   }
 };
 
-export const downloadLibraryFromDrive = async (onProgress: (message: string) => void): Promise<{ payload: SyncPayload; booksWithData: BookRecord[] } | null> => {
+export const listDriveSnapshots = async (): Promise<DriveSnapshot[]> => {
+  try {
+    getAccessTokenOrThrow();
+    const appFolderId = await findOrCreateFolder(APP_FOLDER_NAME);
+
+    let latestFileId: string | undefined;
+    let latestFileName: string | undefined;
+    const latestPointer = await findFileByName(appFolderId, LATEST_POINTER_FILE_NAME);
+    if (latestPointer?.id) {
+      try {
+        const latestPointerResponse = await driveGet({ fileId: latestPointer.id, alt: 'media' });
+        const pointerBody = JSON.parse(latestPointerResponse.body || '{}');
+        latestFileId = typeof pointerBody.latestSnapshotFileId === 'string' ? pointerBody.latestSnapshotFileId : undefined;
+        latestFileName = typeof pointerBody.latestSnapshotFileName === 'string' ? pointerBody.latestSnapshotFileName : undefined;
+      } catch (error) {
+        logger.warn('Failed to parse latest.json pointer', error);
+      }
+    }
+
+    const q = `'${appFolderId}' in parents and name contains '${SNAPSHOT_PREFIX}' and trashed=false`;
+    const response = await driveList({
+      q,
+      fields: 'files(id,name,createdTime,modifiedTime)',
+      orderBy: 'modifiedTime desc',
+      pageSize: 50,
+    });
+
+    const files: any[] = Array.isArray(response?.result?.files) ? response.result.files : [];
+    const snapshots = files
+      .filter((file) => typeof file?.id === 'string' && typeof file?.name === 'string')
+      .map((file) => ({
+        id: file.id as string,
+        name: file.name as string,
+        createdAt: (file.createdTime || file.modifiedTime || new Date(0).toISOString()) as string,
+        isLatest: (latestFileId && latestFileId === file.id) || (latestFileName && latestFileName === file.name) || false,
+      })) satisfies DriveSnapshot[];
+
+    // Backward-compat fallback if no snapshots exist yet.
+    if (snapshots.length === 0) {
+      const legacy = await findFileByName(appFolderId, METADATA_FILE_NAME);
+      if (legacy?.id) {
+        return [{
+          id: legacy.id,
+          name: METADATA_FILE_NAME,
+          createdAt: new Date(0).toISOString(),
+          isLatest: true,
+        }];
+      }
+    }
+
+    return snapshots;
+  } catch (error) {
+    throw toUserFacingError(error, 'Failed to list Drive snapshots.');
+  }
+};
+
+export const downloadLibraryFromDrive = async (
+  onProgress: (message: string) => void,
+  snapshotFileId?: string,
+): Promise<{ payload: SyncPayload; booksWithData: BookRecord[] } | null> => {
   try {
     getAccessTokenOrThrow();
 
     onProgress('Finding app folder in Drive...');
     const appFolderId = await findOrCreateFolder(APP_FOLDER_NAME);
 
-    onProgress('Downloading library metadata...');
-    const q = `'${appFolderId}' in parents and name='${METADATA_FILE_NAME}' and trashed=false`;
-    const listResponse = await driveList({ q });
+    onProgress('Resolving metadata snapshot...');
+    let metadataFileId = snapshotFileId;
 
-    if (!listResponse.result.files || listResponse.result.files.length === 0) {
+    if (!metadataFileId) {
+      const latestPointer = await findFileByName(appFolderId, LATEST_POINTER_FILE_NAME);
+      if (latestPointer?.id) {
+        try {
+          const latestPointerResponse = await driveGet({ fileId: latestPointer.id, alt: 'media' });
+          const pointerBody = JSON.parse(latestPointerResponse.body || '{}');
+          if (typeof pointerBody.latestSnapshotFileId === 'string') {
+            metadataFileId = pointerBody.latestSnapshotFileId;
+          } else if (typeof pointerBody.latestSnapshotFileName === 'string') {
+            const byName = await findFileByName(appFolderId, pointerBody.latestSnapshotFileName);
+            metadataFileId = byName?.id;
+          }
+        } catch (error) {
+          logger.warn('Failed to resolve latest snapshot pointer; falling back to library.json', error);
+        }
+      }
+    }
+
+    if (!metadataFileId) {
+      const legacy = await findFileByName(appFolderId, METADATA_FILE_NAME);
+      metadataFileId = legacy?.id;
+    }
+
+    if (!metadataFileId) {
       return null;
     }
 
-    const metadataFileId = listResponse.result.files[0].id;
+    onProgress('Downloading library metadata...');
     const fileResponse = await driveGet({
       fileId: metadataFileId,
       alt: 'media',

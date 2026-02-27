@@ -37,7 +37,7 @@ export {
 
 // Google Drive sync services
 export {
-    downloadLibraryFromDrive, uploadLibraryToDrive,
+    downloadLibraryFromDrive, listDriveSnapshots, uploadLibraryToDrive,
 } from './google';
 
 // Utility functions
@@ -49,4 +49,3 @@ export {
 export {
     buildTocFromSpine, findFirstChapter, getBookmarksForBook, getCitationsForBook, getEpubViewStateForBook, getLastPositionForBook, getLastSpokenPositionForBook, getPdfViewStateForBook, getReaderSettings, getStorageKey, performBookSearch, saveBookmarksForBook, saveCitationsForBook, saveEpubViewStateForBook, saveLastPositionForBook, saveLastSpokenPositionForBook, savePdfViewStateForBook, saveReaderSettings,
 } from './readerUtils';
-

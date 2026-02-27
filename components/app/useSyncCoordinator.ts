@@ -1,11 +1,12 @@
 import { useCallback, useState } from 'react';
 
-import { db, downloadLibraryFromDrive, logger, uploadLibraryToDrive } from '../../services';
+import { db, downloadLibraryFromDrive, listDriveSnapshots, logger, uploadLibraryToDrive } from '../../services';
 import type {
   Bookmark,
   BookRecord,
   Catalog,
   Citation,
+  DriveSnapshot,
   ReaderSettings,
   SyncPayload,
 } from '../../types';
@@ -24,6 +25,9 @@ const initialSyncStatus: SyncStatusState = { state: 'idle', message: '' };
 
 export const useSyncCoordinator = ({ tokenClient, confirm }: UseSyncCoordinatorOptions) => {
   const [syncStatus, setSyncStatus] = useState<SyncStatusState>(initialSyncStatus);
+  const [driveSnapshots, setDriveSnapshots] = useState<DriveSnapshot[]>([]);
+  const [selectedSnapshotId, setSelectedSnapshotId] = useState<string>('');
+  const [isLoadingSnapshots, setIsLoadingSnapshots] = useState(false);
 
   const gatherDataForUpload = useCallback(async (): Promise<{ payload: SyncPayload; booksWithData: BookRecord[] }> => {
     const booksWithData = await db.getAllBooks();
@@ -54,6 +58,33 @@ export const useSyncCoordinator = ({ tokenClient, confirm }: UseSyncCoordinatorO
     };
   }, []);
 
+  const refreshDriveSnapshots = useCallback(async () => {
+    if (!tokenClient) {
+      setDriveSnapshots([]);
+      setSelectedSnapshotId('');
+      return;
+    }
+
+    setIsLoadingSnapshots(true);
+    try {
+      const snapshots = await listDriveSnapshots();
+      setDriveSnapshots(snapshots);
+
+      const latest = snapshots.find((s) => s.isLatest);
+      if (!selectedSnapshotId && latest?.id) {
+        setSelectedSnapshotId(latest.id);
+      } else if (selectedSnapshotId && !snapshots.some((s) => s.id === selectedSnapshotId)) {
+        setSelectedSnapshotId(latest?.id || '');
+      }
+    } catch (error) {
+      logger.warn('Failed to load Drive snapshots', error);
+      setDriveSnapshots([]);
+      setSelectedSnapshotId('');
+    } finally {
+      setIsLoadingSnapshots(false);
+    }
+  }, [selectedSnapshotId, tokenClient]);
+
   const handleUploadToDrive = useCallback(async () => {
     if (!tokenClient) return;
     setSyncStatus({ state: 'syncing', message: 'Gathering local data...' });
@@ -64,12 +95,13 @@ export const useSyncCoordinator = ({ tokenClient, confirm }: UseSyncCoordinatorO
         setSyncStatus({ state: 'syncing', message: progressMsg });
       });
       localStorage.setItem('ebook-reader-last-sync', new Date().toISOString());
+      await refreshDriveSnapshots();
       setSyncStatus({ state: 'success', message: 'Library successfully uploaded!' });
     } catch (error) {
       logger.error('Upload failed:', error);
       setSyncStatus({ state: 'error', message: error instanceof Error ? error.message : 'An unknown error occurred.' });
     }
-  }, [gatherDataForUpload, tokenClient]);
+  }, [gatherDataForUpload, refreshDriveSnapshots, tokenClient]);
 
   const handleDownloadFromDrive = useCallback(async () => {
     if (!tokenClient) return;
@@ -85,7 +117,7 @@ export const useSyncCoordinator = ({ tokenClient, confirm }: UseSyncCoordinatorO
     try {
       const downloadedData = await downloadLibraryFromDrive((progressMsg) => {
         setSyncStatus({ state: 'syncing', message: progressMsg });
-      });
+      }, selectedSnapshotId || undefined);
 
       if (!downloadedData) {
         throw new Error('No data found in Google Drive.');
@@ -126,11 +158,16 @@ export const useSyncCoordinator = ({ tokenClient, confirm }: UseSyncCoordinatorO
       logger.error('Download failed:', error);
       setSyncStatus({ state: 'error', message: error instanceof Error ? error.message : 'An unknown error occurred.' });
     }
-  }, [confirm, tokenClient]);
+  }, [confirm, selectedSnapshotId, tokenClient]);
 
   return {
     syncStatus,
     setSyncStatus,
+    driveSnapshots,
+    selectedSnapshotId,
+    setSelectedSnapshotId,
+    isLoadingSnapshots,
+    refreshDriveSnapshots,
     handleUploadToDrive,
     handleDownloadFromDrive,
   };

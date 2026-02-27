@@ -2,6 +2,7 @@ import React from 'react';
 
 import { useAuth } from '../contexts/AuthContext';
 import { useFocusTrap } from '../hooks/useFocusTrap';
+import type { DriveSnapshot } from '../domain/sync/types';
 
 import { CloseIcon, DownloadIcon, UploadIcon } from './icons';
 import Spinner from './Spinner';
@@ -11,6 +12,11 @@ interface SettingsModalProps {
   onClose: () => void;
   onUploadToDrive: () => void;
   onDownloadFromDrive: () => void;
+  driveSnapshots: DriveSnapshot[];
+  selectedSnapshotId: string;
+  onSelectSnapshotId: (snapshotId: string) => void;
+  onRefreshSnapshots: () => void;
+  isLoadingSnapshots: boolean;
   syncStatus: {
     state: 'idle' | 'syncing' | 'success' | 'error';
     message: string;
@@ -30,7 +36,19 @@ const GoogleIcon: React.FC<{ className?: string }> = ({ className }) => (
   </svg>
 );
 
-const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose, onUploadToDrive, onDownloadFromDrive, syncStatus, setSyncStatus }) => {
+const SettingsModal: React.FC<SettingsModalProps> = ({
+  isOpen,
+  onClose,
+  onUploadToDrive,
+  onDownloadFromDrive,
+  driveSnapshots,
+  selectedSnapshotId,
+  onSelectSnapshotId,
+  onRefreshSnapshots,
+  isLoadingSnapshots,
+  syncStatus,
+  setSyncStatus,
+}) => {
   const { user, isLoggedIn, signIn, signOut, isInitialized, authStatus, authError } = useAuth();
 
   const handleClose = () => {
@@ -114,6 +132,38 @@ const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose, onUpload
             <div className="bg-slate-900/50 p-4 rounded-lg">
               <h3 className="text-lg font-semibold mb-2 text-slate-200">Google Drive Sync</h3>
               <p className="text-xs text-slate-500 mb-4">Last synced: {lastSyncString}</p>
+
+              <div className="mb-4 p-3 rounded-md bg-slate-800/60 border border-slate-700">
+                <div className="flex items-center justify-between gap-3 mb-2">
+                  <p className="text-xs font-semibold text-slate-300 uppercase">Restore Point</p>
+                  <button
+                    onClick={onRefreshSnapshots}
+                    disabled={isSyncing || isLoadingSnapshots}
+                    className="text-xs px-2 py-1 rounded bg-slate-700 hover:bg-slate-600 disabled:opacity-60"
+                  >
+                    {isLoadingSnapshots ? 'Refreshing...' : 'Refresh'}
+                  </button>
+                </div>
+                <select
+                  value={selectedSnapshotId}
+                  onChange={(e) => onSelectSnapshotId(e.target.value)}
+                  disabled={isSyncing || isLoadingSnapshots || driveSnapshots.length === 0}
+                  className="w-full p-2 rounded bg-slate-900 border border-slate-700 text-sm text-white"
+                >
+                  {driveSnapshots.length === 0 ? (
+                    <option value="">No snapshots found yet</option>
+                  ) : (
+                    driveSnapshots.map((snapshot) => (
+                      <option key={snapshot.id} value={snapshot.id}>
+                        {snapshot.isLatest ? '[Latest] ' : ''}{snapshot.name}
+                      </option>
+                    ))
+                  )}
+                </select>
+                <p className="mt-2 text-xs text-slate-400">
+                  Select which cloud snapshot to use when downloading. Upload creates a new timestamped snapshot automatically.
+                </p>
+              </div>
 
               {syncStatus.state !== 'idle' ? (
                 <div className="p-4 rounded-md bg-slate-700/50 text-center">

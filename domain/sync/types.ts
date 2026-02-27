@@ -56,6 +56,17 @@ export interface SyncStatus {
 }
 
 /**
+ * Metadata snapshot entry stored in Google Drive.
+ * Used to select a rollback point when restoring.
+ */
+export interface DriveSnapshot {
+  id: string;
+  name: string;
+  createdAt: string;
+  isLatest: boolean;
+}
+
+/**
  * Sync conflict resolution strategy
  */
 export type ConflictResolutionStrategy = 'local' | 'remote' | 'merge';

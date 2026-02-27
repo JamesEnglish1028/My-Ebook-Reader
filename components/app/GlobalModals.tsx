@@ -7,7 +7,7 @@ import {
   SettingsModal,
   ShortcutHelpModal,
 } from '..';
-import type { CredentialPrompt } from '../../types';
+import type { CredentialPrompt, DriveSnapshot } from '../../types';
 
 interface GlobalModalsProps {
   // Cloud sync modal
@@ -15,6 +15,11 @@ interface GlobalModalsProps {
   onCloseCloudSyncModal: () => void;
   onUploadToDrive: () => Promise<void>;
   onDownloadFromDrive: () => Promise<void>;
+  driveSnapshots: DriveSnapshot[];
+  selectedSnapshotId: string;
+  onSelectSnapshotId: (snapshotId: string) => void;
+  onRefreshSnapshots: () => Promise<void>;
+  isLoadingSnapshots: boolean;
   syncStatus: {
     state: 'idle' | 'syncing' | 'success' | 'error';
     message: string;
@@ -54,6 +59,11 @@ export const GlobalModals: React.FC<GlobalModalsProps> = ({
   onCloseCloudSyncModal,
   onUploadToDrive,
   onDownloadFromDrive,
+  driveSnapshots,
+  selectedSnapshotId,
+  onSelectSnapshotId,
+  onRefreshSnapshots,
+  isLoadingSnapshots,
   syncStatus,
   setSyncStatus,
   isLocalStorageModalOpen,
@@ -76,6 +86,11 @@ export const GlobalModals: React.FC<GlobalModalsProps> = ({
         onClose={onCloseCloudSyncModal}
         onUploadToDrive={onUploadToDrive}
         onDownloadFromDrive={onDownloadFromDrive}
+        driveSnapshots={driveSnapshots}
+        selectedSnapshotId={selectedSnapshotId}
+        onSelectSnapshotId={onSelectSnapshotId}
+        onRefreshSnapshots={onRefreshSnapshots}
+        isLoadingSnapshots={isLoadingSnapshots}
         syncStatus={syncStatus}
         setSyncStatus={setSyncStatus}
       />
