@@ -3,6 +3,7 @@ import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
 
 import { mebooksBook } from '../../assets';
+import { useAuth } from '../../contexts/AuthContext';
 import { bookKeys, useCatalogs, useLocalStorage } from '../../hooks';
 import { db, logger } from '../../services';
 import type { BookMetadata, BookRecord, Catalog, CatalogBook, CatalogRegistry, CoverAnimationData } from '../../types';
@@ -63,6 +64,7 @@ const LibraryView: React.FC<LibraryViewProps> = ({
   // Use libraryRefreshFlag to trigger refreshes in child components if needed
   // React Query client for cache invalidation
   const queryClient = useQueryClient();
+  const { user, isLoggedIn } = useAuth();
 
   // Catalog management
   const {
@@ -378,6 +380,20 @@ const LibraryView: React.FC<LibraryViewProps> = ({
 
         {/* Actions */}
         <div className="flex items-center gap-2 flex-shrink-0 self-end md:self-auto">
+          {isLoggedIn && user && (
+            <div className="hidden sm:flex items-center gap-2 bg-slate-800 border border-slate-700 rounded-lg px-2 py-1 max-w-[220px]">
+              <img
+                src={user.picture}
+                alt={`${user.name} profile`}
+                className="w-7 h-7 rounded-full object-cover"
+                referrerPolicy="no-referrer"
+              />
+              <span className="text-sm text-slate-100 truncate" title={user.name}>
+                {user.name}
+              </span>
+            </div>
+          )}
+
           {/* Sort (only for local library) */}
           {!isBrowsingOpds && (
             <SortControls
