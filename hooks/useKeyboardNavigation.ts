@@ -225,6 +225,3 @@ export function useGridNavigation(options: GridNavigationOptions) {
     setFocusedIndex,
   };
 }
-
-// Import React for useState
-import React from 'react';
