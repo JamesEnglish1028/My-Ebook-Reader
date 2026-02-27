@@ -7,7 +7,7 @@
  */
 
 import { logger } from '../../services/logger';
-import { parseOpds1Xml, resolveAcquisitionChainOpds1 } from '../../services/opds';
+import { fetchCatalogContent, parseOpds1Xml, resolveAcquisitionChainOpds1 } from '../../services/opds';
 import { parseOpds2Json, resolveAcquisitionChain as resolveOpds2 } from '../../services/opds2';
 
 import type {
@@ -43,6 +43,50 @@ export type OPDSVersion = '1' | '2' | 'auto';
  * Handles parsing of OPDS 1 (Atom/XML) and OPDS 2 (JSON) feeds.
  */
 export class OPDSParserService {
+  async fetchCatalog(
+    url: string,
+    baseUrl: string,
+    opdsVersion: OPDSVersion = 'auto',
+  ): Promise<ParserResult<ParsedCatalog>> {
+    try {
+      const hostname = (() => {
+        try {
+          return new URL(url).hostname.toLowerCase();
+        } catch {
+          return '';
+        }
+      })();
+
+      const isPalaceHost =
+        hostname.endsWith('palace.io') ||
+        hostname.endsWith('palaceproject.io') ||
+        hostname.endsWith('thepalaceproject.org') ||
+        hostname === 'palace.io' ||
+        hostname.endsWith('.palace.io') ||
+        hostname.endsWith('.thepalaceproject.org');
+
+      const forcedVersion: OPDSVersion = isPalaceHost ? '1' : opdsVersion;
+      const result = await fetchCatalogContent(url, baseUrl, forcedVersion);
+
+      if (result.error) {
+        return { success: false, error: result.error };
+      }
+
+      return {
+        success: true,
+        data: {
+          books: result.books,
+          navLinks: result.navLinks,
+          pagination: result.pagination,
+        },
+      };
+    } catch (error) {
+      const errorMessage = error instanceof Error ? error.message : 'Unknown error fetching OPDS catalog';
+      logger.error('OPDS fetch error:', errorMessage);
+      return { success: false, error: errorMessage };
+    }
+  }
+
   /**
    * Parse an OPDS 1 feed (Atom/XML)
    *

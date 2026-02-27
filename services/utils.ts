@@ -109,7 +109,10 @@ export const blobUrlToBase64 = async (blobUrl: string): Promise<string> => {
 const CORS_PROXY_URL = 'https://corsproxy.io/?';
 // Own proxy URL can be configured via Vite env var VITE_OWN_PROXY_URL
 const OWN_PROXY_URL: string = (typeof import.meta !== 'undefined' && (import.meta as any).env && (import.meta as any).env.VITE_OWN_PROXY_URL) ? (import.meta as any).env.VITE_OWN_PROXY_URL : '';
+const ALLOW_PUBLIC_PROXY = (typeof import.meta !== 'undefined' && (import.meta as any).env && (import.meta as any).env.VITE_ALLOW_PUBLIC_PROXY === 'true');
 const FORCE_PROXY = (typeof import.meta !== 'undefined' && (import.meta as any).env && (import.meta as any).env.VITE_FORCE_PROXY === 'true');
+// Dev-only: Skip CORS probe and use direct fetch (useful when proxy is unavailable)
+const SKIP_CORS_CHECK = (typeof import.meta !== 'undefined' && (import.meta as any).env && (import.meta as any).env.VITE_SKIP_CORS_CHECK === 'true');
 
 /**
  * Wraps a URL with a CORS proxy to prevent cross-origin issues.
@@ -133,8 +136,11 @@ export const proxiedUrl = (url: string): string => {
       if (FORCE_PROXY) return `${base}${sep}url=${encodeURIComponent(url)}`;
       return `${base}${sep}url=${encodeURIComponent(url)}`;
     }
-    // Fallback to the public CORS proxy
-    return `${CORS_PROXY_URL}${encodeURIComponent(url)}`;
+    // Public proxy fallback is opt-in only.
+    if (ALLOW_PUBLIC_PROXY) {
+      return `${CORS_PROXY_URL}${encodeURIComponent(url)}`;
+    }
+    return url;
   } catch (e) {
     // If the URL is invalid, return an empty string or a placeholder to avoid breaking image tags.
     console.error('Invalid URL passed to proxiedUrl:', url);
@@ -154,11 +160,24 @@ export const proxiedUrl = (url: string): string => {
  * - For open-access content, skips the HEAD probe since authentication shouldn't be required.
  */
 export const maybeProxyForCors = async (url: string, skipProbe = false): Promise<string> => {
+  // Dev-only: Skip CORS check entirely and use direct fetch
+  if (SKIP_CORS_CHECK) {
+    try {
+      new URL(url);
+      console.log('[maybeProxyForCors] VITE_SKIP_CORS_CHECK=true, returning direct URL:', url.substring(0, 80));
+      return url;
+    } catch (e) {
+      console.error('Invalid URL for maybeProxyForCors:', url);
+      return '';
+    }
+  }
+
   // If developer explicitly requests forcing the owned proxy, respect it immediately.
   if (FORCE_PROXY) {
     try {
       // Validate URL before proxying
       new URL(url);
+      console.log('[maybeProxyForCors] VITE_FORCE_PROXY=true, using proxy:', url.substring(0, 80));
       return proxiedUrl(url);
     } catch (e) {
       console.error('Invalid URL for maybeProxyForCors when forcing proxy:', url);
@@ -177,8 +196,8 @@ export const maybeProxyForCors = async (url: string, skipProbe = false): Promise
   // For open-access, we still need to use the proxy due to CORS, but we skip the HEAD probe
   // because HEAD might return 401 even though GET would succeed for open-access content
   if (skipProbe) {
-    console.log('[maybeProxyForCors] Skipping HEAD probe for open-access content, using proxy for CORS');
-    return proxiedUrl(url);
+    console.log('[maybeProxyForCors] Skipping HEAD probe for open-access content, using direct URL');
+    return url;
   }
 
   try {
@@ -190,22 +209,28 @@ export const maybeProxyForCors = async (url: string, skipProbe = false): Promise
     // probe. This allows maybeProxyForCors to detect when a user has just
     // authenticated at the provider and direct fetches (with cookies) may
     // succeed even if unauthenticated probes would not.
+    console.log('[maybeProxyForCors] Starting HEAD probe for:', url.substring(0, 80));
     let resp = await fetch(url, { method: 'HEAD', mode: 'cors', redirect: 'manual', credentials: 'include' });
     // Some servers don't support HEAD and respond 405. In that case, try a
     // lightweight GET probe with credentials included to better detect CORS
     // allowance when cookies are present.
     if (resp && resp.status === 405) {
       try {
+        console.log('[maybeProxyForCors] HEAD returned 405, trying GET probe');
         resp = await fetch(url, { method: 'GET', mode: 'cors', redirect: 'manual', credentials: 'include' });
       } catch (e) {
+        console.log('[maybeProxyForCors] GET probe failed:', String(e).substring(0, 80));
         // keep original resp if GET fails
       }
     }
-    if (!resp) return proxiedUrl(url);
+    if (!resp) {
+      console.log('[maybeProxyForCors] No response, using proxy');
+      return proxiedUrl(url);
+    }
 
     // If the server returned a redirect, don't attempt to fetch directly — use proxy.
     if (resp.status >= 300 && resp.status < 400) {
-      console.log('[maybeProxyForCors] HEAD probe redirect', { url, status: resp.status });
+      console.log('[maybeProxyForCors] HEAD probe redirect', { url: url.substring(0, 80), status: resp.status });
       return proxiedUrl(url);
     }
 
@@ -214,22 +239,30 @@ export const maybeProxyForCors = async (url: string, skipProbe = false): Promise
       const allow = resp.headers.get('access-control-allow-origin');
       try {
         const origin = (typeof window !== 'undefined' && window.location && window.location.origin) ? window.location.origin : '';
-        console.log('[maybeProxyForCors] HEAD probe', { url, status: resp.status, allow, origin });
+        console.log('[maybeProxyForCors] HEAD probe success', { url: url.substring(0, 80), status: resp.status, allow, origin });
         if (allow === '*' || (allow && origin && allow === origin)) {
-          console.log('[maybeProxyForCors] using direct URL', { url });
+          console.log('[maybeProxyForCors] CORS allows direct URL, skipping proxy');
           return url;
+        } else {
+          console.log('[maybeProxyForCors] CORS headers missing or mismatched, using proxy');
         }
       } catch (e) {
         // If we can't determine window origin, be conservative and use the proxy
-        console.log('[maybeProxyForCors] error determining origin, falling back to proxy', { url, err: e });
+        console.log('[maybeProxyForCors] error determining origin, falling back to proxy', { url: url.substring(0, 80), err: String(e).substring(0, 80) });
       }
+    } else {
+      console.log('[maybeProxyForCors] probe returned non-2xx:', { url: url.substring(0, 80), status: resp.status });
     }
 
     // Fallback to proxy for any other status (including 4xx/5xx or missing CORS header)
-    return proxiedUrl(url);
+    const proxied = proxiedUrl(url);
+    console.log('[maybeProxyForCors] Returning proxied URL');
+    return proxied;
   } catch (e) {
     // Likely a network or CORS error — use the proxy.
-    return proxiedUrl(url);
+    console.log('[maybeProxyForCors] Probe error (network/CORS), using proxy:', String(e).substring(0, 100));
+    const proxied = proxiedUrl(url);
+    return proxied;
   }
 };
 

@@ -1,7 +1,7 @@
 import { useQuery } from '@tanstack/react-query';
 
+import { opdsParserService } from '../domain/catalog';
 import { logger } from '../services/logger';
-import { fetchCatalogContent } from '../services/opds';
 import type { CatalogBook, CatalogNavigationLink, CatalogPagination } from '../types';
 
 // Query keys for catalog content
@@ -57,43 +57,34 @@ export function useCatalogContent(
 
       logger.debug(`[useCatalogContent] Fetching: ${url}`);
 
-      // Force Palace hosts to use OPDS 1
-      const hostname = (() => {
-        try {
-          return new URL(url).hostname.toLowerCase();
-        } catch {
-          return '';
-        }
-      })();
-
-      const isPalaceHost =
-        hostname.endsWith('palace.io') ||
-        hostname.endsWith('palaceproject.io') ||
-        hostname === 'palace.io' ||
-        hostname.endsWith('.palace.io');
-
-      const forcedVersion = isPalaceHost ? '1' : opdsVersion;
-
-      const result = await fetchCatalogContent(url, baseUrl, forcedVersion);
+      const result = await opdsParserService.fetchCatalog(url, baseUrl, opdsVersion);
+      if (!result.success) {
+        return {
+          books: [],
+          navLinks: [],
+          pagination: {},
+          error: result.error,
+        };
+      }
 
       // Filter pagination URLs from navigation links for registry feeds
-      const isFeedARegistry = result.navLinks.length > 0 && result.books.length === 0;
-      let finalNavLinks = result.navLinks;
+      const isFeedARegistry = result.data.navLinks.length > 0 && result.data.books.length === 0;
+      let finalNavLinks = result.data.navLinks;
 
-      if (isFeedARegistry && result.pagination) {
-        const paginationUrls = Object.values(result.pagination).filter(
+      if (isFeedARegistry && result.data.pagination) {
+        const paginationUrls = Object.values(result.data.pagination).filter(
           (val): val is string => !!val,
         );
-        finalNavLinks = result.navLinks.filter(
+        finalNavLinks = result.data.navLinks.filter(
           nav => !paginationUrls.includes(nav.url),
         );
       }
 
       return {
-        books: result.books,
+        books: result.data.books,
         navLinks: finalNavLinks,
-        pagination: result.pagination,
-        error: result.error,
+        pagination: result.data.pagination,
+        error: null,
       };
     },
     enabled: enabled && !!url,

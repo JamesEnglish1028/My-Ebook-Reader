@@ -92,9 +92,12 @@ export const useImportCoordinator = ({ onCatalogImportSuccess }: UseImportCoordi
         }
 
         if (source === 'catalog' && !((catalogMeta as { coverImage?: string | null }).coverImage)) {
-          setImportStatus({ isLoading: false, message: '', error: 'No valid cover image found for this book. Import aborted.' });
-          return { success: false };
+          // Keep catalog PDF imports robust when provider image URLs are unavailable.
+          validCover = await generatePdfCover(title, author);
+          catalogMeta = { ...catalogMeta, coverImage: validCover };
         }
+
+        const finalProviderId = providerId || fileName;
 
         const newBook: BookRecord = {
           title,
@@ -103,12 +106,21 @@ export const useImportCoordinator = ({ onCatalogImportSuccess }: UseImportCoordi
           epubData: bookData,
           format: 'PDF',
           providerName,
-          providerId,
+          providerId: finalProviderId,
           description: (catalogMeta as Partial<CatalogBook>).summary,
           publisher: normalizePublisher((catalogMeta as Partial<CatalogBook>).publisher),
           publicationDate: (catalogMeta as Partial<CatalogBook>).publicationDate,
           subjects: (catalogMeta as Partial<CatalogBook>).subjects,
         };
+
+        if (finalProviderId) {
+          const existing = await db.findBookByIdentifier(finalProviderId);
+          if (existing) {
+            setImportStatus(initialImportState);
+            return { success: false, bookRecord: newBook, existingBook: existing };
+          }
+        }
+
         await db.saveBook(newBook);
         setImportStatus({ isLoading: false, message: 'Import successful!', error: null });
         bumpLibraryRefresh();

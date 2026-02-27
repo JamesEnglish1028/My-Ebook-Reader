@@ -1,31 +1,37 @@
-const handleImgError = (e: React.SyntheticEvent<HTMLImageElement, Event>) => {
-    (e.target as HTMLImageElement).src = '/default-cover.png';
-  };
-// Main BookDetailView component
 import React, { useRef } from 'react';
 
 import { bookmarkService } from '../domain/reader';
 import { citationService } from '../domain/reader/citation-service';
 import type { BookMetadata, BookRecord, Bookmark, CatalogBook, Citation, ImportStatus } from '../types';
 
-// Helper type to allow CatalogBook fields (mediaType, acquisitionMediaType, publicationTypeLabel, schemaOrgType, contributors, categories) for detail view
-type BookDetailMetadata = BookMetadata & Partial<Pick<CatalogBook, 'mediaType' | 'acquisitionMediaType' | 'publicationTypeLabel' | 'schemaOrgType' | 'contributors' | 'categories'>>;
+// Helper type to allow both library and catalog records in detail view
+export type BookDetailMetadata = BookMetadata | CatalogBook;
+
+type LegacyImportStatus = {
+  isLoading: boolean;
+  message: string;
+  error: string | null;
+};
 
 // Unified props interface (fixes type errors)
 export interface BookDetailViewProps {
   book: BookDetailMetadata;
-  source: 'library' | 'catalog';
+  source: 'library' | 'catalog' | string;
   catalogName?: string;
   onBack: () => void;
   onReadBook: (book: BookDetailMetadata) => void;
-  onImportFromCatalog?: (book: CatalogBook, catalogName?: string) => Promise<{ success: boolean; bookRecord?: BookRecord; existingBook?: BookRecord }>;
-  importStatus?: ImportStatus;
-  setImportStatus?: (status: ImportStatus) => void;
-  userCitationFormat: 'apa' | 'mla' | 'chicago';
+  onImportFromCatalog?: (book: CatalogBook | BookDetailMetadata, catalogName?: string) => Promise<{ success: boolean; bookRecord?: BookRecord; existingBook?: BookRecord }>;
+  importStatus?: ImportStatus | LegacyImportStatus;
+  setImportStatus?: ((status: ImportStatus) => void) | React.Dispatch<React.SetStateAction<LegacyImportStatus>>;
+  userCitationFormat?: 'apa' | 'mla' | 'chicago' | string;
 }
 
 import { LeftArrowIcon } from './icons';
 import BookBadges from './library/shared/BookBadges';
+
+const handleImgError = (e: React.SyntheticEvent<HTMLImageElement, Event>) => {
+  (e.target as HTMLImageElement).src = '/default-cover.png';
+};
 
 // Utility: format date for display
 const formatDate = (dateString: string | number): string => {
@@ -39,7 +45,7 @@ const BookAnnotationsAside: React.FC<{
   libraryBook: BookMetadata;
   bookmarks: Bookmark[];
   citations: Citation[];
-  userCitationFormat: 'apa' | 'mla' | 'chicago';
+  userCitationFormat: 'apa' | 'mla' | 'chicago' | string;
 }> = ({ libraryBook, bookmarks = [], citations = [], userCitationFormat }) => {
   function downloadTextFile(filename: string, content: string) {
     const blob = new Blob([content], { type: 'text/plain' });
@@ -90,7 +96,8 @@ const BookAnnotationsAside: React.FC<{
           <ul className="space-y-2">
             {citations.map((ct, idx) => {
               // Use the citation's formatType (citationFormat) as set by the user in Reader Views
-              const citationFormat = ct.citationFormat || userCitationFormat || 'apa';
+              const rawCitationFormat = ct.citationFormat || userCitationFormat || 'apa';
+              const citationFormat = rawCitationFormat === 'mla' ? 'mla' : 'apa';
               const formatted = citationService.formatCitation(libraryBook, ct, citationFormat);
               return (
                 <li key={ct.id || idx} className="bg-slate-800 rounded p-3 text-slate-300">
@@ -118,26 +125,56 @@ interface AnimationData {
 }
 
 
-const BookDetailView: React.FC<BookDetailViewProps> = ({ book, onBack, source, catalogName, userCitationFormat, onReadBook, onImportFromCatalog, importStatus, setImportStatus }) => {
+const BookDetailView: React.FC<BookDetailViewProps> = ({ book, onBack, source, catalogName, userCitationFormat = 'apa', onReadBook, onImportFromCatalog, importStatus, setImportStatus }) => {
+  const bookAny = book as any;
+  const publisherText = typeof bookAny.publisher === 'string' ? bookAny.publisher : bookAny.publisher?.name;
+  const libraryBookForAnnotations: BookMetadata = {
+    id: bookAny.id ?? 0,
+    title: book.title,
+    author: book.author,
+    coverImage: book.coverImage,
+    publisher: publisherText,
+    publicationDate: bookAny.publicationDate,
+    providerId: bookAny.providerId,
+    providerName: bookAny.providerName,
+    description: bookAny.description ?? bookAny.summary ?? undefined,
+    subjects: bookAny.subjects,
+    format: bookAny.format,
+    isbn: bookAny.isbn,
+    language: bookAny.language,
+    rights: bookAny.rights,
+    identifiers: Array.isArray(bookAny.identifiers)
+      ? bookAny.identifiers.map((id: any) => (typeof id === 'string' ? id : id?.value)).filter(Boolean)
+      : undefined,
+    opfRaw: bookAny.opfRaw,
+    accessModes: bookAny.accessModes,
+    accessModesSufficient: bookAny.accessModesSufficient,
+    accessibilityFeatures: bookAny.accessibilityFeatures,
+    hazards: bookAny.hazards,
+    accessibilitySummary: bookAny.accessibilitySummary,
+    certificationConformsTo: bookAny.certificationConformsTo,
+    certification: bookAny.certification,
+    accessibilityFeedback: bookAny.accessibilityFeedback,
+  };
   const [localBookmarks, setLocalBookmarks] = React.useState<Bookmark[]>([]);
   const [localCitations, setLocalCitations] = React.useState<Citation[]>([]);
 
   React.useEffect(() => {
-    if (book.id) {
-      const result = bookmarkService.findByBookId(book.id);
+    if (bookAny.id) {
+      const result = bookmarkService.findByBookId(bookAny.id);
       if (result.success) setLocalBookmarks(result.data);
     }
-  }, [book.id]);
+  }, [bookAny.id]);
 
   React.useEffect(() => {
-    if (book.id) {
-      const result = citationService.findByBookId(book.id);
+    if (bookAny.id) {
+      const result = citationService.findByBookId(bookAny.id);
       if (result.success) setLocalCitations(result.data);
     }
-  }, [book.id]);
+  }, [bookAny.id]);
   const coverRef = useRef<HTMLImageElement>(null);
   const handleReadClick = () => {
-    if (onReadBook && book.id) {
+    if (onReadBook && bookAny.id) {
       onReadBook(book);
     }
   };
@@ -148,7 +185,7 @@ const BookDetailView: React.FC<BookDetailViewProps> = ({ book, onBack, source, c
   // Only allow import if format or mediaType is PDF or EPUB
   const isImportable = (() => {
     const format = book.format?.toUpperCase();
-    const mediaType = book.mediaType?.toLowerCase();
+    const mediaType = bookAny.mediaType?.toLowerCase();
     return (
       format === 'PDF' || format === 'EPUB' ||
       mediaType === 'application/pdf' || mediaType === 'application/epub+zip'
@@ -159,8 +196,16 @@ const BookDetailView: React.FC<BookDetailViewProps> = ({ book, onBack, source, c
     if (isImporting) return;
     setIsImporting(true);
     if (onImportFromCatalog) {
-      await onImportFromCatalog(book);
-      setShowImportSuccess(true);
+      const result = await onImportFromCatalog(book as CatalogBook, catalogName);
+      if (result.success) {
+        setShowImportSuccess(true);
+      } else if (result.existingBook && setImportStatus) {
+        setImportStatus({
+          isLoading: false,
+          message: '',
+          error: `A book with the same identifier is already in your library: "${result.existingBook.title}".`,
+        } as ImportStatus);
+      }
     }
     setIsImporting(false);
   };
@@ -169,7 +214,7 @@ const BookDetailView: React.FC<BookDetailViewProps> = ({ book, onBack, source, c
     <div className="flex flex-col md:flex-row gap-8 items-start px-4 md:px-12 md:pr-16">
       {/* Left column: cover, buttons, bookmarks, citations */}
       <div className="md:w-1/3 flex-shrink-0">
-        <BookDetailHeader onBack={onBack} source={source} />
+        <BookDetailHeader onBack={onBack} source={source as 'library' | 'catalog'} />
         <div className="mb-10" />
         <div className="mb-6 flex flex-col items-center">
           {book.coverImage ? (
@@ -211,7 +256,7 @@ const BookDetailView: React.FC<BookDetailViewProps> = ({ book, onBack, source, c
           )}
         </div>
         <div className="w-full max-w-xs mx-auto">
-          <BookAnnotationsAside libraryBook={book} bookmarks={localBookmarks} citations={localCitations} userCitationFormat={userCitationFormat} />
+          <BookAnnotationsAside libraryBook={libraryBookForAnnotations} bookmarks={localBookmarks} citations={localCitations} userCitationFormat={userCitationFormat} />
         </div>
       </div>
       {/* Right column: Book Details */}
@@ -220,64 +265,66 @@ const BookDetailView: React.FC<BookDetailViewProps> = ({ book, onBack, source, c
         <div className="mb-6 mt-10 flex flex-col justify-start">
           <h2 className="text-4xl md:text-5xl font-extrabold text-slate-100 mb-6 leading-tight mt-0">{book.title}</h2>
           {book.author && <div className="mb-2 text-lg text-slate-400">By {book.author}</div>}
-          {book.contributors && book.contributors.length > 0 && (
-            <div className="mb-2 text-slate-400">Contributors: {book.contributors.join(', ')}</div>
+          {bookAny.contributors && bookAny.contributors.length > 0 && (
+            <div className="mb-2 text-slate-400">Contributors: {bookAny.contributors.join(', ')}</div>
           )}
-          {book.publisher && <div className="mb-2 text-slate-400">Publisher: {book.publisher}</div>}
-          {book.publicationDate && <div className="mb-2 text-slate-400">Published: {book.publicationDate}</div>}
-          {book.isbn && (
-            <div className="mb-2 text-slate-400">Publisher ID: {book.isbn}</div>
+          {publisherText && <div className="mb-2 text-slate-400">Publisher: {publisherText}</div>}
+          {bookAny.publicationDate && <div className="mb-2 text-slate-400">Published: {bookAny.publicationDate}</div>}
+          {bookAny.isbn && (
+            <div className="mb-2 text-slate-400">Publisher ID: {bookAny.isbn}</div>
           )}
-          {book.language && <div className="mb-2 text-slate-400">Language: {book.language}</div>}
-          {(book.format || book.mediaType || book.acquisitionMediaType || book.publicationTypeLabel) && (
+          {bookAny.language && <div className="mb-2 text-slate-400">Language: {bookAny.language}</div>}
+          {(book.format || bookAny.mediaType || bookAny.acquisitionMediaType || bookAny.publicationTypeLabel) && (
             <div className="mb-2 flex flex-col gap-1">
               <div className="mb-2 flex flex-col gap-1">
                 <div className="flex flex-wrap items-center gap-2">
-                  <BookBadges book={book} />
+                  <BookBadges book={book as CatalogBook | BookMetadata} />
                 </div>
                 {/* Warn if mediaType is missing or is text/html */}
-                {(!book.mediaType || book.mediaType === 'text/html') && (
+                {(!bookAny.mediaType || bookAny.mediaType === 'text/html') && (
                   <div className="text-xs text-yellow-400 font-semibold">
-                    Warning: This item may not be a valid book file (mediaType is {book.mediaType ? 'text/html' : 'missing'}).
+                    Warning: This item may not be a valid book file (mediaType is {bookAny.mediaType ? 'text/html' : 'missing'}).
                   </div>
                 )}
               </div>
             </div>
           )}
-          {book.description && <div className="mt-4 text-slate-300 text-base">{book.description}</div>}
+          {(bookAny.description || bookAny.summary) && <div className="mt-4 text-slate-300 text-base">{bookAny.description || bookAny.summary}</div>}
         </div>
         {/* Book Details Section (accessibility, provider) INSIDE container */}
         <div className="space-y-6 p-6 bg-slate-800 rounded-lg border border-slate-700 md:mt-4 md:mr-6 md:mb-4 md:p-8">
           <h3 className="text-xl font-bold text-sky-300 mb-4">Book Details</h3>
           <ul className="space-y-2 text-base">
             <li>
-              <span className="font-semibold text-slate-200">Provider:</span> <span className="text-slate-400">{book.providerName || (source === 'catalog' ? catalogName : 'Imported locally')}</span>
-              {book.providerId ? (
+              <span className="font-semibold text-slate-200">Provider:</span> <span className="text-slate-400">{bookAny.providerName || (source === 'catalog' ? catalogName : 'Imported locally')}</span>
+              {bookAny.providerId ? (
                 <div className="text-xs text-slate-500 mt-1">
                   Provider ID: {
-                    /^https?:\/\//.test(book.providerId)
-                      ? <a href={book.providerId} target="_blank" rel="noopener noreferrer" className="text-sky-400 underline hover:text-sky-600">{book.providerId}</a>
-                      : book.providerId
+                    /^https?:\/\//.test(bookAny.providerId)
+                      ? <a href={bookAny.providerId} target="_blank" rel="noopener noreferrer" className="text-sky-400 underline hover:text-sky-600">{bookAny.providerId}</a>
+                      : bookAny.providerId
                   }
                 </div>
               ) : (
                 <div className="text-xs text-slate-500 mt-1">Imported locally</div>
               )}
             </li>
-            {book.accessibilitySummary && <li><span className="font-semibold text-slate-200">Accessibility:</span> <span className="text-slate-400">{book.accessibilitySummary}</span></li>}
-            {book.accessibilityFeatures && book.accessibilityFeatures.length > 0 && (
-              <li><span className="font-semibold text-slate-200">Features:</span> <span className="text-slate-400">{book.accessibilityFeatures.join(', ')}</span></li>
+            {bookAny.accessibilitySummary && <li><span className="font-semibold text-slate-200">Accessibility:</span> <span className="text-slate-400">{bookAny.accessibilitySummary}</span></li>}
+            {bookAny.accessibilityFeatures && bookAny.accessibilityFeatures.length > 0 && (
+              <li><span className="font-semibold text-slate-200">Features:</span> <span className="text-slate-400">{bookAny.accessibilityFeatures.join(', ')}</span></li>
             )}
-            {book.categories && book.categories.length > 0 && (
+            {bookAny.categories && bookAny.categories.length > 0 && (
               <li>
                 <span className="font-semibold text-slate-200">Categories:</span>{' '}
-                <span className="text-slate-400">{book.categories.map(cat => cat.label || cat.term).join(', ')}</span>
+                <span className="text-slate-400">{bookAny.categories.map((cat: any) => cat.label || cat.term).join(', ')}</span>
               </li>
             )}
-            {(!book.categories || book.categories.length === 0) && book.subjects && book.subjects.length > 0 && (
+            {(!bookAny.categories || bookAny.categories.length === 0) && book.subjects && book.subjects.length > 0 && (
               <li>
                 <span className="font-semibold text-slate-200">Subjects:</span>{' '}
-                <span className="text-slate-400">{book.subjects.join(', ')}</span>
+                <span className="text-slate-400">
+                  {book.subjects.map(s => typeof s === 'string' ? s : s.name).join(', ')}
+                </span>
               </li>
             )}
           </ul>

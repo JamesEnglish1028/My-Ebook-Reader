@@ -6,10 +6,12 @@ import {
   findCredentialForUrl,
   logger,
   maybeProxyForCors,
+  proxiedUrl,
   saveOpdsCredential,
 } from '../../services';
 
 import type {
+  BookRecord,
   Catalog,
   CatalogBook,
   CatalogRegistry,
@@ -19,6 +21,8 @@ import type { ImportStatusState } from './useImportCoordinator';
 
 interface ImportResult {
   success: boolean;
+  bookRecord?: BookRecord;
+  existingBook?: BookRecord;
 }
 
 interface UseAuthAcquisitionCoordinatorOptions {
@@ -32,7 +36,7 @@ interface UseAuthAcquisitionCoordinatorOptions {
     format?: string,
     coverImageUrl?: string | null,
     catalogBookMeta?: Partial<CatalogBook>,
-  ) => Promise<{ success: boolean }>;
+  ) => Promise<{ success: boolean; bookRecord?: BookRecord; existingBook?: BookRecord }>;
   setImportStatus: Dispatch<SetStateAction<ImportStatusState>>;
   setActiveOpdsSource: Dispatch<SetStateAction<Catalog | CatalogRegistry | null>>;
   setCurrentView: Dispatch<SetStateAction<'library' | 'reader' | 'pdfReader' | 'bookDetail' | 'about'>>;
@@ -109,7 +113,7 @@ export const useAuthAcquisitionCoordinator = ({
         try {
           response = await fetch(finalUrl, { headers: downloadHeaders, credentials: 'include', redirect: 'follow' });
         } catch {
-          proxyUrl = await maybeProxyForCors(finalUrl, true);
+          proxyUrl = proxiedUrl(finalUrl);
           response = await fetch(proxyUrl, { headers: {}, credentials: 'omit', redirect: 'follow' });
         }
       } else {
@@ -156,7 +160,7 @@ export const useAuthAcquisitionCoordinator = ({
         setCurrentView('library');
       }
 
-      return { success: result.success };
+      return result;
     } catch (error) {
       logger.error('Error importing from catalog:', error);
       let message = 'Download failed. The file may no longer be available or there was a network issue.';
@@ -198,7 +202,7 @@ export const useAuthAcquisitionCoordinator = ({
           throw new Error(`Download failed: ${response.status}`);
         }
         const bookData = await response.arrayBuffer();
-        await processAndSaveBook(
+        const importResult = await processAndSaveBook(
           bookData,
           credentialPrompt.pendingBook.title,
           credentialPrompt.pendingBook.author,
@@ -208,6 +212,13 @@ export const useAuthAcquisitionCoordinator = ({
           credentialPrompt.pendingBook.format,
           credentialPrompt.pendingBook.coverImage,
         );
+        if (!importResult.success && importResult.existingBook) {
+          setImportStatus({
+            isLoading: false,
+            message: '',
+            error: `A book with the same identifier is already in your library: "${importResult.existingBook.title}".`,
+          });
+        }
       } else {
         setImportStatus({ isLoading: false, message: '', error: 'Failed to resolve acquisition URL.' });
         setCredentialPrompt(initialCredentialPrompt);
@@ -245,7 +256,7 @@ export const useAuthAcquisitionCoordinator = ({
       }
 
       const bookData = await response.arrayBuffer();
-      await processAndSaveBook(
+      const importResult = await processAndSaveBook(
         bookData,
         credentialPrompt.pendingBook.title,
         credentialPrompt.pendingBook.author,
@@ -255,6 +266,13 @@ export const useAuthAcquisitionCoordinator = ({
         credentialPrompt.pendingBook.format,
         credentialPrompt.pendingBook.coverImage,
       );
+      if (!importResult.success && importResult.existingBook) {
+        setImportStatus({
+          isLoading: false,
+          message: '',
+          error: `A book with the same identifier is already in your library: "${importResult.existingBook.title}".`,
+        });
+      }
       setCredentialPrompt(initialCredentialPrompt);
     } catch (error) {
       logger.error('Retry after provider login failed', error);
