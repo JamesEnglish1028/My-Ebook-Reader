@@ -173,7 +173,13 @@ const CatalogView: React.FC<CatalogViewProps> = ({
     }))
   ), [currentUrl, facetGroups]);
 
-  const hasSidebarContent = navigationLinks.length > 0
+  const displayNavigationLinks = useMemo(() => {
+    if (!currentUrl) return navigationLinks;
+    const filtered = navigationLinks.filter((link) => link.url !== currentUrl);
+    return filtered.length > 0 ? filtered : navigationLinks;
+  }, [currentUrl, navigationLinks]);
+
+  const hasSidebarContent = displayNavigationLinks.length > 0
     || normalizedFacetGroups.some((group) => group.links.length > 0);
 
   if (isLoading) {
@@ -203,7 +209,7 @@ const CatalogView: React.FC<CatalogViewProps> = ({
       {hasSidebarContent && (
         <aside className="order-2 w-full lg:order-1 lg:w-56 lg:flex-shrink-0">
           <CatalogSidebar
-            navigationLinks={navigationLinks}
+            navigationLinks={displayNavigationLinks}
             currentNavigationUrl={currentUrl}
             facetGroups={normalizedFacetGroups}
             onNavigationSelect={handleNavigationSelect}
