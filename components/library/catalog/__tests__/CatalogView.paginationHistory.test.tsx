@@ -6,9 +6,13 @@ import { vi, describe, it, expect, beforeEach, afterEach } from 'vitest';
 import { useCatalogContent } from '../../../../hooks';
 import CatalogView from '../CatalogView';
 
-vi.mock('../../../../hooks', () => ({
-  useCatalogContent: vi.fn(),
-}));
+vi.mock('../../../../hooks', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('../../../../hooks')>();
+  return {
+    ...actual,
+    useCatalogContent: vi.fn(),
+  };
+});
 
 // Render helper (no QueryClientProvider needed because we mock the data hook)
 function wrap(node: React.ReactElement) {

@@ -7,9 +7,13 @@ import { useCatalogContent } from '../../../../hooks';
 import type { Catalog, CatalogRegistry } from '../../../../types';
 import CatalogView from '../CatalogView';
 
-vi.mock('../../../../hooks', () => ({
-  useCatalogContent: vi.fn(),
-}));
+vi.mock('../../../../hooks', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('../../../../hooks')>();
+  return {
+    ...actual,
+    useCatalogContent: vi.fn(),
+  };
+});
 
 // Provide a test wrapper that supplies minimal props and mocks
 const initialCatalog: Catalog = {
