@@ -20,6 +20,14 @@ interface AuthContextType {
 const TOKEN_KEY = 'g_access_token';
 const TOKEN_EXPIRY_KEY = 'g_access_token_expires_at';
 
+const parseExpiryMs = (raw: unknown): number | null => {
+  if (typeof raw !== 'number' && typeof raw !== 'string') return null;
+  const num = typeof raw === 'number' ? raw : Number(raw);
+  if (!Number.isFinite(num)) return null;
+  // Heuristic: seconds vs milliseconds.
+  return num > 1e12 ? num : num * 1000;
+};
+
 const AuthContext = createContext<AuthContextType | null>(null);
 
 export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
@@ -54,13 +62,24 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }
   }, [clearStoredToken]);
 
-  const storeAccessToken = useCallback((response: any) => {
-    if (!response?.access_token) return;
+  const storeAccessToken = useCallback((response: any): number | null => {
+    if (!response?.access_token) return null;
     localStorage.setItem(TOKEN_KEY, response.access_token);
-    if (typeof response.expires_in === 'number' && Number.isFinite(response.expires_in)) {
-      const expiresAt = Date.now() + (response.expires_in * 1000);
-      localStorage.setItem(TOKEN_EXPIRY_KEY, String(expiresAt));
+    let expiresAt: number | null = null;
+    const expiresIn = Number(response.expires_in);
+    if (Number.isFinite(expiresIn) && expiresIn > 0) {
+      expiresAt = Date.now() + (expiresIn * 1000);
+    } else {
+      expiresAt = parseExpiryMs(response.expires_at);
     }
+
+    if (expiresAt !== null) {
+      localStorage.setItem(TOKEN_EXPIRY_KEY, String(expiresAt));
+    } else {
+      // Prevent stale expiry from previous sessions causing false "expired" errors.
+      localStorage.removeItem(TOKEN_EXPIRY_KEY);
+    }
+    return expiresAt;
   }, []);
 
   const hasValidStoredToken = useCallback((): string | null => {
@@ -83,7 +102,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     return token;
   }, [clearStoredToken]);
 
-  const fetchUserProfile = useCallback(async (accessToken: string) => {
+  const fetchUserProfile = useCallback(async (accessToken: string, expiresAtMs?: number | null) => {
     try {
       const userInfoResponse = await fetch('https://www.googleapis.com/oauth2/v3/userinfo', {
         headers: { Authorization: `Bearer ${accessToken}` },
@@ -94,7 +113,11 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       const profile = await userInfoResponse.json();
 
       if (window.gapi?.client) {
-        window.gapi.client.setToken({ access_token: accessToken });
+        const tokenPayload: Record<string, unknown> = { access_token: accessToken };
+        if (typeof expiresAtMs === 'number' && Number.isFinite(expiresAtMs)) {
+          tokenPayload.expires_at = expiresAtMs;
+        }
+        window.gapi.client.setToken(tokenPayload);
       }
 
       setUser({
@@ -142,8 +165,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }
 
     if (response?.access_token) {
-      storeAccessToken(response);
-      await fetchUserProfile(response.access_token);
+      const expiresAtMs = storeAccessToken(response);
+      await fetchUserProfile(response.access_token, expiresAtMs);
     }
   }, [fetchUserProfile, requestAccessToken, storeAccessToken]);
 

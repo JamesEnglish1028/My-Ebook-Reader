@@ -135,12 +135,6 @@ const getAccessTokenOrThrow = () => {
     throw new Error('Google session not available. Please sign in before syncing.');
   }
 
-  const storedExpiryRaw = localStorage.getItem(TOKEN_EXPIRY_KEY);
-  const storedExpiry = storedExpiryRaw ? Number(storedExpiryRaw) : NaN;
-  if (Number.isFinite(storedExpiry) && storedExpiry <= Date.now() + 60000) {
-    throw new Error('Google session expired. Please sign in again.');
-  }
-
   let tokenExpiryMs: number | null = null;
   if (typeof token?.expires_at === 'number' && Number.isFinite(token.expires_at)) {
     // Some SDK responses use seconds, others milliseconds.
@@ -148,6 +142,14 @@ const getAccessTokenOrThrow = () => {
   }
   if (tokenExpiryMs !== null && tokenExpiryMs <= Date.now() + 60000) {
     throw new Error('Google session expired. Please sign in again.');
+  }
+
+  // Fallback to stored expiry only when gapi token does not provide one.
+  const storedExpiryRaw = localStorage.getItem(TOKEN_EXPIRY_KEY);
+  const storedExpiry = storedExpiryRaw ? Number(storedExpiryRaw) : NaN;
+  if (tokenExpiryMs === null && Number.isFinite(storedExpiry) && storedExpiry <= Date.now() + 60000) {
+    // Clear stale expiry marker so a fresh in-memory token can still be attempted.
+    localStorage.removeItem(TOKEN_EXPIRY_KEY);
   }
 
   return accessToken;
