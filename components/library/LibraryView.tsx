@@ -4,6 +4,7 @@ import { useQueryClient } from '@tanstack/react-query';
 
 import { mebooksBook } from '../../assets';
 import { bookKeys, useCatalogs, useLocalStorage } from '../../hooks';
+import { db, logger } from '../../services';
 import type { BookMetadata, BookRecord, Catalog, CatalogBook, CatalogRegistry, CoverAnimationData } from '../../types';
 import DuplicateBookModal from '../DuplicateBookModal';
 import { ChevronDownIcon, SettingsIcon } from '../icons';
@@ -236,9 +237,9 @@ const LibraryView: React.FC<LibraryViewProps> = ({
 
           setImportStatus({ isLoading: false, message: 'Import successful!', error: null });
           setTimeout(() => setImportStatus({ isLoading: false, message: '', error: null }), 2000);
-        } else if (result.existingBook) {
+        } else if (!result.success && result.bookRecord && result.existingBook) {
           console.log('[LibraryView] Duplicate book detected');
-          setDuplicateBook(result.bookRecord || null);
+          setDuplicateBook(result.bookRecord);
           setExistingBook(result.existingBook);
           setImportStatus({ isLoading: false, message: '', error: null });
         }
@@ -262,6 +263,56 @@ const LibraryView: React.FC<LibraryViewProps> = ({
       event.target.value = '';
     };
   };
+
+  const handleReplaceBook = useCallback(async () => {
+    if (!duplicateBook || !existingBook) return;
+
+    setImportStatus({ isLoading: true, message: 'Replacing book...', error: null });
+    const bookToSave = { ...duplicateBook, id: existingBook.id };
+
+    setDuplicateBook(null);
+    setExistingBook(null);
+
+    try {
+      await db.saveBook(bookToSave);
+      if (!activeOpdsSource) {
+        await queryClient.invalidateQueries({ queryKey: bookKeys.all });
+      }
+      setImportStatus({ isLoading: false, message: 'Import successful!', error: null });
+      setTimeout(() => setImportStatus({ isLoading: false, message: '', error: null }), 2000);
+    } catch (error) {
+      logger.error('Error replacing book:', error);
+      setImportStatus({ isLoading: false, message: '', error: 'Failed to replace the book in the library.' });
+    }
+  }, [activeOpdsSource, duplicateBook, existingBook, queryClient, setImportStatus]);
+
+  const handleAddAnyway = useCallback(async () => {
+    if (!duplicateBook) return;
+
+    setImportStatus({ isLoading: true, message: 'Saving new copy...', error: null });
+    const bookToSave = { ...duplicateBook };
+
+    setDuplicateBook(null);
+    setExistingBook(null);
+
+    try {
+      await db.saveBook(bookToSave);
+      if (!activeOpdsSource) {
+        await queryClient.invalidateQueries({ queryKey: bookKeys.all });
+      }
+      setImportStatus({ isLoading: false, message: 'Import successful!', error: null });
+      setTimeout(() => setImportStatus({ isLoading: false, message: '', error: null }), 2000);
+    } catch (error) {
+      logger.error('Error adding duplicate book:', error);
+      setImportStatus({ isLoading: false, message: '', error: 'Failed to add the new copy to the library.' });
+    }
+  }, [activeOpdsSource, duplicateBook, queryClient, setImportStatus]);
+
+  const handleCancelDuplicate = useCallback(() => {
+    setDuplicateBook(null);
+    setExistingBook(null);
+    setImportStatus({ isLoading: false, message: '', error: null });
+  }, [setImportStatus]);
 
   const currentTitle = activeOpdsSource ? activeOpdsSource.name : 'My Library';
   const isBrowsingOpds = !!activeOpdsSource;
@@ -448,20 +499,9 @@ const LibraryView: React.FC<LibraryViewProps> = ({
 
       <DuplicateBookModal
         isOpen={!!duplicateBook}
-        onClose={() => {
-          setDuplicateBook(null);
-          setExistingBook(null);
-        }}
-        onReplace={() => {
-          // Handle replace
-          setDuplicateBook(null);
-          setExistingBook(null);
-        }}
-        onAddAnyway={() => {
-          // Handle add anyway
-          setDuplicateBook(null);
-          setExistingBook(null);
-        }}
+        onClose={handleCancelDuplicate}
+        onReplace={handleReplaceBook}
+        onAddAnyway={handleAddAnyway}
         bookTitle={duplicateBook?.title || ''}
       />
     </div>
