@@ -1097,8 +1097,8 @@ export const getAvailableFictionModes = (books: CatalogBook[]): FictionMode[] =>
         if (book.categories && book.categories.length > 0) {
             book.categories.forEach(cat => {
                 if (cat.scheme.includes('fiction') || cat.scheme.includes('genre') || cat.scheme.includes('bisac')) {
-                    const label = cat.label.toLowerCase();
-                    const term = cat.term.toLowerCase();
+                    const label = String(cat.label || '').toLowerCase();
+                    const term = String(cat.term || '').toLowerCase();
 
                     if ((label.includes('fiction') && !label.includes('non-fiction')) ||
                         (term.includes('fiction') && !term.includes('non-fiction'))) {
@@ -1131,7 +1131,7 @@ export const getAvailableFictionModes = (books: CatalogBook[]): FictionMode[] =>
         // Check subjects for fiction classification
         if (book.subjects && book.subjects.length > 0) {
             book.subjects.forEach(subject => {
-                const subjectLower = subject.toLowerCase();
+                const subjectLower = String(subject || '').toLowerCase();
 
                 if (subjectLower.includes('fiction') && !subjectLower.includes('non-fiction')) {
                     hasFiction = true;
@@ -1251,12 +1251,13 @@ export const getAvailableCategories = (books: CatalogBook[], navLinks: CatalogNa
     books.forEach(book => {
         if (book.collections && book.collections.length > 0) {
             book.collections.forEach(collection => {
+                const titleLower = String(collection.title || '').toLowerCase();
                 // Only include categories (groups) - exclude true collections (feeds)
                 const isCategory = collection.href.includes('/groups/') ||
-                    collection.title.toLowerCase() === 'fiction' ||
-                    collection.title.toLowerCase() === 'nonfiction' ||
-                    collection.title.toLowerCase().includes('young adult') ||
-                    collection.title.toLowerCase().includes('children');
+                    titleLower === 'fiction' ||
+                    titleLower === 'nonfiction' ||
+                    titleLower.includes('young adult') ||
+                    titleLower.includes('children');
 
                 if (isCategory) {
                     categories.add(collection.title);
@@ -1268,12 +1269,13 @@ export const getAvailableCategories = (books: CatalogBook[], navLinks: CatalogNa
     // Extract categories from navigation links
     navLinks.forEach(link => {
         if (link.rel === 'collection' || link.rel === 'subsection') {
+            const titleLower = String(link.title || '').toLowerCase();
             // Only include categories (groups)
             const isCategory = link.url.includes('/groups/') ||
-                link.title.toLowerCase() === 'fiction' ||
-                link.title.toLowerCase() === 'nonfiction' ||
-                link.title.toLowerCase().includes('young adult') ||
-                link.title.toLowerCase().includes('children');
+                titleLower === 'fiction' ||
+                titleLower === 'nonfiction' ||
+                titleLower.includes('young adult') ||
+                titleLower.includes('children');
 
             if (isCategory) {
                 categories.add(link.title);
@@ -1291,12 +1293,13 @@ export const getAvailableCollections = (books: CatalogBook[], navLinks: CatalogN
     books.forEach(book => {
         if (book.collections && book.collections.length > 0) {
             book.collections.forEach(collection => {
+                const titleLower = String(collection.title || '').toLowerCase();
                 // Filter out categories (groups) - only include true collections (feeds)
                 const isCategory = collection.href.includes('/groups/') ||
-                    collection.title.toLowerCase() === 'fiction' ||
-                    collection.title.toLowerCase() === 'nonfiction' ||
-                    collection.title.toLowerCase().includes('young adult') ||
-                    collection.title.toLowerCase().includes('children');
+                    titleLower === 'fiction' ||
+                    titleLower === 'nonfiction' ||
+                    titleLower.includes('young adult') ||
+                    titleLower.includes('children');
 
                 if (!isCategory) {
                     collections.add(collection.title);
@@ -1309,12 +1312,13 @@ export const getAvailableCollections = (books: CatalogBook[], navLinks: CatalogN
     // In Palace OPDS: /feed/ URLs are collections, /groups/ URLs are categories
     navLinks.forEach(link => {
         if (link.rel === 'collection' || link.rel === 'subsection') {
+            const titleLower = String(link.title || '').toLowerCase();
             // Distinguish between collections and categories based on URL pattern
             const isCategory = link.url.includes('/groups/') ||
-                link.title.toLowerCase() === 'fiction' ||
-                link.title.toLowerCase() === 'nonfiction' ||
-                link.title.toLowerCase().includes('young adult') ||
-                link.title.toLowerCase().includes('children');
+                titleLower === 'fiction' ||
+                titleLower === 'nonfiction' ||
+                titleLower.includes('young adult') ||
+                titleLower.includes('children');
 
             if (!isCategory) {
                 collections.add(link.title);
