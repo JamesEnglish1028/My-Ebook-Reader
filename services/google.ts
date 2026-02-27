@@ -156,7 +156,7 @@ export const initGoogleClient = (callback: (resp: any) => void): Promise<any> =>
     void (async () => {
       try {
         ensureGoogleClientConfigured();
-        await Promise.all([waitForGlobal('gapi', 'client'), waitForGlobal('google', 'accounts')]);
+        await Promise.all([waitForGlobal('gapi'), waitForGlobal('google', 'accounts')]);
 
         if (!gisInited) {
           tokenClient = window.google.accounts.oauth2.initTokenClient({
