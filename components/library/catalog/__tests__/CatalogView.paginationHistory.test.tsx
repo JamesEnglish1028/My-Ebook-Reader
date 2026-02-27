@@ -3,7 +3,12 @@ import React from 'react';
 import { render, screen, fireEvent, act, cleanup } from '@testing-library/react';
 import { vi, describe, it, expect, beforeEach, afterEach } from 'vitest';
 
-import * as hooks from '../../../../hooks';
+import { useCatalogContent } from '../../../../hooks';
+import CatalogView from '../CatalogView';
+
+vi.mock('../../../../hooks', () => ({
+  useCatalogContent: vi.fn(),
+}));
 
 // Render helper (no QueryClientProvider needed because we mock the data hook)
 function wrap(node: React.ReactElement) {
@@ -24,7 +29,7 @@ const registryCatalog = {
 };
 
 describe('CatalogView pagination history', () => {
-  const useCatalogContentSpy = vi.spyOn(hooks as any, 'useCatalogContent');
+  const mockUseCatalogContent = vi.mocked(useCatalogContent);
 
   beforeEach(() => {
     vi.resetAllMocks();
@@ -36,8 +41,7 @@ describe('CatalogView pagination history', () => {
   });
 
   it('navigates back using local history when feed omits prev', async () => {
-    // First render: catalog with next link but no prev
-    useCatalogContentSpy.mockImplementation(() => ({
+    mockUseCatalogContent.mockImplementation(() => ({
       data: {
         books: [{ id: 'b1', title: 'Book 1', metadata: { title: 'Book 1' } }],
         navigationLinks: [],
@@ -48,9 +52,6 @@ describe('CatalogView pagination history', () => {
       error: null,
       refetch: vi.fn(),
     }));
-
-    const CatalogViewModule = await import('../CatalogView');
-    const CatalogView = CatalogViewModule.default;
 
     const setCatalogNavPath = vi.fn();
 
@@ -68,7 +69,7 @@ describe('CatalogView pagination history', () => {
     expect(nextBtn).toBeEnabled();
 
     // Mock the hook for the second page: has no prev, but we will rely on local history
-    useCatalogContentSpy.mockReturnValueOnce({
+    mockUseCatalogContent.mockReturnValueOnce({
       data: {
         books: [{ id: 'b2', title: 'Book 2', metadata: { title: 'Book 2' } }],
         navigationLinks: [],
@@ -90,7 +91,7 @@ describe('CatalogView pagination history', () => {
 
     // Now simulate that the component shows the second page and exposes a Previous synthesized
     // Provide a return value for the hook representing page 2 with a synthesized prev absent from feed
-    useCatalogContentSpy.mockReturnValueOnce({
+    mockUseCatalogContent.mockReturnValueOnce({
       data: {
         books: [{ id: 'b2', title: 'Book 2', metadata: { title: 'Book 2' } }],
         navigationLinks: [],
@@ -128,7 +129,7 @@ describe('CatalogView pagination history', () => {
   });
 
   it('clears history when switching active source or clicking breadcrumb', async () => {
-    useCatalogContentSpy.mockImplementation(() => ({
+    mockUseCatalogContent.mockImplementation(() => ({
       data: {
         books: [{ id: 'b1', title: 'Book 1', metadata: { title: 'Book 1' } }],
         navigationLinks: [],
@@ -139,9 +140,6 @@ describe('CatalogView pagination history', () => {
       error: null,
       refetch: vi.fn(),
     }));
-
-    const CatalogViewModule = await import('../CatalogView');
-    const CatalogView = CatalogViewModule.default;
 
     const setCatalogNavPath = vi.fn();
 
@@ -155,7 +153,7 @@ describe('CatalogView pagination history', () => {
     ));
 
     // Simulate clicking Next to build history
-    useCatalogContentSpy.mockReturnValueOnce({
+    mockUseCatalogContent.mockReturnValueOnce({
       data: {
         books: [{ id: 'b2', title: 'Book 2', metadata: { title: 'Book 2' } }],
         navigationLinks: [],
@@ -174,7 +172,7 @@ describe('CatalogView pagination history', () => {
     });
 
     // Now simulate switching to another active source (registry) which should reset history
-    useCatalogContentSpy.mockReturnValueOnce({
+    mockUseCatalogContent.mockReturnValueOnce({
       data: { books: [], navigationLinks: [], facetGroups: [], pagination: {} },
       isLoading: true,
       error: null,
@@ -196,7 +194,7 @@ describe('CatalogView pagination history', () => {
     expect(screen.queryByRole('button', { name: /previous page/i })).not.toBeInTheDocument();
 
     // Rerender back to original catalog and ensure history is cleared (no prev synthesized)
-    useCatalogContentSpy.mockReturnValueOnce({
+    mockUseCatalogContent.mockReturnValueOnce({
       data: {
         books: [{ id: 'b1', title: 'Book 1', metadata: { title: 'Book 1' } }],
         navigationLinks: [],
