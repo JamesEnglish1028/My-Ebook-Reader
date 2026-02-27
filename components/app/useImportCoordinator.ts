@@ -2,7 +2,7 @@ import { useCallback, useState } from 'react';
 
 import { db, generatePdfCover, imageUrlToBase64, logger } from '../../services';
 import { extractBookMetadataFromOpf } from '../../services/epubParser';
-import { extractOpfXmlFromEpub } from '../../services/epubZipUtils';
+import { extractCoverImageFromEpub, extractOpfXmlFromEpub } from '../../services/epubZipUtils';
 import type { BookRecord, CatalogBook } from '../../types';
 
 export interface ImportStatusState {
@@ -157,7 +157,6 @@ export const useImportCoordinator = ({ onCatalogImportSuccess }: UseImportCoordi
       setImportStatus((prev) => ({ ...prev, message: 'Extracting cover...' }));
       if (!finalCoverImage) {
         try {
-          const { extractCoverImageFromEpub } = await import('../../services/epubZipUtils');
           finalCoverImage = await extractCoverImageFromEpub(bookData);
         } catch (coverErr) {
           logger.error('[processAndSaveBook] Failed to extract cover image:', coverErr);

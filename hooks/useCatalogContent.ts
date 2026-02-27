@@ -63,7 +63,7 @@ export function useCatalogContent(
           books: [],
           navLinks: [],
           pagination: {},
-          error: result.error,
+          error: 'error' in result ? result.error : 'Failed to fetch catalog content',
         };
       }
 

@@ -1,4 +1,4 @@
-import React, { lazy, Suspense, useCallback, useEffect, useState } from 'react';
+import React, { Suspense, useCallback, useEffect, useState } from 'react';
 import { QueryClient, QueryClientProvider, QueryErrorResetBoundary } from '@tanstack/react-query';
 import { ReactQueryDevtools } from '@tanstack/react-query-devtools';
 import 'react-pdf/dist/Page/AnnotationLayer.css';
@@ -13,6 +13,7 @@ import {
   useToast,
 } from './components';
 import { GlobalModals, ViewRenderer } from './components/app';
+import PdfReaderView from './components/PdfReaderView';
 import { useAuthAcquisitionCoordinator } from './components/app/useAuthAcquisitionCoordinator';
 import { useImportCoordinator } from './components/app/useImportCoordinator';
 import { useSyncCoordinator } from './components/app/useSyncCoordinator';
@@ -26,8 +27,6 @@ import type {
   CatalogRegistry,
   CoverAnimationData,
 } from './types';
-
-const PdfReaderView = lazy(() => import('./components/PdfReaderView'));
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -367,11 +366,9 @@ const App: React.FC = () => (
             <Route
               path="/pdf/:id"
               element={(
-                <Suspense fallback={<div className="w-full h-full flex items-center justify-center">Loading PDF viewer...</div>}>
-                  <ErrorBoundary onReset={() => { reset(); window.location.replace('/'); }} fallbackMessage="There was an error loading the PDF viewer.">
-                    <PdfReaderViewWrapper />
-                  </ErrorBoundary>
-                </Suspense>
+                <ErrorBoundary onReset={() => { reset(); window.location.replace('/'); }} fallbackMessage="There was an error loading the PDF viewer.">
+                  <PdfReaderViewWrapper />
+                </ErrorBoundary>
               )}
             />
             <Route

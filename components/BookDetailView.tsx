@@ -200,11 +200,11 @@ const BookDetailView: React.FC<BookDetailViewProps> = ({ book, onBack, source, c
       if (result.success) {
         setShowImportSuccess(true);
       } else if (result.existingBook && setImportStatus) {
-        setImportStatus({
+        (setImportStatus as React.Dispatch<React.SetStateAction<LegacyImportStatus>>)({
           isLoading: false,
           message: '',
           error: `A book with the same identifier is already in your library: "${result.existingBook.title}".`,
-        } as ImportStatus);
+        });
       }
     }
     setIsImporting(false);

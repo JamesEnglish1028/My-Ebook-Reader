@@ -104,7 +104,11 @@ async function encryptSecret(key: CryptoKey, value: string): Promise<{ cipher: s
 async function decryptSecret(key: CryptoKey, cipherText: string, ivB64: string): Promise<string> {
   const iv = base64ToBytes(ivB64);
   const ciphertext = base64ToBytes(cipherText);
-  const decrypted = await crypto.subtle.decrypt({ name: 'AES-GCM', iv }, key, ciphertext);
+  const ivBytes = new Uint8Array(iv.byteLength);
+  ivBytes.set(iv);
+  const cipherBytes = new Uint8Array(ciphertext.byteLength);
+  cipherBytes.set(ciphertext);
+  const decrypted = await crypto.subtle.decrypt({ name: 'AES-GCM', iv: ivBytes }, key, cipherBytes);
   return new TextDecoder().decode(new Uint8Array(decrypted));
 }
 

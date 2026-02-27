@@ -95,9 +95,16 @@ function parseOpds2NavigationLinks(jsonData: any, baseUrl: string): CatalogNavig
     (jsonData.navigation as Opds2Link[]).forEach((link) => {
       if (link.href && link.title) {
         const url = new URL(link.href, baseUrl).href;
-        const inferredRel = link.rel || (link.type && typeof link.type === 'string' && link.type.includes('application/opds+json') ? 'subsection' : '');
+        let inferredRel = '';
+        if (typeof link.rel === 'string') {
+          inferredRel = normalizeRel(link.rel);
+        } else if (Array.isArray(link.rel) && link.rel.length > 0) {
+          inferredRel = normalizeRel(String(link.rel[0]));
+        } else {
+          inferredRel = (link.type && typeof link.type === 'string' && link.type.includes('application/opds+json')) ? 'subsection' : '';
+        }
         const isCatalog = !!(link.type && typeof link.type === 'string' && link.type.includes('application/opds+json')) || !!link.isCatalog;
-  navLinks.push({ title: link.title, url, rel: Array.isArray(inferredRel) ? String(inferredRel[0]) : inferredRel, isCatalog });
+        navLinks.push({ title: link.title, url, rel: Array.isArray(inferredRel) ? String(inferredRel[0]) : inferredRel, isCatalog });
       }
     });
   }
@@ -141,6 +148,7 @@ function parseOpds2Pagination(jsonData: any, baseUrl: string): CatalogPagination
 
 import credentialsService from './credentials';
 import { logger } from './logger';
+import { parseOpds1Xml } from './opds';
 import { maybeProxyForCors, proxiedUrl } from './utils';
 
 // Helper: convert a Uint8Array into a binary string (latin1) without triggering decoding
@@ -311,17 +319,15 @@ export function getCachedEtag(url: string) {
 }
 
 
-export const parseOpds2Json = (jsonData: any, baseUrl: string): { books: CatalogBook[], navLinks: CatalogNavigationLink[], pagination: CatalogPagination } => {
-  console.error('[OPDS2] parseOpds2Json REACHED', { baseUrl, typeofJson: typeof jsonData });
+export const parseOpds2Json = (jsonData: any, baseUrl: string): { books: CatalogBook[], navLinks: CatalogNavigationLink[], pagination: CatalogPagination, error?: string } => {
+  logger.debug('[OPDS2] parseOpds2Json start', { baseUrl, typeofJson: typeof jsonData });
   try {
     if (typeof jsonData !== 'object' || jsonData === null) {
       throw new Error('Invalid OPDS2 catalog format: input is not an object');
     }
-    try {
-      const keys = Object.keys(jsonData);
-      console.error('[OPDS2] parseOpds2Json START', { baseUrl, keys });
-    } catch (err) {
-      console.error('[OPDS2] parseOpds2Json Object.keys ERROR', {
+    try { logger.debug('[OPDS2] keys', { baseUrl, keys: Object.keys(jsonData) }); }
+    catch (err) {
+      logger.warn('[OPDS2] Object.keys failed', {
         baseUrl,
         type: typeof jsonData,
         constructor: jsonData && jsonData.constructor ? jsonData.constructor.name : undefined,
@@ -333,26 +339,6 @@ export const parseOpds2Json = (jsonData: any, baseUrl: string): { books: Catalog
   const pagination: CatalogPagination = parseOpds2Pagination(jsonData, baseUrl);
 
   const toArray = (v: any) => Array.isArray(v) ? v : v ? [v] : [];
-
-    // Support OPDS2 registry feeds with top-level 'groups' array
-    if (jsonData.groups && Array.isArray(jsonData.groups)) {
-      jsonData.groups.forEach((group: any) => {
-        const groupTitle = group.metadata?.title || '';
-        if (group.navigation && Array.isArray(group.navigation)) {
-          group.navigation.forEach((link: any) => {
-            if (link.href && link.title) {
-              const url = new URL(link.href, baseUrl).href;
-              // Use group title as prefix if present
-              const navTitle = groupTitle ? `${groupTitle}: ${link.title}` : link.title;
-              // Normalize rel: treat 'modules:xxxx' as 'collection'
-              const inferredRel = normalizeRel(link.rel) || (link.type && typeof link.type === 'string' && link.type.includes('application/opds+json') ? 'subsection' : '');
-              const isCatalog = !!(link.type && typeof link.type === 'string' && link.type.includes('application/opds+json')) || !!link.isCatalog;
-              navLinks.push({ title: navTitle, url, rel: inferredRel, isCatalog });
-            }
-          });
-        }
-      });
-    }
 
   // pagination / top-level links
   if (jsonData.links && Array.isArray(jsonData.links)) {
@@ -388,6 +374,147 @@ function normalizeFormat(type?: string, indirectType?: string): string | undefin
   return undefined;
 }
 
+/**
+ * Infer identifier scheme from value or format
+ */
+function inferIdentifierScheme(id: string): string | undefined {
+  if (id.startsWith('urn:isbn:')) return 'isbn';
+  if (id.startsWith('urn:issn:')) return 'issn';
+  if (id.startsWith('urn:uuid:')) return 'uuid';
+  if (id.startsWith('http://') || id.startsWith('https://')) return 'uri';
+  // Try to detect ISBN-like patterns (10 or 13 digits)
+  if (/^\d{10}(\d{3})?$/.test(id)) return 'isbn';
+  return undefined;
+}
+
+/**
+ * Extract identifier information with schemes
+ */
+function extractIdentifiers(metadata: any): import('../domain/catalog').IdentifierInfo[] | undefined {
+  const identifiers: import('../domain/catalog').IdentifierInfo[] = [];
+  
+  if (!metadata.identifier) return undefined;
+  
+  const ids = Array.isArray(metadata.identifier) ? metadata.identifier : [metadata.identifier];
+  ids.forEach((id: any) => {
+    if (typeof id === 'string') {
+      identifiers.push({ 
+        value: id, 
+        scheme: inferIdentifierScheme(id) 
+      });
+    } else if (id && typeof id === 'object') {
+      const value = id.value || id.identifier || String(id);
+      identifiers.push({
+        value,
+        scheme: id.scheme || id.schemeURI || inferIdentifierScheme(value)
+      });
+    }
+  });
+  
+  return identifiers.length > 0 ? identifiers : undefined;
+}
+
+/**
+ * Extract enhanced subject information with scheme
+ */
+function extractPublicationSubjects(metadata: any): import('../domain/catalog').PublicationSubject[] | undefined {
+  if (!Array.isArray(metadata.subject) || metadata.subject.length === 0) return undefined;
+  
+  const subjects: import('../domain/catalog').PublicationSubject[] = [];
+  
+  metadata.subject.forEach((s: any) => {
+    if (typeof s === 'string') {
+      subjects.push({ name: s });
+    } else if (s && typeof s === 'object') {
+      const name = s.name || s.label;
+      if (name) {
+        subjects.push({
+          name: String(name).trim(),
+          scheme: s.scheme || s.schemeURI,
+          code: s.term || s.code
+        });
+      }
+    }
+  });
+  
+  return subjects.length > 0 ? subjects : undefined;
+}
+
+/**
+ * Extract contributor information with roles
+ */
+function extractContributors(metadata: any): import('../domain/catalog').ContributorInfo[] | undefined {
+  const contributors: import('../domain/catalog').ContributorInfo[] = [];
+  
+  const contrib = metadata.contributor || metadata.contributors;
+  if (!contrib) return undefined;
+  
+  const arr = Array.isArray(contrib) ? contrib : [contrib];
+  
+  arr.forEach((c: any) => {
+    if (typeof c === 'string') {
+      contributors.push({ name: c });
+    } else if (c && typeof c === 'object') {
+      const name = c.name || c.label;
+      if (name) {
+        contributors.push({
+          name: String(name).trim(),
+          role: c.role || c.type,
+          uri: c.uri || c.identifier
+        });
+      }
+    }
+  });
+  
+  return contributors.length > 0 ? contributors : undefined;
+}
+
+/**
+ * Extract accessibility metadata
+ */
+function extractAccessibilityMetadata(metadata: any): import('../domain/catalog').AccessibilityMetadata | undefined {
+  if (!metadata.accessMode && !metadata.accessibilityFeature && !metadata.accessibilityHazard && !metadata.conformsTo) {
+    return undefined;
+  }
+  
+  return {
+    modes: metadata.accessMode
+      ? Array.isArray(metadata.accessMode) ? metadata.accessMode : [metadata.accessMode]
+      : undefined,
+    modesSufficient: metadata.accessModesSufficient
+      ? Array.isArray(metadata.accessModesSufficient) 
+        ? metadata.accessModesSufficient 
+        : [metadata.accessModesSufficient]
+      : undefined,
+    features: metadata.accessibilityFeature
+      ? Array.isArray(metadata.accessibilityFeature)
+        ? metadata.accessibilityFeature
+        : [metadata.accessibilityFeature]
+      : undefined,
+    hazards: metadata.accessibilityHazard
+      ? Array.isArray(metadata.accessibilityHazard)
+        ? metadata.accessibilityHazard
+        : [metadata.accessibilityHazard]
+      : undefined,
+    summary: metadata.accessibilitySummary,
+    certification: metadata.conformsTo ? {
+      standard: String(metadata.conformsTo),
+    } : undefined,
+  };
+}
+
+/**
+ * Determine acquisition type from link relationships
+ */
+function getAcquisitionType(rels: string[]): import('../domain/catalog').AcquisitionType {
+  const relStr = rels.join(' ').toLowerCase();
+  if (relStr.includes('/open-access')) return 'open-access';
+  if (relStr.includes('/borrow') || relStr.includes('/loan')) return 'borrow';
+  if (relStr.includes('/buy')) return 'buy';
+  if (relStr.includes('/sample')) return 'sample';
+  return 'generic';
+}
+
 // Helper: Normalize mediumFormatCode (Web for text/html, else mediaType)
 // Helper: Process a single OPDS2 publication and return a CatalogBook or undefined
 function processOpds2Publication(pub: Opds2Publication, baseUrl: string): CatalogBook | undefined {
@@ -415,10 +542,31 @@ function processOpds2Publication(pub: Opds2Publication, baseUrl: string): Catalo
     const found = metadata.identifier.find((id: string) => typeof id === 'string');
     if (found) providerId = found;
   }
-  let subjects: string[] | undefined = undefined;
+  // Series may be provided as metadata.series or belongsTo.series in some feeds
+  let series: { name: string; position?: number } | undefined;
+  try {
+    const rawSeries = (metadata as any).series || (metadata as any).belongsTo?.series;
+    const s = Array.isArray(rawSeries) ? rawSeries[0] : rawSeries;
+    const name = typeof s === 'string' ? s : s?.name;
+    const position = typeof s === 'object' && s ? (s.position ?? s.ordinal ?? s.index) : undefined;
+    if (name) series = { name, position: typeof position === 'number' ? position : undefined };
+  } catch (_) { /* tolerate malformed series */ }
+  
+  // Extract categories from subject field (for backward compatibility)
+  let categories: { scheme: string; term: string; label: string }[] | undefined = undefined;
   if (Array.isArray(metadata.subject)) {
-    subjects = metadata.subject.map((s: any) => typeof s === 'string' ? s : (s?.name || '')).filter((s: string) => !!s);
+    const cats: { scheme: string; term: string; label: string }[] = [];
+    metadata.subject.forEach((s: any) => {
+      if (s && typeof s === 'object') {
+        const name = (s.name || s.label || '').trim();
+        const term = (s.term || s.code || name || '').trim();
+        const scheme = (s.scheme || s.schemeURI || 'http://opds-spec.org/subject').trim();
+        if (name || term) cats.push({ scheme, term: term || name, label: name || term });
+      }
+    });
+    if (cats.length > 0) categories = cats;
   }
+  
   const cover = (pub.images && pub.images[0]) || (metadata.image && metadata.image[0]);
   const coverImage = cover?.href ? new URL(cover.href, baseUrl).href : (cover?.url ? new URL(cover.url, baseUrl).href : null);
   let links: Opds2Link[] = [];
@@ -449,12 +597,14 @@ function processOpds2Publication(pub: Opds2Publication, baseUrl: string): Catalo
   });
   const alternativeFormats = acquisitions.map(a => {
     const format = normalizeFormat(a.type, a.indirectType) || 'UNKNOWN';
+    const acquisitionType = getAcquisitionType(a.rels);
     const isOpenAccess = a.rels.some(r => r.includes('/open-access') || r === 'http://opds-spec.org/acquisition/open-access');
     return {
       format,
       downloadUrl: a.href,
       mediaType: a.type,
       isOpenAccess,
+      acquisitionType,
     };
   });
   let chosen: typeof acquisitions[0] | undefined;
@@ -496,6 +646,63 @@ function processOpds2Publication(pub: Opds2Publication, baseUrl: string): Catalo
   if (chosen && chosen.type) {
     mediumFormatCode = normalizeMediumFormatCode(schemaType, chosen.type);
   }
+
+  // Extract enhanced metadata for OPDS 2
+  const language = metadata.language
+    ? Array.isArray(metadata.language) ? metadata.language[0] : metadata.language
+    : undefined;
+
+  const duration = metadata.duration || (metadata as any).durationInSeconds
+    ? parseInt(String(metadata.duration || (metadata as any).durationInSeconds), 10)
+    : undefined;
+
+  const extent = metadata.extent
+    ? parseInt(String(metadata.extent), 10)
+    : undefined;
+
+  const source = metadata.source || (metadata as any).sourceIdentifier;
+
+  const identifiers = extractIdentifiers(metadata);
+  const publicationSubjects = extractPublicationSubjects(metadata);
+  const contributorInfo = extractContributors(metadata);
+  const accessibility = extractAccessibilityMetadata(metadata);
+
+  // Determine acquisition type
+  const acquisitionType = chosen ? getAcquisitionType(chosen.rels) : undefined;
+
+  // Extract borrowing availability (OPDS 2 opds namespace properties)
+  const borrowPeriodDays = pub.properties?.['opds:borrowPeriod']
+    ? parseInt(String(pub.properties['opds:borrowPeriod']), 10)
+    : undefined;
+  const copiesAvailable = pub.properties?.['opds:copies']
+    ? parseInt(String(pub.properties['opds:copies']), 10)
+    : undefined;
+  const holdsCount = pub.properties?.['opds:holds']
+    ? parseInt(String(pub.properties['opds:holds']), 10)
+    : undefined;
+
+  // Extract series as array
+  let seriesArray: import('../domain/catalog').SeriesInfo[] | undefined;
+  try {
+    const rawSeries = (metadata as any).series || (metadata as any).belongsTo?.series;
+    if (rawSeries) {
+      const arr = Array.isArray(rawSeries) ? rawSeries : [rawSeries];
+      seriesArray = arr
+        .map((s: any) => {
+          const name = typeof s === 'string' ? s : s?.name;
+          if (!name) return undefined;
+          return {
+            name: String(name).trim(),
+            position: typeof s === 'object' && s ? (s.position ?? s.ordinal ?? s.index) : undefined,
+            volume: s?.volume,
+            url: s?.uri || s?.url
+          };
+        })
+        .filter((s: any) => s !== undefined);
+      if (seriesArray.length === 0) seriesArray = undefined;
+    }
+  } catch (_) { /* tolerate malformed series */ }
+
   if (title && (downloadUrl || coverImage)) {
     return {
       title,
@@ -506,15 +713,28 @@ function processOpds2Publication(pub: Opds2Publication, baseUrl: string): Catalo
       publisher: publisher || undefined,
       publicationDate: publicationDate || undefined,
       providerId: providerId || undefined,
-      subjects: subjects || undefined,
+      subjects: publicationSubjects || undefined,
+      contributors: contributorInfo || undefined,
+      categories: categories || undefined,
       collections: collections.length > 0 ? collections : undefined,
       format: format || undefined,
+      acquisitionType,
       mediaType: chosen && chosen.type ? String(chosen.type).toLowerCase().trim() : undefined,
       isOpenAccess: isOpenAccess ? true : undefined,
       alternativeFormats: alternativeFormats.length > 0 ? alternativeFormats : undefined,
+      borrowPeriodDays,
+      copiesAvailable,
+      holdsCount,
       schemaOrgType,
       publicationTypeLabel,
       mediumFormatCode,
+      series: seriesArray,
+      language,
+      duration,
+      extent,
+      source,
+      identifiers,
+      accessibility,
     };
   }
   return undefined;
@@ -549,7 +769,7 @@ function normalizeMediumFormatCode(schemaType: string | undefined, type?: string
   }
 
   if (jsonData.publications && Array.isArray(jsonData.publications)) {
-    console.log('[OPDS2] Parsing', jsonData.publications.length, 'publications from feed');
+    logger.debug('[OPDS2] Parsing publications', { count: jsonData.publications.length, baseUrl });
     if (jsonData.publications && Array.isArray(jsonData.publications)) {
       for (const pub of jsonData.publications) {
         // Normalize links: some providers (e.g., Palace) embed XML serialized <link> elements inside JSON string fields.
@@ -608,27 +828,12 @@ function normalizeMediumFormatCode(schemaType: string | undefined, type?: string
     console.warn('[OPDS2] Warning: feed is missing required metadata and publications.');
   }
 
-  // navigation fallback
-  if (jsonData.navigation && Array.isArray(jsonData.navigation)) {
-    jsonData.navigation.forEach((link: any) => {
-      if (link.href && link.title) {
-        const url = new URL(link.href, baseUrl).href;
-        // Some registries omit a rel on navigation items but provide a type
-        // indicating the target is itself an OPDS catalog. Treat those as
-        // subsections/catalogs so the UI can present them as terminal catalog
-        // links (able to be added) rather than opaque unrelated links.
-        const inferredRel = link.rel || (link.type && typeof link.type === 'string' && link.type.includes('application/opds+json') ? 'subsection' : '');
-        const isCatalog = !!(link.type && typeof link.type === 'string' && link.type.includes('application/opds+json')) || !!link.isCatalog;
-        navLinks.push({ title: link.title, url, rel: inferredRel, isCatalog });
-      }
-    });
-  }
-
-    console.error('[OPDS2] parseOpds2Json END', { navLinks, books, pagination });
+    logger.debug('[OPDS2] parseOpds2Json complete', { navLinks: navLinks.length, books: books.length, paginationKeys: Object.keys(pagination) });
     return { books, navLinks, pagination };
   } catch (err) {
-    console.error('[OPDS2] parseOpds2Json ERROR', err);
-    return { books: [], navLinks: [], pagination: {} };
+    const message = err instanceof Error ? err.message : 'Unknown OPDS2 parse error';
+    logger.error('[OPDS2] parseOpds2Json error', err);
+    return { books: [], navLinks: [], pagination: {}, error: message };
   }
 };
 
@@ -662,8 +867,18 @@ export const fetchOpds2Feed = async (url: string, credentials?: { username: stri
     return { status: resp.status, ...(parseOpds2Json(json, url) as any) };
   }
 
-  // If feed is XML/Atom, return empty (we only handle OPDS2 here for now)
-  return { status: resp.status, books: [], navLinks: [], pagination: {} };
+  // If feed looks like XML/Atom, attempt an OPDS1 parse directly.
+  if (contentType.includes('xml') || text.trim().startsWith('<')) {
+    try {
+      const parsed = parseOpds1Xml(text, url);
+      return { status: resp.status, ...parsed };
+    } catch (e) {
+      const message = e instanceof Error ? e.message : 'Failed to parse XML/OPDS1 content';
+      return { status: resp.status, books: [], navLinks: [], pagination: {}, error: message };
+    }
+  }
+
+  return { status: resp.status, books: [], navLinks: [], pagination: {}, error: 'Unsupported content type for OPDS2 fetch' };
 };
 
 export const borrowOpds2Work = async (borrowHref: string, credentials?: { username: string; password: string } | null) => {
@@ -724,42 +939,11 @@ export const resolveAcquisitionChain = async (href: string, credentials?: { user
   // appropriate. However, if credentials are supplied and the probe selects
   // a public proxy, fail early (public proxies often strip Authorization).
   const current = await maybeProxyForCors(href);
-  try {
-    const usingPublicProxy = typeof current === 'string' && current.includes('corsproxy.io');
-    if (usingPublicProxy && credentials) {
-      const err: any = new Error('Acquisition would use a public CORS proxy which may strip Authorization or block POST requests. Configure an owned proxy (VITE_OWN_PROXY_URL) to perform authenticated borrows.');
-      err.proxyUsed = true;
-      throw err;
-    }
-  } catch (e) {
-    throw e;
-  }
-  // If the chosen fetch URL indicates we're using the public CORS proxy and
-  // credentials are present, error early to avoid sending Authorization through
-  // a proxy that may strip it.
-  try {
-    const usingPublicProxy = typeof current === 'string' && current.includes('corsproxy.io');
-    if (usingPublicProxy && credentials) {
-      const err: any = new Error('Acquisition would use a public CORS proxy which may strip Authorization or block POST requests. Configure an owned proxy (VITE_OWN_PROXY_URL) to perform authenticated borrows.');
-      err.proxyUsed = true;
-      throw err;
-    }
-  } catch (e) {
-    throw e;
-  }
-  // If the chosen fetch URL indicates we're using the public CORS proxy and
-  // credentials are present (or we prefer GET when creds are present), fail
-  // early with a clear error recommending an owned proxy.
-  try {
-    const usingPublicProxy = typeof current === 'string' && current.includes('corsproxy.io');
-    if (usingPublicProxy && credentials) {
-      const err: any = new Error('Acquisition would use a public CORS proxy which may strip Authorization or block POST requests. Configure an owned proxy (VITE_OWN_PROXY_URL) to perform authenticated borrows.');
-      err.proxyUsed = true;
-      throw err;
-    }
-  } catch (e) {
-    // rethrow to surface to caller
-    throw e;
+  const usingPublicProxy = typeof current === 'string' && current.includes('corsproxy.io');
+  if (usingPublicProxy && credentials) {
+    const err: any = new Error('Acquisition would use a public CORS proxy which may strip Authorization or block POST requests. Configure an owned proxy (VITE_OWN_PROXY_URL) to perform authenticated borrows.');
+    err.proxyUsed = true;
+    throw err;
   }
   const makeHeaders = (withCreds = false) => {
     const h: Record<string, string> = { 'Accept': 'application/json, text/json, */*' };
