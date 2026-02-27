@@ -116,7 +116,14 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     if (!tokenClientRef.current) return;
     tokenRequestModeRef.current = mode;
     const prompt = mode === 'interactive_consent' ? 'consent' : '';
-    tokenClientRef.current.requestAccessToken({ prompt });
+    try {
+      tokenClientRef.current.requestAccessToken({ prompt });
+    } catch (error) {
+      console.error('Google token request failed to start:', error);
+      tokenRequestModeRef.current = 'none';
+      const message = error instanceof Error ? error.message : 'Google sign-in request failed.';
+      setAuthError(message);
+    }
   }, []);
 
   const handleCredentialResponse = useCallback(async (response: any) => {
@@ -167,13 +174,16 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   useEffect(() => {
     if (!isInitialized || authStatus !== 'ready') return;
 
+    const hadStoredToken = Boolean(localStorage.getItem(TOKEN_KEY));
     const storedToken = hasValidStoredToken();
     if (storedToken) {
       void fetchUserProfile(storedToken);
       return;
     }
 
-    if (tokenClient) {
+    // Only attempt automatic silent restoration when a prior token existed.
+    // This avoids background token requests on first-run sessions.
+    if (tokenClient && hadStoredToken) {
       requestAccessToken('restore_silent');
     }
   }, [authStatus, fetchUserProfile, hasValidStoredToken, isInitialized, requestAccessToken, tokenClient]);
