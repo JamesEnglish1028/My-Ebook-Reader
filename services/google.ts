@@ -33,6 +33,13 @@ const toUserFacingError = (error: unknown, fallback: string): Error => {
   if (status === 401 || status === 403) {
     return new Error('Google session expired or permission was revoked. Please sign in again.');
   }
+  if (error && typeof error === 'object') {
+    const candidate = error as { error?: string; details?: string; message?: string };
+    const parts = [candidate.error, candidate.details, candidate.message].filter((v): v is string => Boolean(v && v.trim().length > 0));
+    if (parts.length > 0) {
+      return new Error(parts.join(' - '));
+    }
+  }
   if (error instanceof Error) return error;
   return new Error(fallback);
 };
@@ -97,8 +104,8 @@ const ensureGapiInitialized = async () => {
 
     window.gapi.load('client', () => {
       void window.gapi.client.init({
-        clientId: GOOGLE_CLIENT_ID,
-        scope: DRIVE_API_SCOPE,
+        // OAuth is handled via Google Identity Services token client.
+        // gapi client only needs discovery docs for Drive API calls.
         discoveryDocs: ['https://www.googleapis.com/discovery/v1/apis/drive/v3/rest'],
       }).then(() => {
         gapiInited = true;
