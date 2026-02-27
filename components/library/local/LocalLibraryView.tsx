@@ -1,10 +1,9 @@
 import React, { useCallback, useState } from 'react';
 
-import { useBooks, useDeleteBook, useLocalStorage, useSortedBooks } from '../../../hooks';
+import { useBooks, useDeleteBook } from '../../../hooks';
 import type { BookMetadata, CoverAnimationData } from '../../../types';
 import DeleteConfirmationModal from '../../DeleteConfirmationModal';
 import { Error as ErrorDisplay, Loading } from '../../shared';
-import { ImportButton, SortControls } from '../local';
 import { BookGrid, EmptyState } from '../shared';
 
 interface LocalLibraryViewProps {
@@ -34,8 +33,6 @@ const LocalLibraryView: React.FC<LocalLibraryViewProps> = ({
 }) => {
   console.log('[LocalLibraryView] mounted. libraryRefreshFlag:', libraryRefreshFlag);
   const [bookToDelete, setBookToDelete] = useState<BookMetadata | null>(null);
-  const [sortOrder, setSortOrder] = useLocalStorage<string>('ebook-sort-order', 'added-desc');
-  const [isSortDropdownOpen, setIsSortDropdownOpen] = useState(false);
 
   // Fetch books using React Query
   const { data: books = [], isLoading, error, refetch } = useBooks();
@@ -46,10 +43,7 @@ const LocalLibraryView: React.FC<LocalLibraryViewProps> = ({
   }, [libraryRefreshFlag, refetch]);
 
   // Delete book mutation
-  const { mutate: deleteBook, isPending: isDeleting } = useDeleteBook();
-
-  // Sort books using custom hook
-  const sortedBooks = useSortedBooks(books, sortOrder as any);
+  const { mutate: deleteBook } = useDeleteBook();
 
   // Handle book click - open Book Detail modal
   const handleLocalBookClick = (book: BookMetadata) => {
@@ -73,11 +67,6 @@ const LocalLibraryView: React.FC<LocalLibraryViewProps> = ({
     });
   }, [bookToDelete, deleteBook]);
 
-  // Handle sort change
-  const handleSortChange = (newSortOrder: string) => {
-    setSortOrder(newSortOrder);
-  };
-
   // Show loading state
   if (isLoading) {
     return <Loading variant="skeleton" message="Loading library..." />;
@@ -99,7 +88,7 @@ const LocalLibraryView: React.FC<LocalLibraryViewProps> = ({
     <>
       {books.length > 0 ? (
         <BookGrid
-          books={sortedBooks}
+          books={books}
           onBookClick={handleLocalBookClick}
           onBookContextMenu={handleBookContextMenu}
         />
@@ -118,6 +107,4 @@ const LocalLibraryView: React.FC<LocalLibraryViewProps> = ({
   );
 };
 
-// Export additional components needed by parent
-export { ImportButton, SortControls };
 export default LocalLibraryView;

@@ -4,7 +4,7 @@ import { useQueryClient } from '@tanstack/react-query';
 
 import { mebooksBook } from '../../assets';
 import { useAuth } from '../../contexts/AuthContext';
-import { bookKeys, useCatalogs, useLocalStorage } from '../../hooks';
+import { bookKeys, useCatalogs } from '../../hooks';
 import { db, logger } from '../../services';
 import type { BookMetadata, BookRecord, Catalog, CatalogBook, CatalogRegistry, CoverAnimationData } from '../../types';
 import DuplicateBookModal from '../DuplicateBookModal';
@@ -12,7 +12,7 @@ import { ChevronDownIcon, SettingsIcon } from '../icons';
 import ManageCatalogsModal from '../ManageCatalogsModal';
 
 import { CatalogView } from './catalog';
-import { ImportButton, LocalLibraryView, SortControls } from './local';
+import { ImportButton, LocalLibraryView } from './local';
 
 interface LibraryViewProps {
   libraryRefreshFlag: number;
@@ -87,8 +87,6 @@ const LibraryView: React.FC<LibraryViewProps> = ({
   const [isCatalogDropdownOpen, setIsCatalogDropdownOpen] = useState(false);
   const [isManageCatalogsOpen, setIsManageCatalogsOpen] = useState(false);
   const [isSettingsMenuOpen, setIsSettingsMenuOpen] = useState(false);
-  const [isSortDropdownOpen, setIsSortDropdownOpen] = useState(false);
-  const [sortOrder, setSortOrder] = useLocalStorage<string>('ebook-sort-order', 'added-desc');
   const [rootLevelCollections, setRootLevelCollections] = useState<string[]>([]);
 
   // Duplicate book modal
@@ -419,17 +417,6 @@ const LibraryView: React.FC<LibraryViewProps> = ({
             </>
           )}
 
-          {/* Sort (only for local library) */}
-          {!isBrowsingOpds && (
-            <SortControls
-              sortOrder={sortOrder}
-              onSortChange={setSortOrder}
-              isOpen={isSortDropdownOpen}
-              onToggle={() => setIsSortDropdownOpen(prev => !prev)}
-              onClose={() => setIsSortDropdownOpen(false)}
-            />
-          )}
-
           {/* Import Button (only for local library) */}
           {!isBrowsingOpds && (
             <ImportButton
@@ -516,6 +503,7 @@ const LibraryView: React.FC<LibraryViewProps> = ({
           />
         ) : (
           <LocalLibraryView
+            libraryRefreshFlag={libraryRefreshFlag}
             onOpenBook={onOpenBook}
             onShowBookDetail={onShowBookDetail}
             onFileChange={handleFileChange}
