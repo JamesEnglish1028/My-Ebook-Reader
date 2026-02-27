@@ -7,6 +7,10 @@ interface ImportButtonProps {
   isLoading: boolean;
   /** Callback when file is selected */
   onFileChange: (event: React.ChangeEvent<HTMLInputElement>) => void;
+  /** Optional callback when the control is activated */
+  onActivate?: () => void;
+  /** Whether to always show the label text on small screens */
+  alwaysShowLabel?: boolean;
   /** Additional class names */
   className?: string;
 }
@@ -20,6 +24,8 @@ interface ImportButtonProps {
 const ImportButton: React.FC<ImportButtonProps> = ({
   isLoading,
   onFileChange,
+  onActivate,
+  alwaysShowLabel = false,
   className = '',
 }) => {
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -28,11 +34,12 @@ const ImportButton: React.FC<ImportButtonProps> = ({
     <>
       <label
         htmlFor="epub-upload"
+        onClick={onActivate}
         className={`cursor-pointer bg-sky-500 hover:bg-sky-600 text-white font-bold p-2 sm:py-2 sm:px-4 rounded-lg inline-flex items-center transition-colors duration-200 ${isLoading ? 'opacity-50 cursor-not-allowed' : ''
           } ${className}`}
       >
         <UploadIcon className="w-5 h-5 sm:mr-2" />
-        <span className="hidden sm:inline">Import Book</span>
+        <span className={alwaysShowLabel ? 'inline' : 'hidden sm:inline'}>Import Book</span>
       </label>
       <input
         ref={fileInputRef}

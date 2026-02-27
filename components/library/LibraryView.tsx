@@ -8,7 +8,7 @@ import { bookKeys, useCatalogs } from '../../hooks';
 import { db, logger } from '../../services';
 import type { BookMetadata, BookRecord, Catalog, CatalogBook, CatalogRegistry, CoverAnimationData } from '../../types';
 import DuplicateBookModal from '../DuplicateBookModal';
-import { ChevronDownIcon, SettingsIcon } from '../icons';
+import { ChevronDownIcon, ListIcon } from '../icons';
 import ManageCatalogsModal from '../ManageCatalogsModal';
 
 import { CatalogView } from './catalog';
@@ -323,14 +323,14 @@ const LibraryView: React.FC<LibraryViewProps> = ({
   const isBrowsingOpds = !!activeOpdsSource;
   const lastSyncDate = localStorage.getItem('ebook-reader-last-sync');
   const lastSyncLabel = lastSyncDate ? new Date(lastSyncDate).toLocaleString() : 'Never';
-  const syncChipLabel = syncStatus.state === 'idle' ? `Drive: ${lastSyncLabel}` : syncStatus.message;
-  const syncChipTone = syncStatus.state === 'error'
-    ? 'border-red-500/30 bg-red-500/10 text-red-200'
+  const syncSummary = syncStatus.state === 'idle' ? `Last synced ${lastSyncLabel}` : syncStatus.message;
+  const syncSummaryTone = syncStatus.state === 'error'
+    ? 'text-red-300'
     : syncStatus.state === 'success'
-      ? 'border-emerald-500/30 bg-emerald-500/10 text-emerald-200'
+      ? 'text-emerald-300'
       : syncStatus.state === 'syncing'
-        ? 'border-sky-500/30 bg-sky-500/10 text-sky-100'
-        : 'border-slate-700 bg-slate-800 text-slate-200';
+        ? 'text-sky-300'
+        : 'text-slate-400';
 
   return (
     <div className="container mx-auto p-4 md:p-8">
@@ -393,50 +393,49 @@ const LibraryView: React.FC<LibraryViewProps> = ({
 
         {/* Actions */}
         <div className="flex items-center gap-2 flex-shrink-0 self-end md:self-auto">
-          {isLoggedIn && user && (
-            <>
-              <button
-                onClick={onOpenCloudSyncModal}
-                className={`hidden xl:flex items-center gap-2 rounded-lg border px-3 py-1.5 text-xs transition-colors ${syncChipTone}`}
-                title={syncChipLabel}
-              >
-                <span className="font-semibold uppercase tracking-wide">Cloud</span>
-                <span className="max-w-[220px] truncate">{syncChipLabel}</span>
-              </button>
-              <div className="hidden sm:flex items-center gap-2 bg-slate-800 border border-slate-700 rounded-lg px-2 py-1 max-w-[220px]">
-                <img
-                  src={user.picture}
-                  alt={`${user.name} profile`}
-                  className="w-7 h-7 rounded-full object-cover"
-                  referrerPolicy="no-referrer"
-                />
-                <span className="text-sm text-slate-100 truncate" title={user.name}>
-                  {user.name}
-                </span>
-              </div>
-            </>
-          )}
-
-          {/* Import Button (only for local library) */}
-          {!isBrowsingOpds && (
-            <ImportButton
-              isLoading={importStatus.isLoading}
-              onFileChange={handleFileChange}
-            />
-          )}
-
           {/* Settings Menu */}
           <div ref={settingsMenuRef} className="relative">
             <button
               onClick={() => setIsSettingsMenuOpen(prev => !prev)}
-              className="cursor-pointer bg-slate-700 hover:bg-slate-600 text-white font-bold p-2 rounded-lg inline-flex items-center transition-colors duration-200 h-[40px] w-[40px] justify-center"
-              aria-label="Open settings menu"
+              className="cursor-pointer bg-slate-800 hover:bg-slate-700 text-white p-2 rounded-lg inline-flex items-center transition-colors duration-200 h-[40px] w-[40px] justify-center border border-slate-700"
+              aria-label="Open main menu"
             >
-              <SettingsIcon className="w-5 h-5" />
+              <ListIcon className="w-5 h-5" />
             </button>
             {isSettingsMenuOpen && (
-              <div className="absolute top-full right-0 mt-2 w-56 bg-slate-800 border border-slate-700 rounded-lg shadow-xl z-20">
-                <ul className="p-1 text-white">
+              <div className="absolute top-full right-0 mt-2 w-72 bg-slate-900 border border-slate-700 rounded-lg shadow-xl z-20 overflow-hidden">
+                <div className="px-4 py-3 border-b border-slate-700/70 bg-slate-800/80">
+                  {isLoggedIn && user ? (
+                    <div className="flex items-center gap-3">
+                      <img
+                        src={user.picture}
+                        alt={`${user.name} profile`}
+                        className="w-9 h-9 rounded-full object-cover"
+                        referrerPolicy="no-referrer"
+                      />
+                      <div className="min-w-0">
+                        <p className="text-sm font-semibold text-slate-100 truncate">{user.name}</p>
+                        <p className="text-xs text-slate-400 truncate">{user.email}</p>
+                      </div>
+                    </div>
+                  ) : (
+                    <p className="text-sm text-slate-300">Browsing locally</p>
+                  )}
+                  <p className={`mt-3 text-xs ${syncSummaryTone}`}>{syncSummary}</p>
+                </div>
+                <ul className="p-2 text-white">
+                  {!isBrowsingOpds && (
+                    <li>
+                      <ImportButton
+                        isLoading={importStatus.isLoading}
+                        onFileChange={handleFileChange}
+                        onActivate={() => setIsSettingsMenuOpen(false)}
+                        alwaysShowLabel={true}
+                        className="w-full justify-start rounded-md bg-transparent hover:bg-slate-800 text-slate-100 font-medium px-3 py-2 border-0"
+                      />
+                    </li>
+                  )}
+                  {!isBrowsingOpds && <li className="my-1 border-t border-slate-700/50" />}
                   <li>
                     <button
                       onClick={() => {
