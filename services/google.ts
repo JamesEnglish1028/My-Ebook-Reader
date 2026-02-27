@@ -14,6 +14,7 @@ const GOOGLE_SCOPES = [
 const APP_FOLDER_NAME = 'Custom Ebook Reader Library';
 const BOOKS_SUBFOLDER_NAME = 'books';
 const METADATA_FILE_NAME = 'library.json';
+const TOKEN_EXPIRY_KEY = 'g_access_token_expires_at';
 const MAX_RETRIES = 3;
 const RETRY_BASE_DELAY_MS = 400;
 
@@ -132,7 +133,18 @@ const getAccessTokenOrThrow = () => {
     throw new Error('Google session not available. Please sign in before syncing.');
   }
 
-  if (typeof token?.expires_at === 'number' && token.expires_at <= Date.now()) {
+  const storedExpiryRaw = localStorage.getItem(TOKEN_EXPIRY_KEY);
+  const storedExpiry = storedExpiryRaw ? Number(storedExpiryRaw) : NaN;
+  if (Number.isFinite(storedExpiry) && storedExpiry <= Date.now() + 60000) {
+    throw new Error('Google session expired. Please sign in again.');
+  }
+
+  let tokenExpiryMs: number | null = null;
+  if (typeof token?.expires_at === 'number' && Number.isFinite(token.expires_at)) {
+    // Some SDK responses use seconds, others milliseconds.
+    tokenExpiryMs = token.expires_at > 1e12 ? token.expires_at : token.expires_at * 1000;
+  }
+  if (tokenExpiryMs !== null && tokenExpiryMs <= Date.now() + 60000) {
     throw new Error('Google session expired. Please sign in again.');
   }
 
