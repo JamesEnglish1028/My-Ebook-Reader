@@ -397,33 +397,33 @@ const LibraryView: React.FC<LibraryViewProps> = ({
           <div ref={settingsMenuRef} className="relative">
             <button
               onClick={() => setIsSettingsMenuOpen(prev => !prev)}
-              className="cursor-pointer bg-slate-800 hover:bg-slate-700 text-white p-2 rounded-lg inline-flex items-center transition-colors duration-200 h-[40px] w-[40px] justify-center border border-slate-700"
+              className="cursor-pointer bg-slate-900/80 hover:bg-slate-800 text-slate-200 p-2 rounded-md inline-flex items-center transition-colors duration-200 h-[36px] w-[36px] justify-center border border-slate-700/80"
               aria-label="Open main menu"
             >
-              <ListIcon className="w-5 h-5" />
+              <ListIcon className="w-4 h-4" />
             </button>
             {isSettingsMenuOpen && (
-              <div className="absolute top-full right-0 mt-2 w-72 bg-slate-900 border border-slate-700 rounded-lg shadow-xl z-20 overflow-hidden">
-                <div className="px-4 py-3 border-b border-slate-700/70 bg-slate-800/80">
+              <div className="absolute top-full right-0 mt-2 w-64 bg-slate-900/95 border border-slate-700/80 rounded-md shadow-xl z-20 overflow-hidden backdrop-blur-sm">
+                <div className="px-3 py-2.5 border-b border-slate-700/60 bg-slate-800/50">
                   {isLoggedIn && user ? (
-                    <div className="flex items-center gap-3">
+                    <div className="flex items-center gap-2.5">
                       <img
                         src={user.picture}
                         alt={`${user.name} profile`}
-                        className="w-9 h-9 rounded-full object-cover"
+                        className="w-8 h-8 rounded-full object-cover"
                         referrerPolicy="no-referrer"
                       />
                       <div className="min-w-0">
-                        <p className="text-sm font-semibold text-slate-100 truncate">{user.name}</p>
-                        <p className="text-xs text-slate-400 truncate">{user.email}</p>
+                        <p className="text-[13px] font-medium text-slate-100 truncate leading-tight">{user.name}</p>
+                        <p className="text-[11px] text-slate-500 truncate leading-tight">{user.email}</p>
                       </div>
                     </div>
                   ) : (
-                    <p className="text-sm text-slate-300">Browsing locally</p>
+                    <p className="text-[12px] font-medium text-slate-300">Browsing locally</p>
                   )}
-                  <p className={`mt-3 text-xs ${syncSummaryTone}`}>{syncSummary}</p>
+                  <p className={`mt-2 text-[11px] leading-tight ${syncSummaryTone}`}>{syncSummary}</p>
                 </div>
-                <ul className="p-2 text-white">
+                <ul className="p-1.5 text-white">
                   {!isBrowsingOpds && (
                     <li>
                       <ImportButton
@@ -431,30 +431,30 @@ const LibraryView: React.FC<LibraryViewProps> = ({
                         onFileChange={handleFileChange}
                         onActivate={() => setIsSettingsMenuOpen(false)}
                         alwaysShowLabel={true}
-                        className="w-full justify-start rounded-md bg-transparent hover:bg-slate-800 text-slate-100 font-medium px-3 py-2 border-0"
+                        className="w-full justify-start rounded-sm bg-transparent hover:bg-slate-800/80 text-slate-100 font-medium px-2.5 py-2 border-0 text-[13px]"
                       />
                     </li>
                   )}
-                  {!isBrowsingOpds && <li className="my-1 border-t border-slate-700/50" />}
+                  {!isBrowsingOpds && <li className="my-1 border-t border-slate-700/40" />}
                   <li>
                     <button
                       onClick={() => {
                         setIsManageCatalogsOpen(true);
                         setIsSettingsMenuOpen(false);
                       }}
-                      className="w-full text-left px-3 py-2 text-sm rounded-md hover:bg-slate-700 block"
+                      className="w-full text-left px-2.5 py-2 text-[13px] rounded-sm hover:bg-slate-800/80 text-slate-200 block"
                     >
                       Manage Sources
                     </button>
                   </li>
-                  <li className="my-1 border-t border-slate-700/50" />
+                  <li className="my-1 border-t border-slate-700/40" />
                   <li>
                     <button
                       onClick={() => {
                         onOpenLocalStorageModal();
                         setIsSettingsMenuOpen(false);
                       }}
-                      className="w-full text-left px-3 py-2 text-sm rounded-md hover:bg-slate-700 block"
+                      className="w-full text-left px-2.5 py-2 text-[13px] rounded-sm hover:bg-slate-800/80 text-slate-200 block"
                     >
                       Local Storage
                     </button>
@@ -465,19 +465,19 @@ const LibraryView: React.FC<LibraryViewProps> = ({
                         onOpenCloudSyncModal();
                         setIsSettingsMenuOpen(false);
                       }}
-                      className="w-full text-left px-3 py-2 text-sm rounded-md hover:bg-slate-700 block"
+                      className="w-full text-left px-2.5 py-2 text-[13px] rounded-sm hover:bg-slate-800/80 text-slate-200 block"
                     >
                       Cloud Sync
                     </button>
                   </li>
-                  <li className="my-1 border-t border-slate-700/50" />
+                  <li className="my-1 border-t border-slate-700/40" />
                   <li>
                     <button
                       onClick={() => {
                         onShowAbout();
                         setIsSettingsMenuOpen(false);
                       }}
-                      className="w-full text-left px-3 py-2 text-sm rounded-md hover:bg-slate-700 block"
+                      className="w-full text-left px-2.5 py-2 text-[13px] rounded-sm hover:bg-slate-800/80 text-slate-200 block"
                     >
                       About
                     </button>
