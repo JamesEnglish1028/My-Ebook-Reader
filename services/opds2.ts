@@ -47,6 +47,12 @@ function normalizeRelValues(rel: unknown): string[] {
 import type { CatalogBook, CatalogFacetGroup, CatalogFacetLink, CatalogNavigationLink, CatalogPagination } from '../types';
 import type { Opds2Link, Opds2NavigationGroup, Opds2Publication } from '../types/opds2';
 
+function isOpdsNavigationTarget(link: Partial<Opds2Link> | undefined): boolean {
+  if (!link) return false;
+  if (link.isCatalog) return true;
+  return typeof link.type === 'string' && link.type.includes('application/opds+json');
+}
+
 // Helper: Parse navigation links from OPDS2 feed
 function parseOpds2NavigationLinks(jsonData: any, baseUrl: string): CatalogNavigationLink[] {
   const navLinks: CatalogNavigationLink[] = [];
@@ -86,7 +92,7 @@ function parseOpds2NavigationLinks(jsonData: any, baseUrl: string): CatalogNavig
       if (group.navigation && Array.isArray(group.navigation)) {
         (group.navigation as Opds2Link[]).forEach((link) => {
           const linkTitle = toNonEmptyString(link.title);
-          if (link.href && linkTitle) {
+          if (link.href && linkTitle && isOpdsNavigationTarget(link)) {
             const url = new URL(link.href, baseUrl).href;
             const navTitle = groupTitle ? `${groupTitle}: ${linkTitle}` : linkTitle;
             let inferredRel = '';
@@ -95,9 +101,9 @@ function parseOpds2NavigationLinks(jsonData: any, baseUrl: string): CatalogNavig
             } else if (Array.isArray(link.rel) && link.rel.length > 0) {
               inferredRel = normalizeRel(String(link.rel[0]));
             } else {
-              inferredRel = (link.type && typeof link.type === 'string' && link.type.includes('application/opds+json')) ? 'subsection' : '';
+              inferredRel = isOpdsNavigationTarget(link) ? 'subsection' : '';
             }
-            const isCatalog = !!(link.type && typeof link.type === 'string' && link.type.includes('application/opds+json')) || !!link.isCatalog;
+            const isCatalog = isOpdsNavigationTarget(link);
             navLinks.push({ title: navTitle, url, rel: Array.isArray(inferredRel) ? String(inferredRel[0]) : inferredRel, isCatalog, type: link.type, source: 'group' });
           }
         });
@@ -108,7 +114,7 @@ function parseOpds2NavigationLinks(jsonData: any, baseUrl: string): CatalogNavig
   if (jsonData.navigation && Array.isArray(jsonData.navigation)) {
     (jsonData.navigation as Opds2Link[]).forEach((link) => {
       const linkTitle = toNonEmptyString(link.title);
-      if (link.href && linkTitle) {
+      if (link.href && linkTitle && isOpdsNavigationTarget(link)) {
         const url = new URL(link.href, baseUrl).href;
         let inferredRel = '';
         if (typeof link.rel === 'string') {
@@ -116,9 +122,9 @@ function parseOpds2NavigationLinks(jsonData: any, baseUrl: string): CatalogNavig
         } else if (Array.isArray(link.rel) && link.rel.length > 0) {
           inferredRel = normalizeRel(String(link.rel[0]));
         } else {
-          inferredRel = (link.type && typeof link.type === 'string' && link.type.includes('application/opds+json')) ? 'subsection' : '';
+          inferredRel = isOpdsNavigationTarget(link) ? 'subsection' : '';
         }
-        const isCatalog = !!(link.type && typeof link.type === 'string' && link.type.includes('application/opds+json')) || !!link.isCatalog;
+        const isCatalog = isOpdsNavigationTarget(link);
         navLinks.push({ title: linkTitle, url, rel: Array.isArray(inferredRel) ? String(inferredRel[0]) : inferredRel, isCatalog, type: link.type, source: 'navigation' });
       }
     });
@@ -130,7 +136,7 @@ function parseOpds2NavigationLinks(jsonData: any, baseUrl: string): CatalogNavig
       if (link.href && link.rel && linkTitle) {
         const rels = normalizeRelValues(link.rel);
         const fullUrl = new URL(link.href, baseUrl).href;
-        if (rels.some((r: string) => r.includes('collection') || r.includes('subsection') || r.includes('section'))) {
+        if (isOpdsNavigationTarget(link) && rels.some((r: string) => r.includes('collection') || r.includes('subsection') || r.includes('section'))) {
           navLinks.push({ title: linkTitle, url: fullUrl, rel: rels[0] || '', type: link.type, isCatalog: false, source: 'navigation' });
         }
       }

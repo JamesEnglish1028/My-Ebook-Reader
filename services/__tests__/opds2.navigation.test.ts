@@ -83,4 +83,29 @@ describe('parseOpds2Json - navigation/catalog inference', () => {
     expect(facetGroups[0].links[0].isActive).toBe(true);
     expect(facetGroups[0].links[0].count).toBe(12);
   });
+
+  it('ignores non-OPDS alternate links inside navigation arrays', () => {
+    const json = {
+      metadata: { title: 'Arts & Humanities OERs' },
+      navigation: [
+        {
+          rel: 'modules:cff5347e-e674-4229-8ae6-086a276291c1',
+          href: 'https://catalog.openresearchlibrary.org/opds/v2/modules/cff5347e-e674-4229-8ae6-086a276291c1/0',
+          type: 'application/opds+json',
+          title: 'Arts & Humanities OERs',
+        },
+        {
+          rel: 'alternate',
+          href: 'https://openresearchlibrary.org/module/cff5347e-e674-4229-8ae6-086a276291c1',
+          type: 'text/html',
+          title: 'View on BiblioBoard',
+        },
+      ],
+    };
+
+    const { navLinks } = parseOpds2Json(json, 'https://catalog.openresearchlibrary.org/');
+    expect(navLinks).toHaveLength(1);
+    expect(navLinks[0].title).toBe('Arts & Humanities OERs');
+    expect(navLinks[0].type).toBe('application/opds+json');
+  });
 });
