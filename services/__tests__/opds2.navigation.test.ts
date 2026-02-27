@@ -47,4 +47,40 @@ describe('parseOpds2Json - navigation/catalog inference', () => {
     expect(books[0].subjects).toEqual(['Young Adult']);
     expect(() => getAvailableAudiences(books)).not.toThrow();
   });
+
+  it('parses OPDS 2 facets separately from navigation links', () => {
+    const json = {
+      metadata: { title: 'Feed' },
+      navigation: [
+        { title: 'Browse by Subject', href: '/navigation/subjects', rel: 'subsection', type: 'application/opds+json' },
+      ],
+      facets: [
+        {
+          metadata: { title: 'Availability' },
+          links: [
+            {
+              title: 'Available now',
+              href: '/feed?availability=available',
+              rel: 'self',
+              properties: { numberOfItems: 12 },
+            },
+            {
+              title: 'All titles',
+              href: '/feed',
+              rel: 'collection',
+              properties: { numberOfItems: 42 },
+            },
+          ],
+        },
+      ],
+    };
+
+    const { navLinks, facetGroups } = parseOpds2Json(json, 'https://example.org/');
+    expect(navLinks).toHaveLength(1);
+    expect(facetGroups).toHaveLength(1);
+    expect(facetGroups[0].title).toBe('Availability');
+    expect(facetGroups[0].links[0].title).toBe('Available now');
+    expect(facetGroups[0].links[0].isActive).toBe(true);
+    expect(facetGroups[0].links[0].count).toBe(12);
+  });
 });

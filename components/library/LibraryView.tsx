@@ -87,8 +87,6 @@ const LibraryView: React.FC<LibraryViewProps> = ({
   const [isCatalogDropdownOpen, setIsCatalogDropdownOpen] = useState(false);
   const [isManageCatalogsOpen, setIsManageCatalogsOpen] = useState(false);
   const [isSettingsMenuOpen, setIsSettingsMenuOpen] = useState(false);
-  const [rootLevelCollections, setRootLevelCollections] = useState<string[]>([]);
-
   // Duplicate book modal
   const [duplicateBook, setDuplicateBook] = useState<BookRecord | null>(null);
   const [existingBook, setExistingBook] = useState<BookRecord | null>(null);
@@ -497,8 +495,6 @@ const LibraryView: React.FC<LibraryViewProps> = ({
             catalogNavPath={catalogNavPath}
             setCatalogNavPath={setCatalogNavPath}
             onShowBookDetail={onShowBookDetail}
-            rootLevelCollections={rootLevelCollections}
-            setRootLevelCollections={setRootLevelCollections}
           />
         ) : (
           <LocalLibraryView

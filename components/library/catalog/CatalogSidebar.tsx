@@ -1,183 +1,126 @@
 import React, { useState } from 'react';
 
-import type { CatalogNavigationLink, CollectionMode } from '../../../types';
+import type { CatalogFacetGroup, CatalogFacetLink, CatalogNavigationLink } from '../../../types';
 
 interface CatalogSidebarProps {
-  /** Available collections to display */
-  collections: string[];
-  /** Available categories to display */
-  categories: string[];
-  /** Currently active collection */
-  activeCollection: CollectionMode;
-  /** Current navigation path depth */
-  navPathLength: number;
-  /** Callback when collection is selected */
-  onCollectionChange: (collection: CollectionMode) => void;
-  /** Callback when category is clicked */
-  onCategoryNavigate: (category: string) => void;
-  /** Catalog navigation links for finding category URLs */
-  catalogNavLinks: CatalogNavigationLink[];
-  /** Active OPDS source */
-  activeOpdsSource: any;
+  /** Parsed catalog navigation links */
+  navigationLinks: CatalogNavigationLink[];
+  /** Parsed facet groups for the current feed */
+  facetGroups: CatalogFacetGroup[];
+  /** Callback when a navigation link is selected */
+  onNavigationSelect: (link: CatalogNavigationLink) => void;
+  /** Callback when a facet link is selected */
+  onFacetSelect: (link: CatalogFacetLink) => void;
   /** Whether catalog is currently loading */
   isLoading?: boolean;
 }
 
 /**
- * CatalogSidebar - Navigation sidebar with accordions
+ * CatalogSidebar - Spec-aligned OPDS sidebar
  *
- * Displays "Navigate By" sections for Categories and Curated Collections.
- * Uses accordions to organize navigation options.
+ * Renders parsed navigation links and facet groups separately so the UI
+ * reflects feed semantics instead of inferring roles from titles or URLs.
  */
 const CatalogSidebar: React.FC<CatalogSidebarProps> = ({
-  collections,
-  categories,
-  activeCollection,
-  navPathLength,
-  onCollectionChange,
-  onCategoryNavigate,
-  catalogNavLinks,
-  activeOpdsSource,
+  navigationLinks,
+  facetGroups,
+  onNavigationSelect,
+  onFacetSelect,
   isLoading = false,
 }) => {
-  const [categoriesOpen, setCategoriesOpen] = useState(true);
-  const [collectionsOpen, setCollectionsOpen] = useState(true);
+  const [navigationOpen, setNavigationOpen] = useState(true);
+  const [facetsOpen, setFacetsOpen] = useState(true);
+  const hasNavigation = navigationLinks.length > 0;
+  const hasFacets = facetGroups.some((group) => group.links.length > 0);
 
-
-  // Show registry navigation links if no books/collections/categories but navLinks are present
-  const hasRegistryNavLinks = catalogNavLinks && catalogNavLinks.length > 0 && categories.length === 0 && collections.length === 0;
-
-  if (!hasRegistryNavLinks && categories.length === 0 && collections.length === 0 && !isLoading) {
+  if (!hasNavigation && !hasFacets && !isLoading) {
     return null;
   }
 
-  const handleCategoryClick = (category: string) => {
-    // Find the category navigation link
-    const categoryNavLink = catalogNavLinks.find(
-      (link) =>
-        (link.rel === 'collection' || link.rel === 'subsection') &&
-        link.title === category &&
-        link.url.includes('/groups/'),
-    );
-
-    if (categoryNavLink && activeOpdsSource) {
-      onCategoryNavigate(category);
-    }
-  };
-
   return (
-    <aside className="w-full lg:w-64 lg:flex-shrink-0 order-2 lg:order-1">
-      <div className="bg-slate-800/50 rounded-lg p-4 lg:sticky lg:top-4">
-        <h3 className="text-lg font-semibold text-white mb-4">Navigate By</h3>
+    <div className="bg-slate-800/50 rounded-lg p-4 lg:sticky lg:top-4">
+      <h3 className="text-lg font-semibold text-white mb-4">Browse</h3>
 
-        {/* Registry Navigation Links (for OPDS2 registries) */}
-        {hasRegistryNavLinks && (
-          <nav className="mb-6">
-            <h4 className="text-md font-semibold text-slate-200 mb-2">Catalogs</h4>
-            <ul className="space-y-1">
-              {catalogNavLinks.map((link, idx) => (
-                <li key={link.url + idx}>
+      <div className="space-y-3">
+        {hasNavigation && (
+          <div className="border border-slate-700 rounded-lg overflow-hidden">
+            <button
+              onClick={() => setNavigationOpen(!navigationOpen)}
+              className="w-full flex items-center justify-between px-3 py-2 bg-slate-700/50 hover:bg-slate-700 transition-colors"
+            >
+              <span className="text-sm font-medium text-slate-200">Navigation</span>
+              <svg
+                className={`w-4 h-4 text-slate-400 transition-transform ${navigationOpen ? 'rotate-180' : ''}`}
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24"
+              >
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+              </svg>
+            </button>
+            {navigationOpen && (
+              <nav className="p-2 space-y-1 bg-slate-800/30">
+                {navigationLinks.map((link, index) => (
                   <button
+                    key={`${link.url}-${index}`}
+                    onClick={() => onNavigationSelect(link)}
                     className="w-full text-left px-3 py-2 rounded-md text-sm transition-colors bg-sky-600/20 hover:bg-sky-600/40 text-sky-300 border border-transparent hover:border-sky-600/30"
-                    onClick={() => onCategoryNavigate(link.title)}
                   >
                     {link.title}
                   </button>
-                </li>
-              ))}
-            </ul>
-          </nav>
+                ))}
+              </nav>
+            )}
+          </div>
         )}
 
-        {/* "All Books" button - always at top */}
-        {!hasRegistryNavLinks && (
-          <button
-            onClick={() => onCollectionChange('all')}
-            className={`w-full text-left px-3 py-2 rounded-md text-sm transition-colors mb-4 ${navPathLength <= 1 && (activeCollection === 'all' || !activeCollection)
-                ? 'bg-emerald-600 text-white font-medium shadow-lg border-2 border-emerald-500'
-                : 'bg-slate-700 hover:bg-slate-600 text-slate-300 border-2 border-transparent'
-              }`}
-          >
-            All Books
-          </button>
-        )}
-
-        <div className="space-y-3">
-          {/* Categories Accordion */}
-          {categories.length > 0 && (
-            <div className="border border-slate-700 rounded-lg overflow-hidden">
-              <button
-                onClick={() => setCategoriesOpen(!categoriesOpen)}
-                className="w-full flex items-center justify-between px-3 py-2 bg-slate-700/50 hover:bg-slate-700 transition-colors"
+        {hasFacets && (
+          <div className="border border-slate-700 rounded-lg overflow-hidden">
+            <button
+              onClick={() => setFacetsOpen(!facetsOpen)}
+              className="w-full flex items-center justify-between px-3 py-2 bg-slate-700/50 hover:bg-slate-700 transition-colors"
+            >
+              <span className="text-sm font-medium text-slate-200">Facets</span>
+              <svg
+                className={`w-4 h-4 text-slate-400 transition-transform ${facetsOpen ? 'rotate-180' : ''}`}
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24"
               >
-                <span className="text-sm font-medium text-slate-200">Categories</span>
-                <svg
-                  className={`w-4 h-4 text-slate-400 transition-transform ${categoriesOpen ? 'rotate-180' : ''}`}
-                  fill="none"
-                  stroke="currentColor"
-                  viewBox="0 0 24 24"
-                >
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
-                </svg>
-              </button>
-              {categoriesOpen && (
-                <nav className="p-2 space-y-1 bg-slate-800/30">
-                  {categories.map((category, index) => (
-                    <button
-                      key={`${category}-${index}`}
-                      onClick={() => handleCategoryClick(category)}
-                      className="w-full text-left px-3 py-2 rounded-md text-sm transition-colors bg-emerald-600/20 hover:bg-emerald-600/40 text-emerald-300 border border-transparent hover:border-emerald-600/30"
-                    >
-                      {category}
-                    </button>
-                  ))}
-                </nav>
-              )}
-            </div>
-          )}
-
-          {/* Curated Collections Accordion */}
-          {collections.length > 0 && (
-            <div className="border border-slate-700 rounded-lg overflow-hidden">
-              <button
-                onClick={() => setCollectionsOpen(!collectionsOpen)}
-                className="w-full flex items-center justify-between px-3 py-2 bg-slate-700/50 hover:bg-slate-700 transition-colors"
-              >
-                <span className="text-sm font-medium text-slate-200">Curated Collections</span>
-                <svg
-                  className={`w-4 h-4 text-slate-400 transition-transform ${collectionsOpen ? 'rotate-180' : ''}`}
-                  fill="none"
-                  stroke="currentColor"
-                  viewBox="0 0 24 24"
-                >
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
-                </svg>
-              </button>
-              {collectionsOpen && (
-                <nav className="p-2 space-y-1 bg-slate-800/30">
-                  {collections.map((collection, index) => {
-                    const isActive = activeCollection === collection;
-                    return (
-                      <button
-                        key={`${collection}-${index}`}
-                        onClick={() => onCollectionChange(collection as CollectionMode)}
-                        className={`w-full text-left px-3 py-2 rounded-md text-sm transition-colors flex items-center gap-2 border ${isActive
-                            ? 'bg-sky-600 text-white font-medium shadow-lg border-sky-500'
-                            : 'bg-sky-600/20 hover:bg-sky-600/40 text-sky-300 border-transparent hover:border-sky-600/30'
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+              </svg>
+            </button>
+            {facetsOpen && (
+              <div className="p-2 space-y-3 bg-slate-800/30">
+                {facetGroups.filter((group) => group.links.length > 0).map((group, groupIndex) => (
+                  <div key={`${group.title}-${groupIndex}`}>
+                    <p className="px-2 pb-1 text-[11px] uppercase tracking-wide text-slate-500">{group.title}</p>
+                    <nav className="space-y-1">
+                      {group.links.map((link, index) => (
+                        <button
+                          key={`${link.url}-${index}`}
+                          onClick={() => onFacetSelect(link)}
+                          className={`w-full text-left px-3 py-2 rounded-md text-sm transition-colors flex items-center justify-between gap-3 border ${
+                            link.isActive
+                              ? 'bg-emerald-600/20 text-emerald-200 border-emerald-500/40'
+                              : 'bg-slate-700/30 hover:bg-slate-700/60 text-slate-300 border-transparent'
                           }`}
-                      >
-                        <span>{isActive ? '📁' : '📂'}</span>
-                        {collection}
-                      </button>
-                    );
-                  })}
-                </nav>
-              )}
-            </div>
-          )}
-        </div>
+                        >
+                          <span className="truncate">{link.title}</span>
+                          {typeof link.count === 'number' && (
+                            <span className="text-xs text-slate-400">{link.count}</span>
+                          )}
+                        </button>
+                      ))}
+                    </nav>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        )}
       </div>
-    </aside>
+    </div>
   );
 };
 

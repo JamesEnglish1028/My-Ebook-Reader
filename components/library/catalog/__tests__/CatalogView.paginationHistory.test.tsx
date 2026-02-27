@@ -40,7 +40,8 @@ describe('CatalogView pagination history', () => {
     useCatalogContentSpy.mockImplementation(() => ({
       data: {
         books: [{ id: 'b1', title: 'Book 1', metadata: { title: 'Book 1' } }],
-        navLinks: [],
+        navigationLinks: [],
+        facetGroups: [],
         pagination: { next: 'https://example.com/opds/catalog?page=2' },
       },
       isLoading: false,
@@ -59,8 +60,6 @@ describe('CatalogView pagination history', () => {
         catalogNavPath={[{ name: initialCatalog.name, url: initialCatalog.url }]}
         setCatalogNavPath={setCatalogNavPath}
         onShowBookDetail={() => {}}
-        rootLevelCollections={[]}
-        setRootLevelCollections={() => {}}
       />,
     ));
 
@@ -72,7 +71,8 @@ describe('CatalogView pagination history', () => {
     useCatalogContentSpy.mockReturnValueOnce({
       data: {
         books: [{ id: 'b2', title: 'Book 2', metadata: { title: 'Book 2' } }],
-        navLinks: [],
+        navigationLinks: [],
+        facetGroups: [],
         pagination: { next: 'https://example.com/opds/catalog?page=3' },
       },
       isLoading: false,
@@ -93,7 +93,8 @@ describe('CatalogView pagination history', () => {
     useCatalogContentSpy.mockReturnValueOnce({
       data: {
         books: [{ id: 'b2', title: 'Book 2', metadata: { title: 'Book 2' } }],
-        navLinks: [],
+        navigationLinks: [],
+        facetGroups: [],
         pagination: { next: undefined, prev: undefined },
       },
       isLoading: false,
@@ -109,8 +110,6 @@ describe('CatalogView pagination history', () => {
           catalogNavPath={[{ name: initialCatalog.name, url: 'https://example.com/opds/catalog?page=2' }]}
           setCatalogNavPath={setCatalogNavPath}
           onShowBookDetail={() => {}}
-          rootLevelCollections={[]}
-          setRootLevelCollections={() => {}}
         />,
       ));
     });
@@ -132,7 +131,8 @@ describe('CatalogView pagination history', () => {
     useCatalogContentSpy.mockImplementation(() => ({
       data: {
         books: [{ id: 'b1', title: 'Book 1', metadata: { title: 'Book 1' } }],
-        navLinks: [],
+        navigationLinks: [],
+        facetGroups: [],
         pagination: { next: 'https://example.com/opds/catalog?page=2' },
       },
       isLoading: false,
@@ -151,8 +151,6 @@ describe('CatalogView pagination history', () => {
         catalogNavPath={[{ name: initialCatalog.name, url: initialCatalog.url }]}
         setCatalogNavPath={setCatalogNavPath}
         onShowBookDetail={() => {}}
-        rootLevelCollections={[]}
-        setRootLevelCollections={() => {}}
       />,
     ));
 
@@ -160,7 +158,8 @@ describe('CatalogView pagination history', () => {
     useCatalogContentSpy.mockReturnValueOnce({
       data: {
         books: [{ id: 'b2', title: 'Book 2', metadata: { title: 'Book 2' } }],
-        navLinks: [],
+        navigationLinks: [],
+        facetGroups: [],
         pagination: { next: 'https://example.com/opds/catalog?page=3' },
       },
       isLoading: false,
@@ -176,7 +175,7 @@ describe('CatalogView pagination history', () => {
 
     // Now simulate switching to another active source (registry) which should reset history
     useCatalogContentSpy.mockReturnValueOnce({
-      data: { books: [], navLinks: [], pagination: {} },
+      data: { books: [], navigationLinks: [], facetGroups: [], pagination: {} },
       isLoading: true,
       error: null,
       refetch: vi.fn(),
@@ -189,8 +188,6 @@ describe('CatalogView pagination history', () => {
           catalogNavPath={[{ name: registryCatalog.name, url: registryCatalog.url }]}
           setCatalogNavPath={setCatalogNavPath}
           onShowBookDetail={() => {}}
-          rootLevelCollections={[]}
-          setRootLevelCollections={() => {}}
         />,
       ));
     });
@@ -202,7 +199,8 @@ describe('CatalogView pagination history', () => {
     useCatalogContentSpy.mockReturnValueOnce({
       data: {
         books: [{ id: 'b1', title: 'Book 1', metadata: { title: 'Book 1' } }],
-        navLinks: [],
+        navigationLinks: [],
+        facetGroups: [],
         pagination: { next: undefined, prev: undefined },
       },
       isLoading: false,
@@ -217,8 +215,6 @@ describe('CatalogView pagination history', () => {
           catalogNavPath={[{ name: initialCatalog.name, url: initialCatalog.url }]}
           setCatalogNavPath={setCatalogNavPath}
           onShowBookDetail={() => {}}
-          rootLevelCollections={[]}
-          setRootLevelCollections={() => {}}
         />,
       ));
     });

@@ -2,7 +2,7 @@ import { useQuery } from '@tanstack/react-query';
 
 import { opdsParserService } from '../domain/catalog';
 import { logger } from '../services/logger';
-import type { CatalogBook, CatalogNavigationLink, CatalogPagination } from '../types';
+import type { CatalogBook, CatalogFacetGroup, CatalogNavigationLink, CatalogPagination } from '../types';
 
 // Query keys for catalog content
 export const catalogKeys = {
@@ -13,7 +13,8 @@ export const catalogKeys = {
 
 interface CatalogContentResult {
   books: CatalogBook[];
-  navLinks: CatalogNavigationLink[];
+  navigationLinks: CatalogNavigationLink[];
+  facetGroups: CatalogFacetGroup[];
   pagination: CatalogPagination;
   error: string | null;
 }
@@ -49,7 +50,8 @@ export function useCatalogContent(
       if (!url) {
         return {
           books: [],
-          navLinks: [],
+          navigationLinks: [],
+          facetGroups: [],
           pagination: {},
           error: 'No URL provided',
         };
@@ -61,28 +63,30 @@ export function useCatalogContent(
       if (!result.success) {
         return {
           books: [],
-          navLinks: [],
+          navigationLinks: [],
+          facetGroups: [],
           pagination: {},
           error: 'error' in result ? result.error : 'Failed to fetch catalog content',
         };
       }
 
       // Filter pagination URLs from navigation links for registry feeds
-      const isFeedARegistry = result.data.navLinks.length > 0 && result.data.books.length === 0;
-      let finalNavLinks = result.data.navLinks;
+      const isFeedARegistry = result.data.navigationLinks.length > 0 && result.data.books.length === 0;
+      let finalNavigationLinks = result.data.navigationLinks;
 
       if (isFeedARegistry && result.data.pagination) {
         const paginationUrls = Object.values(result.data.pagination).filter(
           (val): val is string => !!val,
         );
-        finalNavLinks = result.data.navLinks.filter(
+        finalNavigationLinks = result.data.navigationLinks.filter(
           nav => !paginationUrls.includes(nav.url),
         );
       }
 
       return {
         books: result.data.books,
-        navLinks: finalNavLinks,
+        navigationLinks: finalNavigationLinks,
+        facetGroups: result.data.facetGroups,
         pagination: result.data.pagination,
         error: null,
       };
@@ -105,7 +109,7 @@ export function useCatalogContent(
  */
 export function useCatalogRootCollections(
   books: CatalogBook[],
-  navLinks: CatalogNavigationLink[],
+  navigationLinks: CatalogNavigationLink[],
 ): string[] {
   if (books.length === 0) return [];
 
@@ -121,7 +125,7 @@ export function useCatalogRootCollections(
   });
 
   // From navigation links (catalog-level collections)
-  navLinks.forEach(link => {
+  navigationLinks.forEach(link => {
     if (link.rel === 'collection' || link.rel === 'subsection') {
       rootCollections.add(link.title);
     }

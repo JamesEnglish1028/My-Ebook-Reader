@@ -26,10 +26,9 @@ function getSchemaOrgTypeAndLabel(schemaType: string | undefined): { schemaOrgTy
   const label = schemaOrgTypeToLabel[schemaType] || 'Digital Document';
   return { schemaOrgType: schemaType, publicationTypeLabel: label };
 }
-// Helper: treat rels like 'modules:xxxx' as 'collection' for navigation
+// Helper: preserve rels as provided by the feed.
 function normalizeRel(rel: string | undefined): string {
   if (!rel) return '';
-  if (/^modules:[\w-]+$/i.test(rel)) return 'collection';
   return rel;
 }
 function toLowerSafe(value: unknown): string {
@@ -45,7 +44,7 @@ function normalizeRelValues(rel: unknown): string[] {
     .map((r) => normalizeRel(toLowerSafe(r)))
     .filter((r) => r.length > 0);
 }
-import type { CatalogBook, CatalogNavigationLink, CatalogPagination } from '../types';
+import type { CatalogBook, CatalogFacetGroup, CatalogFacetLink, CatalogNavigationLink, CatalogPagination } from '../types';
 import type { Opds2Link, Opds2NavigationGroup, Opds2Publication } from '../types/opds2';
 
 // Helper: Parse navigation links from OPDS2 feed
@@ -75,6 +74,7 @@ function parseOpds2NavigationLinks(jsonData: any, baseUrl: string): CatalogNavig
           url: new URL(link.href, baseUrl).href,
           rel: 'subsection',
           isCatalog: true,
+          source: 'registry',
         });
       }
     });
@@ -98,7 +98,7 @@ function parseOpds2NavigationLinks(jsonData: any, baseUrl: string): CatalogNavig
               inferredRel = (link.type && typeof link.type === 'string' && link.type.includes('application/opds+json')) ? 'subsection' : '';
             }
             const isCatalog = !!(link.type && typeof link.type === 'string' && link.type.includes('application/opds+json')) || !!link.isCatalog;
-            navLinks.push({ title: navTitle, url, rel: Array.isArray(inferredRel) ? String(inferredRel[0]) : inferredRel, isCatalog });
+            navLinks.push({ title: navTitle, url, rel: Array.isArray(inferredRel) ? String(inferredRel[0]) : inferredRel, isCatalog, type: link.type, source: 'group' });
           }
         });
       }
@@ -119,7 +119,7 @@ function parseOpds2NavigationLinks(jsonData: any, baseUrl: string): CatalogNavig
           inferredRel = (link.type && typeof link.type === 'string' && link.type.includes('application/opds+json')) ? 'subsection' : '';
         }
         const isCatalog = !!(link.type && typeof link.type === 'string' && link.type.includes('application/opds+json')) || !!link.isCatalog;
-        navLinks.push({ title: linkTitle, url, rel: Array.isArray(inferredRel) ? String(inferredRel[0]) : inferredRel, isCatalog });
+        navLinks.push({ title: linkTitle, url, rel: Array.isArray(inferredRel) ? String(inferredRel[0]) : inferredRel, isCatalog, type: link.type, source: 'navigation' });
       }
     });
   }
@@ -130,13 +130,54 @@ function parseOpds2NavigationLinks(jsonData: any, baseUrl: string): CatalogNavig
       if (link.href && link.rel && linkTitle) {
         const rels = normalizeRelValues(link.rel);
         const fullUrl = new URL(link.href, baseUrl).href;
-        if (rels.some((r: string) => r.includes('collection') || r.includes('subsection') || r.includes('section') || r.includes('related'))) {
-          navLinks.push({ title: linkTitle, url: fullUrl, rel: rels[0] || '', isCatalog: false });
+        if (rels.some((r: string) => r.includes('collection') || r.includes('subsection') || r.includes('section'))) {
+          navLinks.push({ title: linkTitle, url: fullUrl, rel: rels[0] || '', type: link.type, isCatalog: false, source: 'navigation' });
         }
       }
     });
   }
   return navLinks;
+}
+
+function parseOpds2FacetGroups(jsonData: any, baseUrl: string): CatalogFacetGroup[] {
+  if (!Array.isArray(jsonData?.facets)) return [];
+
+  const groups: CatalogFacetGroup[] = [];
+  jsonData.facets.forEach((rawGroup: any, index: number) => {
+    const groupTitle = toNonEmptyString(rawGroup?.metadata?.title)
+      || toNonEmptyString(rawGroup?.title)
+      || `Facet Group ${index + 1}`;
+    const rawLinks = Array.isArray(rawGroup?.links)
+      ? rawGroup.links
+      : Array.isArray(rawGroup?.navigation)
+        ? rawGroup.navigation
+        : [];
+
+    const links: CatalogFacetLink[] = rawLinks
+      .map((link: any) => {
+        const title = toNonEmptyString(link?.title);
+        const href = toNonEmptyString(link?.href);
+        if (!title || !href) return null;
+        const rels = normalizeRelValues(link.rel);
+        const countRaw = link?.properties?.numberOfItems ?? link?.properties?.number_of_items;
+        const countNum = Number(countRaw);
+        return {
+          title,
+          url: new URL(href, baseUrl).href,
+          type: typeof link?.type === 'string' ? link.type : undefined,
+          rel: rels[0] || undefined,
+          count: Number.isFinite(countNum) ? countNum : undefined,
+          isActive: rels.some((rel) => rel.includes('self')),
+        } satisfies CatalogFacetLink;
+      })
+      .filter((link: CatalogFacetLink | null): link is CatalogFacetLink => link !== null);
+
+    if (links.length > 0) {
+      groups.push({ title: groupTitle, links });
+    }
+  });
+
+  return groups;
 }
 
 // Helper: Parse pagination links from OPDS2 feed
@@ -330,7 +371,7 @@ export function getCachedEtag(url: string) {
 }
 
 
-export const parseOpds2Json = (jsonData: any, baseUrl: string): { books: CatalogBook[], navLinks: CatalogNavigationLink[], pagination: CatalogPagination, error?: string } => {
+export const parseOpds2Json = (jsonData: any, baseUrl: string): { books: CatalogBook[], navLinks: CatalogNavigationLink[], facetGroups: CatalogFacetGroup[], pagination: CatalogPagination, error?: string } => {
   logger.debug('[OPDS2] parseOpds2Json start', { baseUrl, typeofJson: typeof jsonData });
   try {
     if (typeof jsonData !== 'object' || jsonData === null) {
@@ -347,6 +388,7 @@ export const parseOpds2Json = (jsonData: any, baseUrl: string): { books: Catalog
     }
   const books: CatalogBook[] = [];
   const navLinks: CatalogNavigationLink[] = parseOpds2NavigationLinks(jsonData, baseUrl);
+  const facetGroups: CatalogFacetGroup[] = parseOpds2FacetGroups(jsonData, baseUrl);
   const pagination: CatalogPagination = parseOpds2Pagination(jsonData, baseUrl);
 
   // pagination / top-level links
@@ -364,8 +406,8 @@ export const parseOpds2Json = (jsonData: any, baseUrl: string): { books: Catalog
         // Extract navigation links with collection, subsection, or other navigation relations
         const linkTitle = toNonEmptyString(link.title);
         if (linkTitle && (rels.some((r: string) => r.includes('collection')) || rels.some((r: string) => r.includes('subsection')) ||
-          rels.some((r: string) => r.includes('section')) || rels.some((r: string) => r.includes('related')))) {
-          navLinks.push({ title: linkTitle, url: fullUrl, rel: rels[0] || '' });
+          rels.some((r: string) => r.includes('section')))) {
+          navLinks.push({ title: linkTitle, url: fullUrl, rel: rels[0] || '', type: link.type, source: 'navigation' });
         }
       }
     });
@@ -846,12 +888,12 @@ function normalizeMediumFormatCode(schemaType: string | undefined, type?: string
     console.warn('[OPDS2] Warning: feed is missing required metadata and publications.');
   }
 
-    logger.debug('[OPDS2] parseOpds2Json complete', { navLinks: navLinks.length, books: books.length, paginationKeys: Object.keys(pagination) });
-    return { books, navLinks, pagination };
+    logger.debug('[OPDS2] parseOpds2Json complete', { navLinks: navLinks.length, facetGroups: facetGroups.length, books: books.length, paginationKeys: Object.keys(pagination) });
+    return { books, navLinks, facetGroups, pagination };
   } catch (err) {
     const message = err instanceof Error ? err.message : 'Unknown OPDS2 parse error';
     logger.error('[OPDS2] parseOpds2Json error', err);
-    return { books: [], navLinks: [], pagination: {}, error: message };
+    return { books: [], navLinks: [], facetGroups: [], pagination: {}, error: message };
   }
 };
 
@@ -872,7 +914,7 @@ export const fetchOpds2Feed = async (url: string, credentials?: { username: stri
 
   const resp = await fetch(proxyUrl, { headers, method: 'GET' });
   if (resp.status === 304) {
-    return { status: 304, books: [], navLinks: [], pagination: {} };
+    return { status: 304, books: [], navLinks: [], facetGroups: [], pagination: {} };
   }
 
   const etag = resp.headers.get('ETag') || resp.headers.get('etag');
@@ -892,11 +934,11 @@ export const fetchOpds2Feed = async (url: string, credentials?: { username: stri
       return { status: resp.status, ...parsed };
     } catch (e) {
       const message = e instanceof Error ? e.message : 'Failed to parse XML/OPDS1 content';
-      return { status: resp.status, books: [], navLinks: [], pagination: {}, error: message };
+      return { status: resp.status, books: [], navLinks: [], facetGroups: [], pagination: {}, error: message };
     }
   }
 
-  return { status: resp.status, books: [], navLinks: [], pagination: {}, error: 'Unsupported content type for OPDS2 fetch' };
+  return { status: resp.status, books: [], navLinks: [], facetGroups: [], pagination: {}, error: 'Unsupported content type for OPDS2 fetch' };
 };
 
 export const borrowOpds2Work = async (borrowHref: string, credentials?: { username: string; password: string } | null) => {

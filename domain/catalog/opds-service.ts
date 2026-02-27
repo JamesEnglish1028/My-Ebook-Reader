@@ -12,6 +12,7 @@ import { parseOpds2Json, resolveAcquisitionChain as resolveOpds2 } from '../../s
 
 import type {
   CatalogBook,
+  CatalogFacetGroup,
   CatalogNavigationLink,
   CatalogPagination,
 } from './types';
@@ -28,7 +29,8 @@ export type ParserResult<T> =
  */
 export interface ParsedCatalog {
   books: CatalogBook[];
-  navLinks: CatalogNavigationLink[];
+  navigationLinks: CatalogNavigationLink[];
+  facetGroups: CatalogFacetGroup[];
   pagination: CatalogPagination;
 }
 
@@ -76,7 +78,8 @@ export class OPDSParserService {
         success: true,
         data: {
           books: result.books,
-          navLinks: result.navLinks,
+          navigationLinks: result.navLinks,
+          facetGroups: result.facetGroups || [],
           pagination: result.pagination,
         },
       };
@@ -109,7 +112,8 @@ export class OPDSParserService {
         success: true,
         data: {
           books: result.books,
-          navLinks: result.navLinks,
+          navigationLinks: result.navLinks,
+          facetGroups: result.facetGroups || [],
           pagination: result.pagination,
         },
       };
@@ -147,7 +151,8 @@ export class OPDSParserService {
         success: true,
         data: {
           books: result.books,
-          navLinks: result.navLinks,
+          navigationLinks: result.navLinks,
+          facetGroups: result.facetGroups || [],
           pagination: result.pagination,
         },
       };

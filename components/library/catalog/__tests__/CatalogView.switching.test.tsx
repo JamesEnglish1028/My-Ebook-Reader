@@ -44,8 +44,6 @@ function renderCatalogView(
         catalogNavPath={catalogNavPath}
         setCatalogNavPath={() => {}}
         onShowBookDetail={onShowBookDetail}
-        rootLevelCollections={[]}
-        setRootLevelCollections={() => {}}
       />,
     ),
   );
@@ -66,9 +64,10 @@ describe('CatalogView - switching source clears display state while loading', ()
         books: [
           { id: 'b1', title: 'Book 1', collections: [{ title: 'Col A', href: 'https://example.com/opds/collection/col-a' }], metadata: { 'title': 'Book 1' } },
         ],
-        navLinks: [
+        navigationLinks: [
           { title: 'Col A', url: 'https://example.com/opds/collection/col-a', rel: 'collection' },
         ],
+        facetGroups: [],
         pagination: {},
       },
       isLoading: false,
@@ -88,7 +87,7 @@ describe('CatalogView - switching source clears display state while loading', ()
 
     // Next: simulate switching to a different registry where the new feed is still loading
     useCatalogContentSpy.mockReturnValueOnce({
-      data: { books: [], navLinks: [], pagination: {} },
+      data: { books: [], navigationLinks: [], facetGroups: [], pagination: {} },
       isLoading: true, // simulate loading state for new source
       error: null,
       refetch: vi.fn(),
@@ -102,8 +101,6 @@ describe('CatalogView - switching source clears display state while loading', ()
           catalogNavPath={[{ name: registryCatalog.name, url: registryCatalog.url }]}
           setCatalogNavPath={() => {}}
           onShowBookDetail={onShowBookDetail}
-          rootLevelCollections={[]}
-          setRootLevelCollections={() => {}}
         />,
       );
     });
@@ -119,9 +116,10 @@ describe('CatalogView - switching source clears display state while loading', ()
     useCatalogContentSpy.mockReturnValueOnce({
       data: {
         books: [{ id: 'b2', title: 'Book 2', collections: [{ title: 'Col B', href: 'https://example.com/opds/collection/col-b' }], metadata: { 'title': 'Book 2' } }],
-        navLinks: [
+        navigationLinks: [
           { title: 'Col B', url: 'https://example.com/opds/collection/col-b', rel: 'collection' },
         ],
+        facetGroups: [],
         pagination: {},
       },
       isLoading: false,
@@ -137,8 +135,6 @@ describe('CatalogView - switching source clears display state while loading', ()
           catalogNavPath={[{ name: registryCatalog.name, url: registryCatalog.url }]}
           setCatalogNavPath={() => {}}
           onShowBookDetail={onShowBookDetail}
-          rootLevelCollections={[]}
-          setRootLevelCollections={() => {}}
         />,
       );
     });

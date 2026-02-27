@@ -1,4 +1,4 @@
-import type { AudienceMode, CatalogBook, CatalogNavigationLink, CatalogPagination, CatalogWithCategories, CatalogWithCollections, CategorizationMode, Category, Collection, CollectionGroup, CollectionMode, FictionMode, MediaMode } from '../types';
+import type { AudienceMode, CatalogBook, CatalogFacetGroup, CatalogFacetLink, CatalogNavigationLink, CatalogPagination, CatalogWithCategories, CatalogWithCollections, CategorizationMode, Category, Collection, CollectionGroup, CollectionMode, FictionMode, MediaMode } from '../types';
 
 import { logger } from './logger';
 import { parseOpds2Json } from './opds2';
@@ -158,7 +158,7 @@ export const getFormatFromMimeType = (mimeType: string | undefined): string | un
  * Handles audiobook detection via schema:additionalType attributes.
  * Supports Palace Project collection links and indirect acquisition chains.
  */
-export const parseOpds1Xml = (xmlText: string, baseUrl: string): { books: CatalogBook[], navLinks: CatalogNavigationLink[], pagination: CatalogPagination } => {
+export const parseOpds1Xml = (xmlText: string, baseUrl: string): { books: CatalogBook[], navLinks: CatalogNavigationLink[], facetGroups: CatalogFacetGroup[], pagination: CatalogPagination } => {
     const parser = new DOMParser();
     const xmlDoc = parser.parseFromString(xmlText, 'application/xml');
 
@@ -177,6 +177,7 @@ export const parseOpds1Xml = (xmlText: string, baseUrl: string): { books: Catalo
     const entries = Array.from(xmlDoc.querySelectorAll('entry'));
     const books: CatalogBook[] = [];
     const navLinks: CatalogNavigationLink[] = [];
+    const facetGroups: CatalogFacetGroup[] = [];
     const pagination: CatalogPagination = {};
 
     // Extract pagination links from feed-level link elements
@@ -192,6 +193,30 @@ export const parseOpds1Xml = (xmlText: string, baseUrl: string): { books: Catalo
             if (rel.includes('prev') || rel.includes('previous')) pagination.prev = fullUrl;
             if (rel.includes('first')) pagination.first = fullUrl;
             if (rel.includes('last')) pagination.last = fullUrl;
+            if (rel.includes('facet')) {
+                const title = link.getAttribute('title')?.trim();
+                if (!title) return;
+                const groupTitle = link.getAttribute('opds:facetGroup')
+                    || link.getAttribute('facetGroup')
+                    || 'Facets';
+                const activeFacetRaw = link.getAttribute('opds:activeFacet') || link.getAttribute('activeFacet') || '';
+                const countRaw = link.getAttribute('thr:count') || link.getAttribute('count') || '';
+                const count = Number(countRaw);
+                const facetLink: CatalogFacetLink = {
+                    title,
+                    url: fullUrl,
+                    type: link.getAttribute('type') || undefined,
+                    rel: relRaw || undefined,
+                    count: Number.isFinite(count) ? count : undefined,
+                    isActive: activeFacetRaw === 'true' || activeFacetRaw === 'active',
+                };
+                const existingGroup = facetGroups.find(group => group.title === groupTitle);
+                if (existingGroup) {
+                    existingGroup.links.push(facetLink);
+                } else {
+                    facetGroups.push({ title: groupTitle, links: [facetLink] });
+                }
+            }
         }
     });
 
@@ -325,35 +350,10 @@ export const parseOpds1Xml = (xmlText: string, baseUrl: string): { books: Catalo
         } else if (subsectionLink) {
             const navUrl = subsectionLink.getAttribute('href');
             if (navUrl) {
-                navLinks.push({ title, url: new URL(navUrl, baseUrl).href, rel: 'subsection' });
+                navLinks.push({ title, url: new URL(navUrl, baseUrl).href, rel: 'subsection', source: 'navigation' });
             }
         }
     });
-
-    // Create navigation links from collections found in books (for Palace Project support)
-    if (books.length > 0 && navLinks.length === 0) {
-        const collectionMap = new Map<string, string>();
-
-        books.forEach(book => {
-            if (book.collections) {
-                book.collections.forEach(collection => {
-                    if (!collectionMap.has(collection.title)) {
-                        collectionMap.set(collection.title, collection.href);
-                    }
-                });
-            }
-        });
-
-        // Convert unique collections to navigation links
-        collectionMap.forEach((href, title) => {
-            navLinks.push({
-                title,
-                url: href,
-                rel: 'collection',
-            });
-        });
-    }
-
 
     // If <feed> has no <entry> elements (empty feed), decide whether to
     // throw or return empty results. Some callers/tests expect an empty
@@ -369,18 +369,18 @@ export const parseOpds1Xml = (xmlText: string, baseUrl: string): { books: Catalo
         if (!hasTitle && !hasLink) {
             throw new Error('The feed contains no entries.');
         }
-        return { books: [], navLinks: [], pagination };
+        return { books: [], navLinks: [], facetGroups, pagination };
     }
     // Throw if <feed> has entries but no OPDS content
     if (rootNodeName && (rootNodeName.toLowerCase() === 'feed' || rootNodeName.endsWith(':feed')) && entries.length > 0 && books.length === 0 && navLinks.length === 0) {
         throw new Error('This appears to be a valid Atom feed, but it contains no recognizable OPDS book entries or navigation links. Please ensure the URL points to an OPDS catalog.');
     }
 
-    return { books, navLinks, pagination };
+    return { books, navLinks, facetGroups, pagination };
 };
 
 
-export const fetchCatalogContent = async (url: string, baseUrl: string, forcedVersion: 'auto' | '1' | '2' = 'auto'): Promise<{ books: CatalogBook[], navLinks: CatalogNavigationLink[], pagination: CatalogPagination, error?: string }> => {
+export const fetchCatalogContent = async (url: string, baseUrl: string, forcedVersion: 'auto' | '1' | '2' = 'auto'): Promise<{ books: CatalogBook[], navLinks: CatalogNavigationLink[], facetGroups: CatalogFacetGroup[], pagination: CatalogPagination, error?: string }> => {
     try {
         // Some providers (notably Palace Project / palace.io, palaceproject.io, and thepalaceproject.org hosts) operate
         // primarily for native clients and don't expose CORS consistently. For
@@ -613,7 +613,7 @@ export const fetchCatalogContent = async (url: string, baseUrl: string, forcedVe
             message = 'An unknown error occurred while loading the catalog.';
         }
 
-        return { books: [], navLinks: [], pagination: {}, error: message };
+        return { books: [], navLinks: [], facetGroups: [], pagination: {}, error: message };
     }
 };
 

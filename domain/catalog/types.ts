@@ -126,7 +126,9 @@ export interface CatalogNavigationLink {
   title: string;
   url: string;
   rel: string;
+  type?: string;
   isCatalog?: boolean;
+  source?: 'navigation' | 'group' | 'registry' | 'compat';
 
   // Tree view state
   isExpanded?: boolean;
@@ -136,6 +138,28 @@ export interface CatalogNavigationLink {
   // Internal state flags
   _hasFetchedChildren?: boolean;
   _canExpand?: boolean;
+}
+
+/**
+ * A facet option for the current feed.
+ * Facets refine or alter the current acquisition feed and are distinct from
+ * hierarchical navigation links.
+ */
+export interface CatalogFacetLink {
+  title: string;
+  url: string;
+  type?: string;
+  rel?: string;
+  count?: number;
+  isActive?: boolean;
+}
+
+/**
+ * A labeled group of facet links.
+ */
+export interface CatalogFacetGroup {
+  title: string;
+  links: CatalogFacetLink[];
 }
 
 /**
@@ -154,6 +178,7 @@ export interface CatalogPagination {
 export interface CatalogWithCollections {
   books: CatalogBook[];
   navLinks: CatalogNavigationLink[];
+  facetGroups?: CatalogFacetGroup[];
   pagination: CatalogPagination;
   collections: CollectionGroup[];
   uncategorizedBooks: CatalogBook[];
@@ -165,6 +190,7 @@ export interface CatalogWithCollections {
 export interface CatalogWithCategories {
   books: CatalogBook[];
   navLinks: CatalogNavigationLink[];
+  facetGroups?: CatalogFacetGroup[];
   pagination: CatalogPagination;
   categoryLanes: CategoryLane[];
   collectionLinks: Collection[];
