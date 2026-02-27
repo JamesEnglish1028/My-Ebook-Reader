@@ -24,6 +24,8 @@ jobs:
       - name: Validate
         run: npm run validate
       - name: Build
+        env:
+          VITE_GOOGLE_CLIENT_ID: ${{ secrets.VITE_GOOGLE_CLIENT_ID }}
         run: npm run build
       - name: Inspect dist output
         run: |
