@@ -32,6 +32,19 @@ function normalizeRel(rel: string | undefined): string {
   if (/^modules:[\w-]+$/i.test(rel)) return 'collection';
   return rel;
 }
+function toLowerSafe(value: unknown): string {
+  return String(value ?? '').toLowerCase();
+}
+function toNonEmptyString(value: unknown): string | undefined {
+  const text = String(value ?? '').trim();
+  return text.length > 0 ? text : undefined;
+}
+function normalizeRelValues(rel: unknown): string[] {
+  const values = Array.isArray(rel) ? rel : [rel];
+  return values
+    .map((r) => normalizeRel(toLowerSafe(r)))
+    .filter((r) => r.length > 0);
+}
 import type { CatalogBook, CatalogNavigationLink, CatalogPagination } from '../types';
 import type { Opds2Link, Opds2NavigationGroup, Opds2Publication } from '../types/opds2';
 
@@ -47,7 +60,7 @@ function parseOpds2NavigationLinks(jsonData: any, baseUrl: string): CatalogNavig
       const title = meta.title || meta.name || catalogEntry.title || 'Catalog';
       const links = Array.isArray(catalogEntry.links) ? catalogEntry.links as Opds2Link[] : [];
       const pickCatalogLink = () => {
-        const relContainsCatalog = (rel: string) => rel.toLowerCase().includes('catalog');
+        const relContainsCatalog = (rel: unknown) => toLowerSafe(rel).includes('catalog');
         // Prefer explicit catalog rel, then any OPDS link
         const byRel = links.find((l) => typeof l.rel === 'string' && relContainsCatalog(l.rel));
         if (byRel) return byRel;
@@ -72,9 +85,10 @@ function parseOpds2NavigationLinks(jsonData: any, baseUrl: string): CatalogNavig
       const groupTitle = group.metadata?.title || '';
       if (group.navigation && Array.isArray(group.navigation)) {
         (group.navigation as Opds2Link[]).forEach((link) => {
-          if (link.href && link.title) {
+          const linkTitle = toNonEmptyString(link.title);
+          if (link.href && linkTitle) {
             const url = new URL(link.href, baseUrl).href;
-            const navTitle = groupTitle ? `${groupTitle}: ${link.title}` : link.title;
+            const navTitle = groupTitle ? `${groupTitle}: ${linkTitle}` : linkTitle;
             let inferredRel = '';
             if (typeof link.rel === 'string') {
               inferredRel = normalizeRel(link.rel);
@@ -93,7 +107,8 @@ function parseOpds2NavigationLinks(jsonData: any, baseUrl: string): CatalogNavig
   // Top-level navigation array
   if (jsonData.navigation && Array.isArray(jsonData.navigation)) {
     (jsonData.navigation as Opds2Link[]).forEach((link) => {
-      if (link.href && link.title) {
+      const linkTitle = toNonEmptyString(link.title);
+      if (link.href && linkTitle) {
         const url = new URL(link.href, baseUrl).href;
         let inferredRel = '';
         if (typeof link.rel === 'string') {
@@ -104,23 +119,19 @@ function parseOpds2NavigationLinks(jsonData: any, baseUrl: string): CatalogNavig
           inferredRel = (link.type && typeof link.type === 'string' && link.type.includes('application/opds+json')) ? 'subsection' : '';
         }
         const isCatalog = !!(link.type && typeof link.type === 'string' && link.type.includes('application/opds+json')) || !!link.isCatalog;
-        navLinks.push({ title: link.title, url, rel: Array.isArray(inferredRel) ? String(inferredRel[0]) : inferredRel, isCatalog });
+        navLinks.push({ title: linkTitle, url, rel: Array.isArray(inferredRel) ? String(inferredRel[0]) : inferredRel, isCatalog });
       }
     });
   }
   // Top-level links with navigation relations
   if (jsonData.links && Array.isArray(jsonData.links)) {
     (jsonData.links as Opds2Link[]).forEach((link) => {
-      if (link.href && link.rel && link.title) {
-        let rels: string[] = [];
-        if (Array.isArray(link.rel)) {
-          rels = link.rel.map((r) => normalizeRel(String(r).toLowerCase()));
-        } else if (typeof link.rel === 'string') {
-          rels = [normalizeRel(link.rel.toLowerCase())];
-        }
+      const linkTitle = toNonEmptyString(link.title);
+      if (link.href && link.rel && linkTitle) {
+        const rels = normalizeRelValues(link.rel);
         const fullUrl = new URL(link.href, baseUrl).href;
         if (rels.some((r: string) => r.includes('collection') || r.includes('subsection') || r.includes('section') || r.includes('related'))) {
-          navLinks.push({ title: link.title, url: fullUrl, rel: rels[0] || '', isCatalog: false });
+          navLinks.push({ title: linkTitle, url: fullUrl, rel: rels[0] || '', isCatalog: false });
         }
       }
     });
@@ -134,7 +145,7 @@ function parseOpds2Pagination(jsonData: any, baseUrl: string): CatalogPagination
   if (jsonData.links && Array.isArray(jsonData.links)) {
     (jsonData.links as Opds2Link[]).forEach((link) => {
       if (link.href && link.rel) {
-        const rels = Array.isArray(link.rel) ? link.rel.map((r) => normalizeRel(String(r).toLowerCase())) : [normalizeRel(String(link.rel).toLowerCase())];
+        const rels = normalizeRelValues(link.rel);
         const fullUrl = new URL(link.href, baseUrl).href;
         if (rels.some((r: string) => r.includes('next'))) pagination.next = fullUrl;
         if (rels.some((r: string) => r.includes('prev') || r.includes('previous'))) pagination.prev = fullUrl;
@@ -338,13 +349,11 @@ export const parseOpds2Json = (jsonData: any, baseUrl: string): { books: Catalog
   const navLinks: CatalogNavigationLink[] = parseOpds2NavigationLinks(jsonData, baseUrl);
   const pagination: CatalogPagination = parseOpds2Pagination(jsonData, baseUrl);
 
-  const toArray = (v: any) => Array.isArray(v) ? v : v ? [v] : [];
-
   // pagination / top-level links
   if (jsonData.links && Array.isArray(jsonData.links)) {
     jsonData.links.forEach((link: any) => {
       if (link.href && link.rel) {
-  const rels = toArray(link.rel).map((r: any) => normalizeRel(String(r).toLowerCase()));
+  const rels = normalizeRelValues(link.rel);
         const fullUrl = new URL(link.href, baseUrl).href;
         // Accept both 'prev' and 'previous' and tolerate full-rel URIs
         if (rels.some((r: string) => r.includes('next'))) pagination.next = fullUrl;
@@ -353,9 +362,10 @@ export const parseOpds2Json = (jsonData: any, baseUrl: string): { books: Catalog
         if (rels.some((r: string) => r.includes('last'))) pagination.last = fullUrl;
 
         // Extract navigation links with collection, subsection, or other navigation relations
-        if (link.title && (rels.some((r: string) => r.includes('collection')) || rels.some((r: string) => r.includes('subsection')) ||
+        const linkTitle = toNonEmptyString(link.title);
+        if (linkTitle && (rels.some((r: string) => r.includes('collection')) || rels.some((r: string) => r.includes('subsection')) ||
           rels.some((r: string) => r.includes('section')) || rels.some((r: string) => r.includes('related')))) {
-          navLinks.push({ title: link.title, url: fullUrl, rel: rels[0] || '' });
+          navLinks.push({ title: linkTitle, url: fullUrl, rel: rels[0] || '' });
         }
       }
     });
@@ -666,6 +676,14 @@ function processOpds2Publication(pub: Opds2Publication, baseUrl: string): Catalo
   const publicationSubjects = extractPublicationSubjects(metadata);
   const contributorInfo = extractContributors(metadata);
   const accessibility = extractAccessibilityMetadata(metadata);
+  const subjectNames = publicationSubjects
+    ?.map((s: any) => (typeof s === 'string' ? s : String(s?.name ?? '')))
+    .map((s: string) => s.trim())
+    .filter((s: string) => s.length > 0);
+  const contributorNames = contributorInfo
+    ?.map((c: any) => (typeof c === 'string' ? c : String(c?.name ?? '')))
+    .map((c: string) => c.trim())
+    .filter((c: string) => c.length > 0);
 
   // Determine acquisition type
   const acquisitionType = chosen ? getAcquisitionType(chosen.rels) : undefined;
@@ -713,8 +731,8 @@ function processOpds2Publication(pub: Opds2Publication, baseUrl: string): Catalo
       publisher: publisher || undefined,
       publicationDate: publicationDate || undefined,
       providerId: providerId || undefined,
-      subjects: publicationSubjects || undefined,
-      contributors: contributorInfo || undefined,
+      subjects: subjectNames && subjectNames.length > 0 ? subjectNames : undefined,
+      contributors: contributorNames && contributorNames.length > 0 ? contributorNames : undefined,
       categories: categories || undefined,
       collections: collections.length > 0 ? collections : undefined,
       format: format || undefined,
