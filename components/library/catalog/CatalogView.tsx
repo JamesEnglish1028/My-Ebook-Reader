@@ -199,10 +199,7 @@ const CatalogView: React.FC<CatalogViewProps> = ({
 
   const hasBooks = catalogBooks.length > 0;
   const hasOriginalBooks = originalCatalogBooks.length > 0;
-
-  if (!hasOriginalBooks && !hasSidebarContent) {
-    return <EmptyState variant="catalog" />;
-  }
+  const isEmptyFeed = !hasOriginalBooks && !hasSidebarContent;
 
   return (
     <div className="flex flex-col lg:flex-row gap-6">
@@ -240,7 +237,9 @@ const CatalogView: React.FC<CatalogViewProps> = ({
           onMediaChange={setMediaMode}
         />
 
-        {hasBooks ? (
+        {isEmptyFeed ? (
+          <EmptyState variant="catalog" />
+        ) : hasBooks ? (
           <BookGrid
             books={catalogBooks}
             onBookClick={handleCatalogBookClick}
