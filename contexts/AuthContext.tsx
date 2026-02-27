@@ -5,12 +5,7 @@ import { initGoogleClient, revokeToken } from '../services/google';
 
 type AuthStatus = 'initializing' | 'ready' | 'error' | 'not_configured';
 type TokenRequestMode = 'none' | 'restore_silent' | 'interactive_silent' | 'interactive_consent';
-const REQUIRED_GOOGLE_SCOPES = [
-  'https://www.googleapis.com/auth/drive.file',
-  'openid',
-  'profile',
-  'email',
-];
+const REQUIRED_DRIVE_SCOPE = 'https://www.googleapis.com/auth/drive.file';
 
 interface AuthContextType {
   user: GoogleUser | null;
@@ -170,11 +165,11 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       return;
     }
 
-    const hasAllScopes = (() => {
+    const hasDriveScope = (() => {
       const oauth2 = window.google?.accounts?.oauth2;
       if (oauth2?.hasGrantedAllScopes && response?.access_token) {
         try {
-          return oauth2.hasGrantedAllScopes(response, ...REQUIRED_GOOGLE_SCOPES);
+          return oauth2.hasGrantedAllScopes(response, REQUIRED_DRIVE_SCOPE);
         } catch {
           // Fall through to string-based scope parsing.
         }
@@ -182,10 +177,10 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       const grantedScopes = typeof response?.scope === 'string'
         ? response.scope.split(/\s+/).filter(Boolean)
         : [];
-      return REQUIRED_GOOGLE_SCOPES.every((scope) => grantedScopes.includes(scope));
+      return grantedScopes.includes(REQUIRED_DRIVE_SCOPE);
     })();
 
-    if (!hasAllScopes) {
+    if (!hasDriveScope) {
       if (requestMode !== 'interactive_consent') {
         requestAccessToken('interactive_consent');
         return;
