@@ -8,7 +8,6 @@ import {
   getAvailableAudiences,
   getAvailableFictionModes,
   getAvailableMediaModes,
-  groupBooksByMode,
 } from '../../../services/opds';
 import type {
   AudienceMode,
@@ -17,14 +16,10 @@ import type {
   CatalogFacetLink,
   CatalogNavigationLink,
   CatalogRegistry,
-  CategorizationMode,
-  CategoryLane,
   FictionMode,
   MediaMode,
 } from '../../../types';
-import { CategoryLaneComponent } from '../../CategoryLane';
 import { Error as ErrorDisplay, Loading } from '../../shared';
-import { UncategorizedLane } from '../../UncategorizedLane';
 import { CatalogFilters, CatalogNavigation, CatalogSidebar } from '../catalog';
 import { BookGrid, EmptyState } from '../shared';
 
@@ -44,10 +39,6 @@ const CatalogView: React.FC<CatalogViewProps> = ({
   const [audienceMode, setAudienceMode] = useState<AudienceMode>('all');
   const [fictionMode, setFictionMode] = useState<FictionMode>('all');
   const [mediaMode, setMediaMode] = useState<MediaMode>('all');
-  const [categorizationMode, setCategorizationMode] = useState<CategorizationMode>('subject');
-  const [showCategoryView, setShowCategoryView] = useState(false);
-  const [categoryLanes, setCategoryLanes] = useState<CategoryLane[]>([]);
-  const [uncategorizedBooks, setUncategorizedBooks] = useState<CatalogBook[]>([]);
   const [catalogBooks, setCatalogBooks] = useState<CatalogBook[]>([]);
   const [pageHistory, setPageHistory] = useState<string[]>([]);
 
@@ -61,9 +52,6 @@ const CatalogView: React.FC<CatalogViewProps> = ({
 
   useEffect(() => {
     setCatalogBooks([]);
-    setCategoryLanes([]);
-    setUncategorizedBooks([]);
-    setShowCategoryView(false);
   }, [currentUrl, activeOpdsSource?.id]);
 
   useEffect(() => {
@@ -97,15 +85,10 @@ const CatalogView: React.FC<CatalogViewProps> = ({
     availableAudiences,
     availableFictionModes,
     availableMediaModes,
-    hasSubjectMetadata,
   } = useMemo(() => ({
     availableAudiences: getAvailableAudiences(originalCatalogBooks),
     availableFictionModes: getAvailableFictionModes(originalCatalogBooks),
     availableMediaModes: getAvailableMediaModes(originalCatalogBooks),
-    hasSubjectMetadata: originalCatalogBooks.some((book) =>
-      (Array.isArray(book.categories) && book.categories.length > 0)
-      || (Array.isArray(book.subjects) && book.subjects.length > 0),
-    ),
   }), [originalCatalogBooks]);
 
   useEffect(() => {
@@ -115,42 +98,10 @@ const CatalogView: React.FC<CatalogViewProps> = ({
     const fictionFiltered = filterBooksByFiction(audienceFiltered, fictionMode);
     const mediaFiltered = filterBooksByMedia(fictionFiltered, mediaMode);
 
-    if (categorizationMode === 'flat') {
-      setCatalogBooks(mediaFiltered);
-      setCategoryLanes([]);
-      setUncategorizedBooks([]);
-      setShowCategoryView(false);
-      return;
-    }
-
-    if (hasSubjectMetadata) {
-      const grouped = groupBooksByMode(
-        mediaFiltered,
-        [],
-        catalogPagination || {},
-        'subject',
-        audienceMode,
-        fictionMode,
-        mediaMode,
-        'all',
-      );
-      setCategoryLanes(grouped.categoryLanes);
-      setUncategorizedBooks(grouped.uncategorizedBooks);
-      setCatalogBooks([]);
-      setShowCategoryView(true);
-      return;
-    }
-
     setCatalogBooks(mediaFiltered);
-    setCategoryLanes([]);
-    setUncategorizedBooks([]);
-    setShowCategoryView(false);
   }, [
     audienceMode,
-    catalogPagination,
-    categorizationMode,
     fictionMode,
-    hasSubjectMetadata,
     mediaMode,
     originalCatalogBooks,
   ]);
@@ -248,7 +199,7 @@ const CatalogView: React.FC<CatalogViewProps> = ({
     );
   }
 
-  const hasBooks = catalogBooks.length > 0 || categoryLanes.length > 0 || uncategorizedBooks.length > 0;
+  const hasBooks = catalogBooks.length > 0;
   const hasOriginalBooks = originalCatalogBooks.length > 0;
 
   if (!hasOriginalBooks && !hasSidebarContent) {
@@ -290,41 +241,7 @@ const CatalogView: React.FC<CatalogViewProps> = ({
           onMediaChange={setMediaMode}
         />
 
-        {hasSubjectMetadata && (
-          <div className="flex items-center space-x-3 mb-6 px-4">
-            <span className="text-sm text-slate-300 font-medium">View By:</span>
-            <button
-              onClick={() => setCategorizationMode(categorizationMode === 'subject' ? 'flat' : 'subject')}
-              aria-label={`Switch to ${categorizationMode === 'subject' ? 'grid view' : 'lanes view'}`}
-              className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:ring-offset-2 focus:ring-offset-slate-800 ${categorizationMode === 'subject' ? 'bg-emerald-600' : 'bg-slate-600'}`}
-            >
-              <span
-                className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${categorizationMode === 'subject' ? 'translate-x-6' : 'translate-x-1'}`}
-              />
-            </button>
-            <span className="text-sm text-slate-300">
-              {categorizationMode === 'subject' ? 'Lanes' : 'Grid'}
-            </span>
-          </div>
-        )}
-
-        {showCategoryView && categoryLanes.length > 0 ? (
-          <div className="space-y-8">
-            {categoryLanes.map((lane) => (
-              <CategoryLaneComponent
-                key={lane.category.label}
-                categoryLane={lane}
-                onBookClick={handleCatalogBookClick}
-              />
-            ))}
-            {uncategorizedBooks.length > 0 && (
-              <UncategorizedLane
-                books={uncategorizedBooks}
-                onBookClick={handleCatalogBookClick}
-              />
-            )}
-          </div>
-        ) : hasBooks ? (
+        {hasBooks ? (
           <BookGrid
             books={catalogBooks}
             onBookClick={handleCatalogBookClick}
