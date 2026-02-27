@@ -38,17 +38,22 @@ const CatalogSidebar: React.FC<CatalogSidebarProps> = ({
   }
 
   return (
-    <div className="bg-slate-800/50 rounded-lg p-4 lg:sticky lg:top-4">
-      <h3 className="text-lg font-semibold text-white mb-4">Browse</h3>
+    <div className="rounded-xl border border-slate-700/60 bg-slate-900/40 p-3 lg:sticky lg:top-4">
+      <div className="mb-3 flex items-center justify-between">
+        <h3 className="text-xs font-semibold uppercase tracking-[0.18em] text-slate-400">Browse</h3>
+        <span className="text-[11px] text-slate-500">
+          {navigationLinks.length + facetGroups.reduce((sum, group) => sum + group.links.length, 0)} options
+        </span>
+      </div>
 
-      <div className="space-y-3">
+      <div className="space-y-2.5">
         {hasNavigation && (
-          <div className="border border-slate-700 rounded-lg overflow-hidden">
+          <div className="overflow-hidden rounded-lg border border-slate-700/70">
             <button
               onClick={() => setNavigationOpen(!navigationOpen)}
-              className="w-full flex items-center justify-between px-3 py-2 bg-slate-700/50 hover:bg-slate-700 transition-colors"
+              className="flex w-full items-center justify-between bg-slate-800/70 px-3 py-2 text-left transition-colors hover:bg-slate-800"
             >
-              <span className="text-sm font-medium text-slate-200">Navigation</span>
+              <span className="text-xs font-medium uppercase tracking-[0.14em] text-slate-300">Navigation</span>
               <svg
                 className={`w-4 h-4 text-slate-400 transition-transform ${navigationOpen ? 'rotate-180' : ''}`}
                 fill="none"
@@ -59,12 +64,12 @@ const CatalogSidebar: React.FC<CatalogSidebarProps> = ({
               </svg>
             </button>
             {navigationOpen && (
-              <nav className="p-2 space-y-1 bg-slate-800/30">
+              <nav className="space-y-1.5 bg-slate-900/30 p-2">
                 {navigationLinks.map((link, index) => (
                   <button
                     key={`${link.url}-${index}`}
                     onClick={() => onNavigationSelect(link)}
-                    className="w-full text-left px-3 py-2 rounded-md text-sm transition-colors bg-sky-600/20 hover:bg-sky-600/40 text-sky-300 border border-transparent hover:border-sky-600/30"
+                    className="w-full rounded-md border border-transparent bg-sky-500/10 px-2.5 py-2 text-left text-sm text-sky-200 transition-colors hover:border-sky-500/30 hover:bg-sky-500/20"
                   >
                     {link.title}
                   </button>
@@ -75,12 +80,12 @@ const CatalogSidebar: React.FC<CatalogSidebarProps> = ({
         )}
 
         {hasFacets && (
-          <div className="border border-slate-700 rounded-lg overflow-hidden">
+          <div className="overflow-hidden rounded-lg border border-slate-700/70">
             <button
               onClick={() => setFacetsOpen(!facetsOpen)}
-              className="w-full flex items-center justify-between px-3 py-2 bg-slate-700/50 hover:bg-slate-700 transition-colors"
+              className="flex w-full items-center justify-between bg-slate-800/70 px-3 py-2 text-left transition-colors hover:bg-slate-800"
             >
-              <span className="text-sm font-medium text-slate-200">Facets</span>
+              <span className="text-xs font-medium uppercase tracking-[0.14em] text-slate-300">Facets</span>
               <svg
                 className={`w-4 h-4 text-slate-400 transition-transform ${facetsOpen ? 'rotate-180' : ''}`}
                 fill="none"
@@ -91,24 +96,24 @@ const CatalogSidebar: React.FC<CatalogSidebarProps> = ({
               </svg>
             </button>
             {facetsOpen && (
-              <div className="p-2 space-y-3 bg-slate-800/30">
+              <div className="space-y-3 bg-slate-900/30 p-2">
                 {facetGroups.filter((group) => group.links.length > 0).map((group, groupIndex) => (
                   <div key={`${group.title}-${groupIndex}`}>
-                    <p className="px-2 pb-1 text-[11px] uppercase tracking-wide text-slate-500">{group.title}</p>
-                    <nav className="space-y-1">
+                    <p className="px-1.5 pb-1 text-[11px] font-medium uppercase tracking-[0.14em] text-slate-500">{group.title}</p>
+                    <nav className="space-y-1.5">
                       {group.links.map((link, index) => (
                         <button
                           key={`${link.url}-${index}`}
                           onClick={() => onFacetSelect(link)}
-                          className={`w-full text-left px-3 py-2 rounded-md text-sm transition-colors flex items-center justify-between gap-3 border ${
+                          className={`flex w-full items-center justify-between gap-3 rounded-md border px-2.5 py-2 text-left text-sm transition-colors ${
                             link.isActive
-                              ? 'bg-emerald-600/20 text-emerald-200 border-emerald-500/40'
-                              : 'bg-slate-700/30 hover:bg-slate-700/60 text-slate-300 border-transparent'
+                              ? 'border-emerald-500/40 bg-emerald-500/12 text-emerald-100'
+                              : 'border-transparent bg-slate-800/40 text-slate-300 hover:bg-slate-800/70'
                           }`}
                         >
                           <span className="truncate">{link.title}</span>
                           {typeof link.count === 'number' && (
-                            <span className="text-xs text-slate-400">{link.count}</span>
+                            <span className="rounded-full bg-slate-800 px-2 py-0.5 text-[11px] text-slate-400">{link.count}</span>
                           )}
                         </button>
                       ))}

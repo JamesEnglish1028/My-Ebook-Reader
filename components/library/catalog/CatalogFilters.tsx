@@ -77,27 +77,32 @@ const CatalogFilters: React.FC<CatalogFiltersProps> = ({
     return null;
   }
 
+  const activeFilterCount = Number(audienceMode !== 'all') + Number(fictionMode !== 'all') + Number(mediaMode !== 'all');
+
   return (
-    <div className="bg-slate-800/50 rounded-lg p-4 mb-6">
-      <h3 className="text-lg font-semibold text-white mb-4">Filter By</h3>
-      {/* Filter Controls Row */}
+    <div className="mb-5 rounded-xl border border-slate-700/60 bg-slate-900/35 p-3">
+      <div className="mb-3 flex items-center justify-between">
+        <h3 className="text-xs font-semibold uppercase tracking-[0.18em] text-slate-400">Filters</h3>
+        <span className="text-[11px] text-slate-500">
+          {activeFilterCount > 0 ? `${activeFilterCount} active` : 'Local only'}
+        </span>
+      </div>
       {(showAudienceFilter || showFictionFilter || showMediaFilter) && (
-        <div className="flex flex-wrap gap-4 items-center">
-          {/* Audience Filter */}
+        <div className="flex flex-wrap items-start gap-3">
           {showAudienceFilter && (
-            <div className="flex items-center gap-2">
-              <span className="text-sm text-slate-400">Audience:</span>
-              <div className="flex gap-1">
+            <div className="flex flex-wrap items-center gap-2">
+              <span className="text-xs font-medium uppercase tracking-[0.12em] text-slate-500">Audience</span>
+              <div className="flex flex-wrap gap-1.5">
                 {audienceOptions
                   .filter((option) => option.available)
                   .map((option) => (
                     <button
                       key={option.key}
                       onClick={() => onAudienceChange(option.key)}
-                      className={`px-3 py-1 text-sm rounded-md transition-colors ${audienceMode === option.key
-                          ? 'bg-blue-600 text-white font-medium'
-                          : 'bg-slate-700 hover:bg-slate-600 text-slate-300'
-                        }`}
+                      className={`rounded-full px-2.5 py-1 text-xs font-medium transition-colors ${audienceMode === option.key
+                        ? 'bg-sky-500/20 text-sky-100 ring-1 ring-sky-500/40'
+                        : 'bg-slate-800 text-slate-300 hover:bg-slate-700'
+                      }`}
                     >
                       {option.label.replace('All Ages', 'All')}
                     </button>
@@ -106,21 +111,20 @@ const CatalogFilters: React.FC<CatalogFiltersProps> = ({
             </div>
           )}
 
-          {/* Fiction Filter */}
           {showFictionFilter && (
-            <div className="flex items-center gap-2">
-              <span className="text-sm text-slate-400">Type:</span>
-              <div className="flex gap-1">
+            <div className="flex flex-wrap items-center gap-2">
+              <span className="text-xs font-medium uppercase tracking-[0.12em] text-slate-500">Type</span>
+              <div className="flex flex-wrap gap-1.5">
                 {fictionOptions
                   .filter((option) => option.available)
                   .map((option) => (
                     <button
                       key={option.key}
                       onClick={() => onFictionChange(option.key)}
-                      className={`px-3 py-1 text-sm rounded-md transition-colors ${fictionMode === option.key
-                          ? 'bg-purple-600 text-white font-medium'
-                          : 'bg-slate-700 hover:bg-slate-600 text-slate-300'
-                        }`}
+                      className={`rounded-full px-2.5 py-1 text-xs font-medium transition-colors ${fictionMode === option.key
+                        ? 'bg-amber-500/20 text-amber-100 ring-1 ring-amber-500/40'
+                        : 'bg-slate-800 text-slate-300 hover:bg-slate-700'
+                      }`}
                     >
                       {option.label.replace('All Types', 'All')}
                     </button>
@@ -129,21 +133,20 @@ const CatalogFilters: React.FC<CatalogFiltersProps> = ({
             </div>
           )}
 
-          {/* Media/Format Filter */}
           {showMediaFilter && (
-            <div className="flex items-center gap-2">
-              <span className="text-sm text-slate-400">Format:</span>
-              <div className="flex gap-1">
+            <div className="flex flex-wrap items-center gap-2">
+              <span className="text-xs font-medium uppercase tracking-[0.12em] text-slate-500">Format</span>
+              <div className="flex flex-wrap gap-1.5">
                 {mediaOptions
                   .filter((option) => option.available)
                   .map((option) => (
                     <button
                       key={option.key}
                       onClick={() => onMediaChange(option.key)}
-                      className={`px-3 py-1 text-sm rounded-md transition-colors ${mediaMode === option.key
-                          ? 'bg-indigo-600 text-white font-medium'
-                          : 'bg-slate-700 hover:bg-slate-600 text-slate-300'
-                        }`}
+                      className={`rounded-full px-2.5 py-1 text-xs font-medium transition-colors ${mediaMode === option.key
+                        ? 'bg-cyan-500/20 text-cyan-100 ring-1 ring-cyan-500/40'
+                        : 'bg-slate-800 text-slate-300 hover:bg-slate-700'
+                      }`}
                     >
                       {option.label.replace('All Media', 'All')}
                     </button>
