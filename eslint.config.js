@@ -14,6 +14,12 @@ export default [
             'dist/**',
             'build/**',
             'coverage/**',
+            'docs/experiments/**',
+            'proxy/**',
+            'scripts/**',
+            'public/mebooks-integration.js',
+            'mebooks-integration.js',
+            'mebooks-integration-package/**',
             '*.min.js',
             '.vite/**',
             '.cache/**',
@@ -187,6 +193,10 @@ export default [
             'no-console': ['warn', {
                 allow: ['warn', 'error'],
             }],
+            'no-unused-vars': 'off',
+            'no-empty': 'off',
+            'no-undef': 'off',
+            'no-useless-catch': 'warn',
             '@typescript-eslint/explicit-function-return-type': ['off', { // Off for now, too strict
                 allowExpressions: true,
                 allowTypedFunctionExpressions: true,

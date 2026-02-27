@@ -853,7 +853,7 @@ const ReaderView: React.FC<ReaderViewProps> = ({ bookId, onClose, animationData 
         if (noFrag !== orig && await tryDisplay(noFrag)) return;
 
         // If loc looks like an idref (no slash, no dot), attempt to find matching spine item by id/idref
-        const looksLikeIdref = !/[\/.]/.test(orig);
+        const looksLikeIdref = !/[/.]/.test(orig);
         if (looksLikeIdref && book?.spine?.items) {
           for (const item of book.spine.items) {
             if (item.id === orig || item.idref === orig || (item.href && item.href.split('#')[0].endsWith(orig))) {
@@ -899,7 +899,7 @@ const ReaderView: React.FC<ReaderViewProps> = ({ bookId, onClose, animationData 
 
     if (navigationRef.current) {
       try {
-        const tocItemPromise = navigationRef.current.get(cfi);
+        const tocItemPromise = (navigationRef.current as any).get(cfi);
         if (tocItemPromise && typeof tocItemPromise.then === 'function') {
           const tocItem = await tocItemPromise;
           if (tocItem?.label) {
@@ -955,7 +955,7 @@ const ReaderView: React.FC<ReaderViewProps> = ({ bookId, onClose, animationData 
 
     if (navigationRef.current) {
       try {
-        const tocItemPromise = navigationRef.current.get(cfi);
+        const tocItemPromise = (navigationRef.current as any).get(cfi);
         if (tocItemPromise && typeof tocItemPromise.then === 'function') {
           const tocItem = await tocItemPromise;
           if (tocItem?.label) {

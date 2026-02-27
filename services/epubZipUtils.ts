@@ -94,7 +94,7 @@ export async function extractCoverImageFromEpub(epubData: ArrayBuffer): Promise<
     const spineMatch = opfXml.match(/<spine[\s\S]*?<itemref[^>]+idref=["']([^"']+)["'][^>]*>/i);
     if (spineMatch) {
       const idref = spineMatch[1];
-      const itemTagRegex = new RegExp(`<item[^>]+id=["']${idref}["'][^>]+href=["']([^"']+)["'][^>]+media-type=["']application/xhtml\+xml["'][^>]*>`, 'i');
+      const itemTagRegex = new RegExp(`<item[^>]+id=["']${idref}["'][^>]+href=["']([^"']+)["'][^>]+media-type=["']application/xhtml+xml["'][^>]*>`, 'i');
       const itemTagMatch = opfXml.match(itemTagRegex);
       if (itemTagMatch) {
         const xhtmlHref = itemTagMatch[1];

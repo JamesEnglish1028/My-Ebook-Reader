@@ -32,35 +32,41 @@ const waitForGlobal = (key: 'gapi' | 'google', subkey?: string): Promise<any> =>
 };
 
 export const initGoogleClient = (callback: (resp: any) => void): Promise<any> => {
-    return new Promise(async (resolve, reject) => {
-        try {
-            await Promise.all([waitForGlobal('gapi', 'client'), waitForGlobal('google', 'accounts')]);
-            
-            if (gisInited) {
-                resolve(tokenClient);
-                return;
-            }
+    return new Promise((resolve, reject) => {
+        void (async () => {
+            try {
+                await Promise.all([waitForGlobal('gapi', 'client'), waitForGlobal('google', 'accounts')]);
 
-            tokenClient = window.google.accounts.oauth2.initTokenClient({
-                client_id: GOOGLE_CLIENT_ID,
-                scope: DRIVE_API_SCOPE,
-                callback: callback,
-            });
-            gisInited = true;
+                if (gisInited) {
+                    resolve(tokenClient);
+                    return;
+                }
 
-            window.gapi.load('client', async () => {
-                await window.gapi.client.init({
-                    clientId: GOOGLE_CLIENT_ID,
+                tokenClient = window.google.accounts.oauth2.initTokenClient({
+                    client_id: GOOGLE_CLIENT_ID,
                     scope: DRIVE_API_SCOPE,
-                    discoveryDocs: ['https://www.googleapis.com/discovery/v1/apis/drive/v3/rest'],
+                    callback: callback,
                 });
-                gapiInited = true;
-                resolve(tokenClient);
-            });
-        } catch(error) {
-            logger.error('Error during Google Client initialization:', error);
-            reject(error);
-        }
+                gisInited = true;
+
+                window.gapi.load('client', () => {
+                    void window.gapi.client.init({
+                        clientId: GOOGLE_CLIENT_ID,
+                        scope: DRIVE_API_SCOPE,
+                        discoveryDocs: ['https://www.googleapis.com/discovery/v1/apis/drive/v3/rest'],
+                    }).then(() => {
+                        gapiInited = true;
+                        resolve(tokenClient);
+                    }).catch((error: unknown) => {
+                        logger.error('Error during Google Client initialization:', error);
+                        reject(error);
+                    });
+                });
+            } catch (error) {
+                logger.error('Error during Google Client initialization:', error);
+                reject(error);
+            }
+        })();
     });
 };
 
