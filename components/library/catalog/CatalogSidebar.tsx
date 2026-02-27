@@ -5,6 +5,8 @@ import type { CatalogFacetGroup, CatalogFacetLink, CatalogNavigationLink } from 
 interface CatalogSidebarProps {
   /** Parsed catalog navigation links */
   navigationLinks: CatalogNavigationLink[];
+  /** Current feed URL for active navigation styling */
+  currentNavigationUrl?: string | null;
   /** Parsed facet groups for the current feed */
   facetGroups: CatalogFacetGroup[];
   /** Callback when a navigation link is selected */
@@ -23,6 +25,7 @@ interface CatalogSidebarProps {
  */
 const CatalogSidebar: React.FC<CatalogSidebarProps> = ({
   navigationLinks,
+  currentNavigationUrl = null,
   facetGroups,
   onNavigationSelect,
   onFacetSelect,
@@ -65,15 +68,23 @@ const CatalogSidebar: React.FC<CatalogSidebarProps> = ({
             </button>
             {navigationOpen && (
               <nav className="space-y-1.5 bg-slate-900/30 p-2">
-                {navigationLinks.map((link, index) => (
+                {navigationLinks.map((link, index) => {
+                  const isActive = !!currentNavigationUrl && link.url === currentNavigationUrl;
+                  return (
                   <button
                     key={`${link.url}-${index}`}
                     onClick={() => onNavigationSelect(link)}
-                    className="w-full rounded-md border border-transparent bg-sky-500/10 px-2.5 py-2 text-left text-sm text-sky-200 transition-colors hover:border-sky-500/30 hover:bg-sky-500/20"
+                    className={`w-full rounded-md border px-2.5 py-2 text-left text-sm transition-colors ${
+                      isActive
+                        ? 'border-sky-400/40 bg-sky-500/20 text-sky-100'
+                        : 'border-transparent bg-sky-500/10 text-sky-200 hover:border-sky-500/30 hover:bg-sky-500/20'
+                    }`}
+                    aria-current={isActive ? 'page' : undefined}
                   >
                     {link.title}
                   </button>
-                ))}
+                  );
+                })}
               </nav>
             )}
           </div>
