@@ -5,6 +5,12 @@ import { initGoogleClient, revokeToken } from '../services/google';
 
 type AuthStatus = 'initializing' | 'ready' | 'error' | 'not_configured';
 type TokenRequestMode = 'none' | 'restore_silent' | 'interactive_silent' | 'interactive_consent';
+const REQUIRED_GOOGLE_SCOPES = [
+  'https://www.googleapis.com/auth/drive.file',
+  'openid',
+  'profile',
+  'email',
+];
 
 interface AuthContextType {
   user: GoogleUser | null;
@@ -164,6 +170,30 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       return;
     }
 
+    const hasAllScopes = (() => {
+      const oauth2 = window.google?.accounts?.oauth2;
+      if (oauth2?.hasGrantedAllScopes && response?.access_token) {
+        try {
+          return oauth2.hasGrantedAllScopes(response, ...REQUIRED_GOOGLE_SCOPES);
+        } catch {
+          // Fall through to string-based scope parsing.
+        }
+      }
+      const grantedScopes = typeof response?.scope === 'string'
+        ? response.scope.split(/\s+/).filter(Boolean)
+        : [];
+      return REQUIRED_GOOGLE_SCOPES.every((scope) => grantedScopes.includes(scope));
+    })();
+
+    if (!hasAllScopes) {
+      if (requestMode !== 'interactive_consent') {
+        requestAccessToken('interactive_consent');
+        return;
+      }
+      setAuthError('Google Drive access was not granted. Please approve Drive access to use cloud sync.');
+      return;
+    }
+
     if (response?.access_token) {
       const expiresAtMs = storeAccessToken(response);
       await fetchUserProfile(response.access_token, expiresAtMs);
@@ -214,7 +244,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const signIn = useCallback(() => {
     if (!tokenClientRef.current) return;
     setAuthError(null);
-    requestAccessToken('interactive_silent');
+    requestAccessToken('interactive_consent');
   }, [requestAccessToken]);
 
   return (

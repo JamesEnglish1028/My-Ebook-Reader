@@ -30,20 +30,52 @@ const isRetriableStatus = (status?: number) => status === 429 || (typeof status 
 
 const toStatus = (error: unknown): number | undefined => {
   if (!error || typeof error !== 'object') return undefined;
-  const candidate = error as { status?: number; code?: number };
+  const candidate = error as {
+    status?: number;
+    code?: number;
+    result?: { error?: { code?: number } };
+  };
   if (typeof candidate.status === 'number') return candidate.status;
   if (typeof candidate.code === 'number') return candidate.code;
+  if (typeof candidate.result?.error?.code === 'number') return candidate.result.error.code;
   return undefined;
 };
 
 const toUserFacingError = (error: unknown, fallback: string): Error => {
   const status = toStatus(error);
-  if (status === 401 || status === 403) {
+  if (status === 401) {
     return new Error('Google session expired or permission was revoked. Please sign in again.');
   }
   if (error && typeof error === 'object') {
-    const candidate = error as { error?: string; details?: string; message?: string };
-    const parts = [candidate.error, candidate.details, candidate.message].filter((v): v is string => Boolean(v && v.trim().length > 0));
+    const candidate = error as {
+      error?: string;
+      details?: string;
+      message?: string;
+      result?: {
+        error?: {
+          message?: string;
+          status?: string;
+          errors?: Array<{ reason?: string; message?: string }>;
+        };
+      };
+    };
+    const nested = candidate.result?.error;
+    const nestedReasons = Array.isArray(nested?.errors)
+      ? nested.errors
+        .map((entry) => entry?.reason || entry?.message)
+        .filter((v): v is string => Boolean(v && v.trim().length > 0))
+      : [];
+    if (status === 403) {
+      const joined = [nested?.status, ...nestedReasons, nested?.message, candidate.details, candidate.message]
+        .filter((v): v is string => Boolean(v && v.trim().length > 0))
+        .join(' | ')
+        .toLowerCase();
+      if (joined.includes('insufficient') || joined.includes('scope')) {
+        return new Error('Google sign-in succeeded, but Drive access was not granted. Sign out, then sign in again and approve Google Drive access.');
+      }
+    }
+    const parts = [candidate.error, candidate.details, candidate.message, nested?.message, ...nestedReasons]
+      .filter((v): v is string => Boolean(v && v.trim().length > 0));
     if (parts.length > 0) {
       return new Error(parts.join(' - '));
     }
@@ -195,6 +227,7 @@ export const initGoogleClient = (callback: (resp: any) => void): Promise<any> =>
           tokenClient = window.google.accounts.oauth2.initTokenClient({
             client_id: GOOGLE_CLIENT_ID,
             scope: GOOGLE_SCOPES,
+            include_granted_scopes: true,
             callback,
           });
           gisInited = true;
