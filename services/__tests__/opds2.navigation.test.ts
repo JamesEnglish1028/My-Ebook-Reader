@@ -20,7 +20,7 @@ describe('parseOpds2Json - navigation/catalog inference', () => {
     expect(navLinks[0].rel).toBe('subsection');
   });
 
-  it('normalizes non-string rel/subject values so catalog filtering does not crash', () => {
+  it('normalizes non-string rel/subject values without inventing navigation links', () => {
     const json = {
       metadata: { title: 'Feed' },
       links: [
@@ -40,9 +40,9 @@ describe('parseOpds2Json - navigation/catalog inference', () => {
       ],
     };
 
-    const { books, navLinks } = parseOpds2Json(json, 'https://example.org/');
-    expect(navLinks).toHaveLength(1);
-    expect(navLinks[0].title).toBe('Fiction');
+    const { books, navLinks, facetGroups } = parseOpds2Json(json, 'https://example.org/');
+    expect(navLinks).toHaveLength(0);
+    expect(facetGroups).toHaveLength(0);
     expect(books).toHaveLength(1);
     expect(books[0].subjects).toEqual(['Young Adult']);
     expect(() => getAvailableAudiences(books)).not.toThrow();
