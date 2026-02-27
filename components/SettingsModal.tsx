@@ -1,7 +1,7 @@
 import React from 'react';
 
 import { useAuth } from '../contexts/AuthContext';
-import { useFocusTrap } from '../hooks';
+import { useFocusTrap } from '../hooks/useFocusTrap';
 
 import { CloseIcon, DownloadIcon, UploadIcon } from './icons';
 import Spinner from './Spinner';

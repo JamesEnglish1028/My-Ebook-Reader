@@ -1,7 +1,7 @@
 import React, { createContext, useState, useEffect, useContext, useCallback, useRef } from 'react';
 
+import type { GoogleUser } from '../domain/sync/types';
 import { initGoogleClient, revokeToken } from '../services/google';
-import type { GoogleUser } from '../types';
 
 type AuthStatus = 'initializing' | 'ready' | 'error' | 'not_configured';
 type TokenRequestMode = 'none' | 'restore_silent' | 'interactive_silent' | 'interactive_consent';

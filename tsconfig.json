@@ -28,5 +28,14 @@
     },
     "allowImportingTsExtensions": true,
     "noEmit": true
-  }
+  },
+  "exclude": [
+    "node_modules",
+    "dist",
+    "archive/**",
+    "docs/**",
+    "public/**",
+    "proxy/**",
+    "mebooks-integration-package/**"
+  ]
 }

@@ -1,4 +1,5 @@
-import type { SyncPayload, BookRecord } from '../types';
+import type { BookRecord } from '../domain/book/types';
+import type { SyncPayload } from '../domain/sync/types';
 
 import { logger } from './logger';
 

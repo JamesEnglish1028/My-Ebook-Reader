@@ -1,0 +1,15 @@
+{
+  "extends": "./tsconfig.json",
+  "include": [
+    "global.d.ts",
+    "domain/book/types.ts",
+    "domain/catalog/types.ts",
+    "domain/reader/types.ts",
+    "domain/sync/types.ts",
+    "services/logger.ts",
+    "services/google.ts",
+    "contexts/AuthContext.tsx",
+    "hooks/useFocusTrap.ts",
+    "components/SettingsModal.tsx"
+  ]
+}

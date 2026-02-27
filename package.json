@@ -11,7 +11,7 @@
     "lint": "eslint . --ext .ts,.tsx --quiet",
     "lint:fix": "eslint . --ext .ts,.tsx --fix",
     "lint:report": "eslint . --ext .ts,.tsx --format json --output-file eslint-report.json",
-    "type-check": "tsc --noEmit",
+    "type-check": "tsc -p tsconfig.typecheck.json --noEmit",
     "type-check:strict": "tsc -p tsconfig.strict.json --noEmit",
     "validate": "npm run type-check && npm run lint"
   },
