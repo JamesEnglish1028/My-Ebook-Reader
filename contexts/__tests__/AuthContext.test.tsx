@@ -12,7 +12,7 @@ vi.mock('../../services/google', () => ({
 }));
 
 const Consumer: React.FC = () => {
-  const { user, isLoggedIn, signIn, signOut, isInitialized, authStatus, authError } = useAuth();
+  const { user, isLoggedIn, signIn, reauthorizeDrive, signOut, isInitialized, authStatus, authError } = useAuth();
   return (
     <div>
       <span data-testid="user">{user ? user.email : 'none'}</span>
@@ -21,6 +21,7 @@ const Consumer: React.FC = () => {
       <span data-testid="auth-status">{authStatus}</span>
       <span data-testid="auth-error">{authError || 'none'}</span>
       <button onClick={signIn}>Sign In</button>
+      <button onClick={reauthorizeDrive}>Reauthorize</button>
       <button onClick={signOut}>Sign Out</button>
     </div>
   );
@@ -63,7 +64,7 @@ describe('AuthContext', () => {
     });
   });
 
-  it('falls back from silent token request to consent prompt on sign in', async () => {
+  it('requests consent on sign in and stores the profile when Drive scope is granted', async () => {
     let callback: ((response: any) => void) | null = null;
     const requestAccessToken = vi.fn();
 
@@ -84,16 +85,14 @@ describe('AuthContext', () => {
     });
 
     fireEvent.click(screen.getByText('Sign In'));
-    expect(requestAccessToken).toHaveBeenLastCalledWith({ prompt: '' });
-
-    await act(async () => {
-      callback?.({ error: 'consent_required' });
-    });
-
     expect(requestAccessToken).toHaveBeenLastCalledWith({ prompt: 'consent' });
 
     await act(async () => {
-      callback?.({ access_token: 'token-123', expires_in: 3600 });
+      callback?.({
+        access_token: 'token-123',
+        expires_in: 3600,
+        scope: 'https://www.googleapis.com/auth/drive.file',
+      });
     });
 
     await waitFor(() => {
@@ -103,6 +102,41 @@ describe('AuthContext', () => {
 
     expect(localStorage.getItem('g_access_token')).toBe('token-123');
     expect(localStorage.getItem('g_access_token_expires_at')).toBeTruthy();
+  });
+
+  it('surfaces an auth error when Google does not grant Drive scope', async () => {
+    let callback: ((response: any) => void) | null = null;
+    const requestAccessToken = vi.fn();
+
+    vi.mocked(initGoogleClient).mockImplementation(async (cb: any) => {
+      callback = cb;
+      return { requestAccessToken };
+    });
+
+    render(
+      <AuthProvider>
+        <Consumer />
+      </AuthProvider>,
+    );
+
+    await waitFor(() => {
+      expect(screen.getByTestId('initialized')).toHaveTextContent('yes');
+    });
+
+    fireEvent.click(screen.getByText('Sign In'));
+
+    await act(async () => {
+      callback?.({
+        access_token: 'token-123',
+        expires_in: 3600,
+        scope: 'openid profile email',
+      });
+    });
+
+    await waitFor(() => {
+      expect(screen.getByTestId('logged-in')).toHaveTextContent('no');
+      expect(screen.getByTestId('auth-error')).toHaveTextContent('Drive access was not granted');
+    });
   });
 
   it('calls signOut and clears localStorage', async () => {

@@ -16,6 +16,10 @@ import { ImportButton, LocalLibraryView, SortControls } from './local';
 
 interface LibraryViewProps {
   libraryRefreshFlag: number;
+  syncStatus: {
+    state: 'idle' | 'syncing' | 'success' | 'error';
+    message: string;
+  };
   onOpenBook: (id: number, animationData: CoverAnimationData, format?: string) => void;
   onShowBookDetail: (book: BookMetadata | CatalogBook, source: 'library' | 'catalog', catalogName?: string) => void;
   processAndSaveBook: (
@@ -60,6 +64,7 @@ const LibraryView: React.FC<LibraryViewProps> = ({
   onOpenLocalStorageModal,
   onShowAbout,
   libraryRefreshFlag,
+  syncStatus,
 }) => {
   // Use libraryRefreshFlag to trigger refreshes in child components if needed
   // React Query client for cache invalidation
@@ -318,6 +323,16 @@ const LibraryView: React.FC<LibraryViewProps> = ({
 
   const currentTitle = activeOpdsSource ? activeOpdsSource.name : 'My Library';
   const isBrowsingOpds = !!activeOpdsSource;
+  const lastSyncDate = localStorage.getItem('ebook-reader-last-sync');
+  const lastSyncLabel = lastSyncDate ? new Date(lastSyncDate).toLocaleString() : 'Never';
+  const syncChipLabel = syncStatus.state === 'idle' ? `Drive: ${lastSyncLabel}` : syncStatus.message;
+  const syncChipTone = syncStatus.state === 'error'
+    ? 'border-red-500/30 bg-red-500/10 text-red-200'
+    : syncStatus.state === 'success'
+      ? 'border-emerald-500/30 bg-emerald-500/10 text-emerald-200'
+      : syncStatus.state === 'syncing'
+        ? 'border-sky-500/30 bg-sky-500/10 text-sky-100'
+        : 'border-slate-700 bg-slate-800 text-slate-200';
 
   return (
     <div className="container mx-auto p-4 md:p-8">
@@ -381,17 +396,27 @@ const LibraryView: React.FC<LibraryViewProps> = ({
         {/* Actions */}
         <div className="flex items-center gap-2 flex-shrink-0 self-end md:self-auto">
           {isLoggedIn && user && (
-            <div className="hidden sm:flex items-center gap-2 bg-slate-800 border border-slate-700 rounded-lg px-2 py-1 max-w-[220px]">
-              <img
-                src={user.picture}
-                alt={`${user.name} profile`}
-                className="w-7 h-7 rounded-full object-cover"
-                referrerPolicy="no-referrer"
-              />
-              <span className="text-sm text-slate-100 truncate" title={user.name}>
-                {user.name}
-              </span>
-            </div>
+            <>
+              <button
+                onClick={onOpenCloudSyncModal}
+                className={`hidden xl:flex items-center gap-2 rounded-lg border px-3 py-1.5 text-xs transition-colors ${syncChipTone}`}
+                title={syncChipLabel}
+              >
+                <span className="font-semibold uppercase tracking-wide">Cloud</span>
+                <span className="max-w-[220px] truncate">{syncChipLabel}</span>
+              </button>
+              <div className="hidden sm:flex items-center gap-2 bg-slate-800 border border-slate-700 rounded-lg px-2 py-1 max-w-[220px]">
+                <img
+                  src={user.picture}
+                  alt={`${user.name} profile`}
+                  className="w-7 h-7 rounded-full object-cover"
+                  referrerPolicy="no-referrer"
+                />
+                <span className="text-sm text-slate-100 truncate" title={user.name}>
+                  {user.name}
+                </span>
+              </div>
+            </>
           )}
 
           {/* Sort (only for local library) */}

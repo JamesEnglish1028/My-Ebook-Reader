@@ -19,6 +19,7 @@ describe('SettingsModal auth states', () => {
       user: null,
       isLoggedIn: false,
       signIn: vi.fn(),
+      reauthorizeDrive: vi.fn(),
       signOut: vi.fn(),
       tokenClient: null,
       isInitialized: true,
@@ -33,6 +34,11 @@ describe('SettingsModal auth states', () => {
         onClose={vi.fn()}
         onUploadToDrive={vi.fn()}
         onDownloadFromDrive={vi.fn()}
+        driveSnapshots={[]}
+        selectedSnapshotId=""
+        onSelectSnapshotId={vi.fn()}
+        onRefreshSnapshots={vi.fn()}
+        isLoadingSnapshots={false}
         syncStatus={{ state: 'idle', message: '' }}
         setSyncStatus={vi.fn()}
       />,
@@ -48,6 +54,7 @@ describe('SettingsModal auth states', () => {
       user: null,
       isLoggedIn: false,
       signIn,
+      reauthorizeDrive: vi.fn(),
       signOut: vi.fn(),
       tokenClient: null,
       isInitialized: true,
@@ -62,6 +69,11 @@ describe('SettingsModal auth states', () => {
         onClose={vi.fn()}
         onUploadToDrive={vi.fn()}
         onDownloadFromDrive={vi.fn()}
+        driveSnapshots={[]}
+        selectedSnapshotId=""
+        onSelectSnapshotId={vi.fn()}
+        onRefreshSnapshots={vi.fn()}
+        isLoadingSnapshots={false}
         syncStatus={{ state: 'idle', message: '' }}
         setSyncStatus={vi.fn()}
       />,

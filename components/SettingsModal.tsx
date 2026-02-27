@@ -49,7 +49,7 @@ const SettingsModal: React.FC<SettingsModalProps> = ({
   syncStatus,
   setSyncStatus,
 }) => {
-  const { user, isLoggedIn, signIn, signOut, isInitialized, authStatus, authError } = useAuth();
+  const { user, isLoggedIn, signIn, reauthorizeDrive, signOut, isInitialized, authStatus, authError } = useAuth();
 
   const handleClose = () => {
     if (syncStatus.state !== 'syncing') {
@@ -77,6 +77,14 @@ const SettingsModal: React.FC<SettingsModalProps> = ({
   })();
 
   const signInDisabled = !isInitialized || authStatus === 'initializing' || authStatus === 'not_configured';
+  const syncTone = syncStatus.state === 'error'
+    ? 'text-red-300 border-red-500/30 bg-red-500/10'
+    : syncStatus.state === 'success'
+      ? 'text-emerald-300 border-emerald-500/30 bg-emerald-500/10'
+      : syncStatus.state === 'syncing'
+        ? 'text-sky-300 border-sky-500/30 bg-sky-500/10'
+        : 'text-slate-300 border-slate-600 bg-slate-800/70';
+  const syncSummary = syncStatus.state === 'idle' ? `Last synced: ${lastSyncString}` : syncStatus.message;
 
   return (
     <div className="fixed inset-0 bg-black/60 z-50 flex items-center justify-center p-4" onClick={handleClose} aria-modal="true" role="dialog">
@@ -99,9 +107,15 @@ const SettingsModal: React.FC<SettingsModalProps> = ({
                     <p className="font-semibold">{user.name}</p>
                     <p className="text-sm text-slate-400">{user.email}</p>
                   </div>
+                  <button onClick={reauthorizeDrive} className="py-2 px-3 rounded-md bg-sky-700 hover:bg-sky-600 transition-colors font-semibold text-xs">
+                    Refresh Drive Access
+                  </button>
                   <button onClick={signOut} className="py-2 px-4 rounded-md bg-slate-600 hover:bg-slate-500 transition-colors font-semibold text-sm">
                     Sign Out
                   </button>
+                </div>
+                <div className={`rounded-md border px-3 py-2 text-xs ${syncTone}`}>
+                  {syncSummary}
                 </div>
                 {authError && (
                   <p className="text-xs text-amber-300" role="status">{authError}</p>

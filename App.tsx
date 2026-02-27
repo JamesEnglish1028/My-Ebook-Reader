@@ -319,6 +319,7 @@ const AppInner: React.FC = () => {
             onImportFromCatalog={handleImportFromCatalog}
             onOpenBook={handleOpenBook}
             onShowBookDetail={handleShowBookDetail}
+            syncStatus={syncStatus}
             processAndSaveBook={processAndSaveBook}
             activeOpdsSource={activeOpdsSource}
             setActiveOpdsSource={setActiveOpdsSource}

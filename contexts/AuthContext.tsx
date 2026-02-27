@@ -12,6 +12,7 @@ interface AuthContextType {
   isLoggedIn: boolean;
   tokenClient: any | null;
   signIn: () => void;
+  reauthorizeDrive: () => void;
   signOut: () => void;
   isInitialized: boolean;
   authStatus: AuthStatus;
@@ -242,6 +243,12 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     requestAccessToken('interactive_consent');
   }, [requestAccessToken]);
 
+  const reauthorizeDrive = useCallback(() => {
+    if (!tokenClientRef.current) return;
+    setAuthError(null);
+    requestAccessToken('interactive_consent');
+  }, [requestAccessToken]);
+
   return (
     <AuthContext.Provider
       value={{
@@ -249,6 +256,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         isLoggedIn,
         tokenClient,
         signIn,
+        reauthorizeDrive,
         signOut,
         isInitialized,
         authStatus,

@@ -39,6 +39,10 @@ export interface ViewRendererProps {
   onImportFromCatalog: (book: CatalogBook, catalogName?: string) => Promise<{ success: boolean; bookRecord?: BookRecord; existingBook?: BookRecord }>;
 
   // Library view props
+  syncStatus: {
+    state: 'idle' | 'syncing' | 'success' | 'error';
+    message: string;
+  };
   onOpenBook: (id: number, animationData: CoverAnimationData, format?: string) => void;
   onShowBookDetail: (book: BookMetadata | CatalogBook, source: 'library' | 'catalog', catalogName?: string) => void;
   userCitationFormat: 'apa' | 'mla' | 'chicago';
@@ -89,6 +93,7 @@ export const ViewRenderer: React.FC<ViewRendererProps> = (props) => {
     onImportFromCatalog,
     onOpenBook,
     onShowBookDetail,
+    syncStatus,
     processAndSaveBook,
     activeOpdsSource,
     setActiveOpdsSource,
@@ -214,6 +219,7 @@ export const ViewRenderer: React.FC<ViewRendererProps> = (props) => {
             onOpenLocalStorageModal={onOpenLocalStorageModal}
             onShowAbout={onShowAbout}
             libraryRefreshFlag={libraryRefreshFlag}
+            syncStatus={syncStatus}
           />
         </ErrorBoundary>
       );
