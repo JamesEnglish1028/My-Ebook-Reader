@@ -518,8 +518,14 @@ export const fetchCatalogContent = async (url: string, baseUrl: string, forcedVe
         if (!response.ok) {
             const statusInfo = `${response.status}${response.statusText ? ` ${response.statusText}` : ''}`;
             let errorMessage = `The catalog server responded with an error (${statusInfo}). Please check the catalog URL.`;
-            if (response.status === 401 || response.status === 403) {
+            if (response.status === 401 || (response.status === 403 && isDirectFetch)) {
                 errorMessage = `Could not access catalog (${statusInfo}). This catalog requires authentication (a login or password), which is not supported by this application.`;
+            }
+            if (response.status === 403 && !isDirectFetch) {
+                const httpHint = url.startsWith('http://')
+                    ? ' This feed uses plain HTTP, so it must be fetched through an HTTPS-capable proxy.'
+                    : '';
+                errorMessage = `Could not access catalog (${statusInfo}). The proxy or upstream server denied the request. This is often caused by proxy host restrictions or the remote server blocking proxy access.${httpHint}`;
             }
             if (response.status === 429) {
                 errorMessage = `Could not access catalog (${statusInfo}). The request was rate-limited by the server or the proxy. Please wait a moment and try again.`;
