@@ -19,6 +19,9 @@ export {
   catalogKeys, useCatalogContent,
   useCatalogRootCollections,
 } from './useCatalogContent';
+export {
+  catalogSearchKeys, useCatalogSearchDescription,
+} from './useCatalogSearchDescription';
 
 // Catalog management mutations
 export {
@@ -34,4 +37,3 @@ export type { FocusTrapOptions } from './useFocusTrap';
 
 export { formatShortcut, getShortcutsByCategory, registerShortcut, shortcutRegistry, unregisterShortcut, useGlobalShortcuts } from './useGlobalShortcuts';
 export type { GlobalShortcutsOptions, ShortcutAction } from './useGlobalShortcuts';
-

@@ -3,7 +3,7 @@ import React from 'react';
 import { render, screen, fireEvent, act, cleanup } from '@testing-library/react';
 import { vi, describe, it, expect, beforeEach, afterEach } from 'vitest';
 
-import { useCatalogContent } from '../../../../hooks';
+import { useCatalogContent, useCatalogSearchDescription } from '../../../../hooks';
 import CatalogView from '../CatalogView';
 
 vi.mock('../../../../hooks', async (importOriginal) => {
@@ -11,6 +11,7 @@ vi.mock('../../../../hooks', async (importOriginal) => {
   return {
     ...actual,
     useCatalogContent: vi.fn(),
+    useCatalogSearchDescription: vi.fn(),
   };
 });
 
@@ -50,9 +51,15 @@ const registryCatalog = {
 
 describe('CatalogView pagination history', () => {
   const mockUseCatalogContent = vi.mocked(useCatalogContent);
+  const mockUseCatalogSearchDescription = vi.mocked(useCatalogSearchDescription);
 
   beforeEach(() => {
     vi.resetAllMocks();
+    mockUseCatalogSearchDescription.mockReturnValue({
+      data: undefined,
+      isLoading: false,
+      error: null,
+    } as any);
   });
 
   afterEach(() => {

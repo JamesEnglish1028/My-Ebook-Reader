@@ -29,6 +29,11 @@ export {
     borrowOpds2Work, deleteOpdsCredential, fetchOpds2Feed, findCredentialForUrl, getCachedEtag, getStoredOpdsCredentials, parseOpds2Json, resolveAcquisitionChain, saveOpdsCredential, setCachedEtag,
 } from './opds2';
 
+// OpenSearch utilities
+export {
+    buildOpenSearchUrl, fetchOpenSearchDescription, parseOpenSearchDescription,
+} from './opensearch';
+
 // Credentials service
 export {
     deleteCredential, findCredential, getAllCredentials,

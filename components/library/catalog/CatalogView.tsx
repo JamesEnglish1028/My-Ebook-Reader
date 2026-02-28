@@ -1,6 +1,7 @@
 import React, { useEffect, useMemo, useState } from 'react';
 
-import { useCatalogContent } from '../../../hooks';
+import { useCatalogContent, useCatalogSearchDescription } from '../../../hooks';
+import { buildOpenSearchUrl } from '../../../services';
 import {
   filterBooksByAudience,
   filterBooksByAvailability,
@@ -27,9 +28,10 @@ import type {
   FictionMode,
   MediaMode,
   PublicationMode,
+  CatalogSearchMetadata,
 } from '../../../types';
 import { Error as ErrorDisplay, Loading } from '../../shared';
-import { CatalogFilters, CatalogNavigation, CatalogSidebar } from '../catalog';
+import { CatalogFilters, CatalogNavigation, CatalogSearch, CatalogSidebar } from '../catalog';
 import { BookGrid, EmptyState } from '../shared';
 
 interface CatalogViewProps {
@@ -53,6 +55,11 @@ const CatalogView: React.FC<CatalogViewProps> = ({
   const [distributorMode, setDistributorMode] = useState<DistributorMode>('all');
   const [catalogBooks, setCatalogBooks] = useState<CatalogBook[]>([]);
   const [pageHistory, setPageHistory] = useState<string[]>([]);
+  const [searchInput, setSearchInput] = useState('');
+  const [activeSearchQuery, setActiveSearchQuery] = useState<string | null>(null);
+  const [searchOriginPath, setSearchOriginPath] = useState<{ name: string; url: string }[] | null>(null);
+  const [catalogSearch, setCatalogSearch] = useState<CatalogSearchMetadata | null>(null);
+  const [searchActionError, setSearchActionError] = useState<string | null>(null);
 
   const currentUrl = catalogNavPath.length > 0
     ? catalogNavPath[catalogNavPath.length - 1].url
@@ -86,6 +93,27 @@ const CatalogView: React.FC<CatalogViewProps> = ({
   const navigationLinks = catalogData?.navigationLinks || [];
   const facetGroups = catalogData?.facetGroups || [];
   const catalogPagination = catalogData?.pagination || null;
+  const discoveredSearch = catalogData?.search || null;
+
+  useEffect(() => {
+    setCatalogSearch(null);
+    setSearchInput('');
+    setActiveSearchQuery(null);
+    setSearchOriginPath(null);
+    setSearchActionError(null);
+  }, [activeOpdsSource?.id]);
+
+  useEffect(() => {
+    if (discoveredSearch) {
+      setCatalogSearch(discoveredSearch);
+    }
+  }, [discoveredSearch]);
+
+  const {
+    data: searchDescription,
+    isLoading: isSearchLoading,
+    error: searchError,
+  } = useCatalogSearchDescription(catalogSearch, !!catalogSearch?.descriptionUrl);
 
   const effectivePagination = useMemo(() => {
     if (!catalogPagination) return null;
@@ -171,6 +199,47 @@ const CatalogView: React.FC<CatalogViewProps> = ({
     onShowBookDetail(book, 'catalog', activeOpdsSource.name);
   };
 
+  const handleSearchSubmit = () => {
+    const query = searchInput.trim();
+    const template = searchDescription?.activeTemplate;
+    if (!query || !template) return;
+
+    let searchUrl: string;
+    try {
+      searchUrl = buildOpenSearchUrl(template, { searchTerms: query });
+    } catch (error) {
+      setSearchActionError(error instanceof Error ? error.message : 'Unable to build search URL.');
+      return;
+    }
+    const basePath = activeSearchQuery && searchOriginPath
+      ? searchOriginPath
+      : (catalogNavPath.length > 0
+        ? catalogNavPath
+        : [{ name: activeOpdsSource.name, url: activeOpdsSource.url }]);
+    const nextPath = [...basePath, { name: `Search: ${query}`, url: searchUrl }];
+
+    setSearchOriginPath(basePath);
+    setActiveSearchQuery(query);
+    setSearchActionError(null);
+    setCatalogNavPath(nextPath);
+    setPageHistory([]);
+  };
+
+  const handleSearchClear = () => {
+    if (searchOriginPath) {
+      setCatalogNavPath(searchOriginPath);
+    } else {
+      setCatalogNavPath(
+        catalogNavPath.slice(0, Math.max(catalogNavPath.length - 1, 0)),
+      );
+    }
+    setActiveSearchQuery(null);
+    setSearchOriginPath(null);
+    setSearchInput('');
+    setSearchActionError(null);
+    setPageHistory([]);
+  };
+
   const handleNavigationSelect = (link: CatalogNavigationLink) => {
     setCatalogNavPath((prev) => [...prev, { name: link.title, url: link.url }]);
     resetLocalFilters();
@@ -251,6 +320,19 @@ const CatalogView: React.FC<CatalogViewProps> = ({
           onPaginationClick={handlePaginationClick}
           isLoading={isLoading}
         />
+
+        {catalogSearch && (
+          <CatalogSearch
+            value={searchInput}
+            onChange={setSearchInput}
+            onSubmit={handleSearchSubmit}
+            onClear={handleSearchClear}
+            disabled={isSearchLoading || !searchDescription?.activeTemplate}
+            isLoading={isSearchLoading}
+            errorMessage={searchActionError || (searchError instanceof Error ? searchError.message : null)}
+            hasActiveSearch={!!activeSearchQuery}
+          />
+        )}
 
         <CatalogFilters
           availableAudiences={availableAudiences}

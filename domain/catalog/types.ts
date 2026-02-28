@@ -174,6 +174,39 @@ export interface CatalogSearchMetadata {
 }
 
 /**
+ * An OpenSearch template parameter extracted from a Url template.
+ */
+export interface OpenSearchTemplateParameter {
+  name: string;
+  required: boolean;
+  namespace?: string;
+}
+
+/**
+ * A single Url entry from an OpenSearch description document.
+ */
+export interface OpenSearchUrlTemplate {
+  template: string;
+  type?: string;
+  method: string;
+  rel?: string;
+  indexOffset?: number;
+  pageOffset?: number;
+  params: OpenSearchTemplateParameter[];
+}
+
+/**
+ * A parsed OpenSearch description document.
+ */
+export interface OpenSearchDescriptionDocument {
+  shortName?: string;
+  description?: string;
+  tags?: string[];
+  urls: OpenSearchUrlTemplate[];
+  activeTemplate?: OpenSearchUrlTemplate;
+}
+
+/**
  * Catalog pagination metadata
  */
 export interface CatalogPagination {
