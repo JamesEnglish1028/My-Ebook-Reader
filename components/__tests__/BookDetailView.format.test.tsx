@@ -53,4 +53,24 @@ describe('BookDetailView format badge and import button', () => {
   // Import button should show 'Import to My Library'
   expect(screen.getByRole('button', { name: /Import to My Library/i })).toBeInTheDocument();
   });
+
+  it('does not warn when acquisitionMediaType is present even if mediaType is missing', () => {
+    const book: CatalogBook = {
+      title: 'Derived EPUB Book',
+      author: 'Catalog Author',
+      coverImage: null,
+      downloadUrl: 'https://example.org/p/book.epub',
+      summary: 'An EPUB book',
+      providerId: 'p3',
+      format: 'EPUB',
+      acquisitionMediaType: 'application/epub+zip',
+    };
+
+    render(<BookDetailView {...baseProps} book={book} source="catalog" onImportFromCatalog={async () => ({ success: false })} />);
+
+    expect(screen.getByRole('button', { name: /Import to My Library/i })).toBeInTheDocument();
+    expect(
+      screen.queryByText(/Warning: This item may not be a valid book file/i),
+    ).not.toBeInTheDocument();
+  });
 });
