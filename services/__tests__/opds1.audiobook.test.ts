@@ -80,9 +80,10 @@ describe('OPDS 1 Audiobook Detection', () => {
     const mediaModes = getAvailableMediaModes(books);
     
     expect(mediaModes).toContain('all');
-    expect(mediaModes).toContain('ebook');
+    expect(mediaModes).toContain('epub');
+    expect(mediaModes).toContain('pdf');
     expect(mediaModes).toContain('audiobook');
-    expect(mediaModes).toHaveLength(3);
+    expect(mediaModes).toHaveLength(4);
   });
 
   it('correctly filters books by media type', () => {
@@ -121,10 +122,15 @@ describe('OPDS 1 Audiobook Detection', () => {
     expect(audiobookFiltered).toHaveLength(1);
     expect(audiobookFiltered[0].title).toBe('Audiobook 1');
 
-    // Test filtering by ebook
-    const ebookFiltered = filterBooksByMedia(books, 'ebook');
-    expect(ebookFiltered).toHaveLength(2); // EPUB and PDF are both ebooks
-    expect(ebookFiltered.map(b => b.title)).toEqual(['E-book 1', 'PDF Book']);
+    // Test filtering by epub
+    const epubFiltered = filterBooksByMedia(books, 'epub');
+    expect(epubFiltered).toHaveLength(1);
+    expect(epubFiltered[0].title).toBe('E-book 1');
+
+    // Test filtering by pdf
+    const pdfFiltered = filterBooksByMedia(books, 'pdf');
+    expect(pdfFiltered).toHaveLength(1);
+    expect(pdfFiltered[0].title).toBe('PDF Book');
 
     // Test filtering by all
     const allFiltered = filterBooksByMedia(books, 'all');

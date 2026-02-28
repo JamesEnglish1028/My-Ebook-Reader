@@ -1192,20 +1192,19 @@ export const filterBooksByMedia = (books: CatalogBook[], mediaMode: MediaMode): 
     }
 
     return books.filter(book => {
-        // Check both mediaType and acquisitionMediaType for compatibility
-        const mediaType = (book.mediaType || book.acquisitionMediaType)?.toLowerCase();
+        // Prefer the acquisition link MIME type; fall back to schema/publication typing.
+        const mediaType = (book.acquisitionMediaType || book.mediaType)?.toLowerCase();
         const format = book.format?.toUpperCase();
 
-        if (mediaMode === 'ebook') {
-            // Match ebooks by media type, format, or default
-            return mediaType?.includes('bib.schema.org/book') ||
-                mediaType?.includes('schema.org/ebook') ||
-                mediaType?.includes('ebook') ||
-                format === 'EPUB' ||
-                format === 'PDF' ||
-                (!mediaType && format !== 'AUDIOBOOK'); // Default to ebook if no media type and not audiobook
+        if (mediaMode === 'epub') {
+            return mediaType === 'application/epub+zip' ||
+                mediaType?.includes('epub') ||
+                format === 'EPUB';
+        } else if (mediaMode === 'pdf') {
+            return mediaType === 'application/pdf' ||
+                mediaType?.includes('pdf') ||
+                format === 'PDF';
         } else if (mediaMode === 'audiobook') {
-            // Match audiobooks by media type or format
             return mediaType?.includes('bib.schema.org/audiobook') ||
                 mediaType?.includes('audiobook') ||
                 format === 'AUDIOBOOK';
@@ -1219,12 +1218,11 @@ export const getAvailableMediaModes = (books: CatalogBook[]): MediaMode[] => {
     const modes: Set<MediaMode> = new Set(['all']); // Always include 'all'
 
     books.forEach((book) => {
-        // Check both mediaType and acquisitionMediaType for compatibility
-        const mediaType = book.mediaType || book.acquisitionMediaType;
+        // Prefer the acquisition link MIME type; fall back to schema/publication typing.
+        const mediaType = book.acquisitionMediaType || book.mediaType;
         const mediaTypeLower = mediaType?.toLowerCase();
         const format = book.format?.toUpperCase();
 
-        // Check for audiobooks - either by media type or format
         if (mediaTypeLower?.includes('bib.schema.org/audiobook') ||
             mediaTypeLower?.includes('audiobook') ||
             mediaType === 'http://bib.schema.org/Audiobook' ||
@@ -1232,16 +1230,16 @@ export const getAvailableMediaModes = (books: CatalogBook[]): MediaMode[] => {
             modes.add('audiobook');
         }
 
-        // Check for ebooks - by media type, format, or default
-        if (mediaTypeLower?.includes('bib.schema.org/book') ||
-            mediaTypeLower?.includes('schema.org/ebook') ||
-            mediaTypeLower?.includes('ebook') ||
-            mediaType === 'http://bib.schema.org/Book' ||
-            mediaType === 'http://schema.org/EBook' ||
-            format === 'EPUB' ||
-            format === 'PDF' ||
-            (!mediaType && format !== 'AUDIOBOOK')) {
-            modes.add('ebook');
+        if (mediaTypeLower === 'application/epub+zip' ||
+            mediaTypeLower?.includes('epub') ||
+            format === 'EPUB') {
+            modes.add('epub');
+        }
+
+        if (mediaTypeLower === 'application/pdf' ||
+            mediaTypeLower?.includes('pdf') ||
+            format === 'PDF') {
+            modes.add('pdf');
         }
     });
 

@@ -246,5 +246,5 @@ export interface StoredCredentials {
 export type CategorizationMode = 'subject' | 'flat';
 export type AudienceMode = 'all' | 'adult' | 'young-adult' | 'children';
 export type FictionMode = 'all' | 'fiction' | 'non-fiction';
-export type MediaMode = 'all' | 'ebook' | 'audiobook';
+export type MediaMode = 'all' | 'epub' | 'pdf' | 'audiobook';
 export type CollectionMode = 'all' | string; // 'all' or specific collection name

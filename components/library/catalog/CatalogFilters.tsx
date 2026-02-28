@@ -62,7 +62,8 @@ const CatalogFilters: React.FC<CatalogFiltersProps> = ({
 
   const mediaOptions: FilterOption<MediaMode>[] = [
     { key: 'all', label: 'All Media', available: true },
-    { key: 'ebook', label: 'E-Books', available: availableMediaModes.includes('ebook') },
+    { key: 'epub', label: 'EPUB', available: availableMediaModes.includes('epub') },
+    { key: 'pdf', label: 'PDF', available: availableMediaModes.includes('pdf') },
     { key: 'audiobook', label: 'Audiobooks', available: availableMediaModes.includes('audiobook') },
   ];
 
