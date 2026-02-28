@@ -19,6 +19,7 @@ This README summarizes the current state (features implemented), developer setup
 - **Book Details Page**: Restored and enhanced layout with two-column design, top-aligned cover and title, accessible font sizes and spacing, format badges (EPUB, PDF, Audiobook) matching catalog views, and citation format support (APA, MLA, Chicago). Includes backup and type updates for reliability.
 - **Palace Registry Integration**: Automatic OPDS catalog import when launched from registry applications. Supports URL parameters `?import=<catalogUrl>&name=<catalogName>` for seamless catalog discovery and addition with user feedback and error handling.
 - **OPDS 2.0 Full Support**: Complete implementation of OPDS 2.0 specification with work/edition relationships, comprehensive accessibility metadata, series organization, and advanced filtering. See [OPDS2_IMPLEMENTATION_SUMMARY.md](OPDS2_IMPLEMENTATION_SUMMARY.md) for details.
+- **OPDS Catalog Search**: OPDS 1 and OPDS 2 feeds that publish `rel="search"` OpenSearch description documents now expose remote catalog search in the catalog view. Search uses the feed's advertised OpenSearch template rather than local-only filtering.
 # Book Details Page
 
 The Book Details page provides a visually clear, accessible, and feature-rich view for each book:
@@ -63,6 +64,28 @@ MeBooks provides comprehensive OPDS 2.0 support with advanced metadata display a
 - **Duration & Extent**: Audiobook duration and book extent (page count) are captured for media-specific metadata.
 
 See [OPDS2_IMPLEMENTATION_SUMMARY.md](OPDS2_IMPLEMENTATION_SUMMARY.md) for complete implementation details and [OPDS2_QUICK_REFERENCE.md](OPDS2_QUICK_REFERENCE.md) for developer reference.
+
+# OPDS Catalog Search
+
+MeBooks now supports remote catalog search for OPDS feeds that publish an OpenSearch description document.
+
+## Supported feed shapes
+
+- **OPDS 1**: feed-level `link rel="search"` with `type="application/opensearchdescription+xml"`
+- **OPDS 2**: top-level `links` entries with `rel` including `search` and `type="application/opensearchdescription+xml"`
+
+## How it works
+
+- The OPDS parser captures the OpenSearch description URL as dedicated catalog metadata.
+- The app fetches and parses the OpenSearch description document, then selects the best supported search template.
+- Catalog search is shown as a separate remote-search control above the local filter bar.
+- Submitting a search navigates to a search-result feed and adds a `Search: <query>` breadcrumb entry.
+- Local catalog filters still apply on top of the returned search results.
+
+## Current limitations
+
+- The current UI submits `searchTerms` only. Advanced optional parameters such as count, paging hints, language, or sort are not yet exposed as user controls.
+- Search depends on the catalog publishing a valid OpenSearch description document with a supported template.
 
 ## Notable implementation details
 
@@ -130,6 +153,7 @@ npm run test
 
 Current test coverage:
 - OPDS 1 & 2 parsing
+- OpenSearch parsing, URL generation, and remote catalog search UI
 - Collection detection and organization
 - Credential handling
 - Book detail views
