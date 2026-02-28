@@ -141,4 +141,48 @@ describe('OPDS1 parseOpds1Xml', () => {
       },
     ]);
   });
+
+  it('falls back to thumbnail images and captures additional authors as contributors', () => {
+    const xml = `<?xml version="1.0" encoding="UTF-8"?>
+<feed xmlns="http://www.w3.org/2005/Atom">
+  <title>Author Feed</title>
+  <entry>
+    <title>Collaborative Book</title>
+    <author><name>Primary Author</name></author>
+    <author><name>Second Author</name></author>
+    <author><name>Third Author</name></author>
+    <link rel="http://opds-spec.org/acquisition" href="/books/collab.epub" type="application/epub+zip"/>
+    <link rel="http://opds-spec.org/image/thumbnail" href="/covers/collab-thumb.png" type="image/png"/>
+  </entry>
+</feed>`;
+
+    const result = parseOpds1Xml(xml, 'https://example.com/');
+
+    expect(result.books).toHaveLength(1);
+    expect(result.books[0].author).toBe('Primary Author');
+    expect(result.books[0].contributors).toEqual(['Second Author', 'Third Author']);
+    expect(result.books[0].coverImage).toBe('https://example.com/covers/collab-thumb.png');
+  });
+
+  it('promotes feed-level rel=search links as navigation options', () => {
+    const xml = `<?xml version="1.0" encoding="UTF-8"?>
+<feed xmlns="http://www.w3.org/2005/Atom">
+  <title>Searchable Feed</title>
+  <link rel="search" href="/search{?query}" type="application/opensearchdescription+xml" title="Search catalog"/>
+  <entry>
+    <title>Book</title>
+    <link rel="http://opds-spec.org/acquisition" href="/books/book.epub" type="application/epub+zip"/>
+  </entry>
+</feed>`;
+
+    const result = parseOpds1Xml(xml, 'https://example.com/');
+
+    expect(result.navLinks).toContainEqual({
+      title: 'Search catalog',
+      url: 'https://example.com/search%7B?query}',
+      rel: 'search',
+      type: 'application/opensearchdescription+xml',
+      source: 'navigation',
+    });
+  });
 });

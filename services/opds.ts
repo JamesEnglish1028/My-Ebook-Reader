@@ -360,6 +360,17 @@ export const parseOpds1Xml = (xmlText: string, baseUrl: string): { books: Catalo
                 return;
             }
 
+            if (rel === 'search') {
+                addNavLink({
+                    title: link.getAttribute('title')?.trim() || 'Search',
+                    url: fullUrl,
+                    rel: relRaw || 'search',
+                    type: link.getAttribute('type') || undefined,
+                    source: 'navigation',
+                });
+                return;
+            }
+
             if (rel === 'collection' || rel.includes('subsection')) {
                 addNavLink({
                     title: link.getAttribute('title')?.trim() || fullUrl,
@@ -458,9 +469,13 @@ export const parseOpds1Xml = (xmlText: string, baseUrl: string): { books: Catalo
 
         if (acquisitionLink) {
             // ...existing book parsing logic...
-            const author = entry.querySelector('author > name')?.textContent?.trim() || 'Unknown Author';
+            const authorNames = Array.from(entry.querySelectorAll('author > name'))
+                .map((node) => node.textContent?.trim())
+                .filter((name): name is string => !!name);
+            const author = authorNames[0] || 'Unknown Author';
             const summary = entry.querySelector('summary')?.textContent?.trim() || entry.querySelector('content')?.textContent?.trim() || null;
-            const coverLink = entry.querySelector('link[rel="http://opds-spec.org/image"]');
+            const coverLink = entry.querySelector('link[rel="http://opds-spec.org/image"]')
+                || entry.querySelector('link[rel="http://opds-spec.org/image/thumbnail"]');
             const coverImageHref = coverLink?.getAttribute('href');
             const coverImage = coverImageHref ? new URL(coverImageHref, baseUrl).href : null;
             const downloadUrlHref = acquisitionLink?.getAttribute('href');
@@ -506,6 +521,7 @@ export const parseOpds1Xml = (xmlText: string, baseUrl: string): { books: Catalo
                     providerId,
                     distributor: distributor,
                     subjects: subjects.length > 0 ? subjects : undefined,
+                    contributors: authorNames.length > 1 ? authorNames.slice(1) : undefined,
                     categories: categories.length > 0 ? categories : undefined,
                     format,
                     acquisitionMediaType: finalMediaType || undefined,
