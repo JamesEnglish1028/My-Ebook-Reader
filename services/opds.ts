@@ -379,7 +379,13 @@ export const parseOpds1Xml = (xmlText: string, baseUrl: string): { books: Catalo
     return { books, navLinks, facetGroups, pagination };
 };
 
-const getProxy403Message = (url: string, contentType: string, responseText: string): string => {
+const getProxy403Message = (url: string, headers: Headers, contentType: string, responseText: string): string => {
+    const errorSource = headers.get('x-mebooks-proxy-error-source');
+    if (errorSource === 'upstream') {
+        const upstreamStatus = headers.get('x-mebooks-upstream-status') || '403';
+        return `The proxy reached the upstream server, but the upstream server denied the request (${upstreamStatus}) for ${url}. This is not a proxy allowlist rejection.`;
+    }
+
     if (contentType.includes('application/json')) {
         try {
             const parsed = JSON.parse(responseText);
@@ -393,11 +399,15 @@ const getProxy403Message = (url: string, contentType: string, responseText: stri
                         : '';
                     return `Proxy denied access to host for ${targetLabel}. The proxy's HOST_ALLOWLIST may need to include the upstream host.${protocolHint}`;
                 }
-                return `Proxy error: ${parsed.error}`;
+                if (errorSource === 'proxy') return `Proxy error: ${parsed.error}`;
             }
         } catch (e) {
             // Fall through to the generic message if the proxy body is not valid JSON.
         }
+    }
+
+    if (errorSource === 'proxy') {
+        return `The proxy itself denied the request for ${url}. Check proxy configuration and allowlist rules.`;
     }
 
     return `Proxy returned 403 for ${url}. The proxy may be blocking this host.`;
@@ -478,7 +488,7 @@ export const fetchCatalogContent = async (url: string, baseUrl: string, forcedVe
 
                 // Detect proxy-level rejections (common when HOST_ALLOWLIST blocks the target)
                 if (proxiedResp.status === 403) {
-                    throw new Error(getProxy403Message(url, contentType, responseText));
+                    throw new Error(getProxy403Message(url, proxiedResp.headers, contentType, responseText));
                 }
 
                 if (contentType.includes('text/html') && responseText.trim().toLowerCase().startsWith('<!doctype html>')) {
@@ -540,7 +550,7 @@ export const fetchCatalogContent = async (url: string, baseUrl: string, forcedVe
             if (response.status === 403 && !isDirectFetch) {
                 const contentType = response.headers.get('Content-Type') || '';
                 const responseText = await safeReadText(response).catch(() => '');
-                errorMessage = getProxy403Message(url, contentType, responseText);
+                errorMessage = getProxy403Message(url, response.headers, contentType, responseText);
             }
             if (response.status === 429) {
                 errorMessage = `Could not access catalog (${statusInfo}). The request was rate-limited by the server or the proxy. Please wait a moment and try again.`;

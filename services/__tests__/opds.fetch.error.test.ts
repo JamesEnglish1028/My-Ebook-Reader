@@ -44,4 +44,23 @@ describe('fetchCatalogContent error propagation', () => {
     expect(result.error).toContain('Proxy denied access to host for legacy.example.org');
     expect(result.error).toContain('plain HTTP');
   });
+
+  it('distinguishes upstream 403 responses from proxy-generated 403s', async () => {
+    vi.spyOn(global, 'fetch' as any).mockResolvedValue(
+      new Response('Forbidden upstream', {
+        status: 403,
+        headers: {
+          'Content-Type': 'text/plain',
+          'Access-Control-Allow-Origin': '*',
+          'X-MeBooks-Proxy-Error-Source': 'upstream',
+          'X-MeBooks-Upstream-Status': '403',
+        },
+      }),
+    );
+
+    const result = await fetchCatalogContent('http://165.227.102.164:8080/opds/', 'http://165.227.102.164:8080/', '2');
+
+    expect(result.error).toContain('upstream server denied the request');
+    expect(result.error).toContain('not a proxy allowlist rejection');
+  });
 });

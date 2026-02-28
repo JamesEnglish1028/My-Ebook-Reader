@@ -61,6 +61,13 @@ function stripHopByHop(headers) {
   return out;
 }
 
+function setProxyDiagnosticHeaders(res, source, status) {
+  try { res.setHeader('X-MeBooks-Proxy-Error-Source', source); } catch (e) { /* ignore */ }
+  if (typeof status === 'number') {
+    try { res.setHeader('X-MeBooks-Upstream-Status', String(status)); } catch (e) { /* ignore */ }
+  }
+}
+
 app.options('/proxy', (req, res) => {
   // Respect the requesting Origin when present so callers that send credentials
   // can be allowed. Fall back to configured ALLOW_ORIGIN or wildcard.
@@ -74,7 +81,7 @@ app.options('/proxy', (req, res) => {
   res.setHeader('Access-Control-Allow-Headers', allowHeaders);
   res.setHeader('Access-Control-Allow-Credentials', 'true');
   // Expose useful headers to the client
-  res.setHeader('Access-Control-Expose-Headers', 'Content-Type,Content-Length,ETag');
+  res.setHeader('Access-Control-Expose-Headers', 'Content-Type,Content-Length,ETag,X-MeBooks-Proxy-Error-Source,X-MeBooks-Upstream-Status');
   res.sendStatus(204);
 });
 
@@ -93,7 +100,7 @@ app.all('/_proxy_headers_echo', (req, res) => {
   const allowOrigin = req.headers.origin || process.env.ALLOW_ORIGIN || '*';
   res.setHeader('Access-Control-Allow-Origin', allowOrigin);
   res.setHeader('Access-Control-Allow-Credentials', 'true');
-  res.setHeader('Access-Control-Expose-Headers', 'Content-Type');
+  res.setHeader('Access-Control-Expose-Headers', 'Content-Type,X-MeBooks-Proxy-Error-Source,X-MeBooks-Upstream-Status');
 
   // Return the headers the proxy received for inspection
   const incoming = {};
@@ -108,7 +115,7 @@ app.all('/proxy', async (req, res) => {
   const allowOrigin = req.headers.origin || process.env.ALLOW_ORIGIN || '*';
   res.setHeader('Access-Control-Allow-Origin', allowOrigin);
   res.setHeader('Access-Control-Allow-Credentials', 'true');
-  res.setHeader('Access-Control-Expose-Headers', 'Content-Type,Content-Length,ETag');
+  res.setHeader('Access-Control-Expose-Headers', 'Content-Type,Content-Length,ETag,X-MeBooks-Proxy-Error-Source,X-MeBooks-Upstream-Status');
     // Explicitly tell browsers not to attempt a content-encoding decode of
     // the proxied stream. Some intermediaries may alter encoding headers
     // or node-fetch may decompress; setting identity avoids double-decode
@@ -116,11 +123,18 @@ app.all('/proxy', async (req, res) => {
     try { res.setHeader('Content-Encoding', 'identity'); } catch (e) { /* ignore */ }
 
     const target = req.query.url;
-    if (!target) return res.status(400).json({ error: 'Missing url parameter' });
+    if (!target) {
+      setProxyDiagnosticHeaders(res, 'proxy');
+      return res.status(400).json({ error: 'Missing url parameter' });
+    }
 
     let targetUrl;
-    try { targetUrl = new URL(target); } catch (err) { return res.status(400).json({ error: 'Invalid URL' }); }
+    try { targetUrl = new URL(target); } catch (err) {
+      setProxyDiagnosticHeaders(res, 'proxy');
+      return res.status(400).json({ error: 'Invalid URL' });
+    }
     if (!['http:', 'https:'].includes(targetUrl.protocol)) {
+      setProxyDiagnosticHeaders(res, 'proxy');
       return res.status(400).json({ error: 'Unsupported URL protocol', protocol: targetUrl.protocol });
     }
 
@@ -144,11 +158,15 @@ app.all('/proxy', async (req, res) => {
         }
       }
     }
-    if (!allowed) return res.status(403).json({ error: 'Host not allowed', host: hostname, protocol: targetUrl.protocol });
+    if (!allowed) {
+      setProxyDiagnosticHeaders(res, 'proxy');
+      return res.status(403).json({ error: 'Host not allowed', host: hostname, protocol: targetUrl.protocol });
+    }
   }
 
     // Optional API key enforcement
     if (process.env.PROXY_KEY && req.header('x-proxy-key') !== process.env.PROXY_KEY) {
+      setProxyDiagnosticHeaders(res, 'proxy');
       return res.status(401).json({ error: 'Unauthorized' });
     }
 
@@ -249,6 +267,7 @@ app.all('/proxy', async (req, res) => {
       console.error('Upstream returned error', { url: targetUrl.toString(), status: upstream.status, headers: Object.fromEntries(upstream.headers.entries()), bodySnippet: bodyText ? bodyText.slice(0, 2000) : null });
       // Forward the upstream status and body (if any) to the client
       try {
+        setProxyDiagnosticHeaders(res, 'upstream', upstream.status);
         res.status(upstream.status);
         if (bodyText) return res.send(bodyText);
         return res.json({ error: 'Upstream error', status: upstream.status });

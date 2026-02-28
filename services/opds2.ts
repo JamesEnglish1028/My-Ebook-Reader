@@ -937,6 +937,7 @@ export const fetchOpds2Feed = async (url: string, credentials?: { username: stri
 
   const contentType = resp.headers.get('Content-Type') || '';
   const text = await safeReadText(resp);
+  const errorSource = resp.headers.get('x-mebooks-proxy-error-source');
   if (resp.status === 403 && contentType.includes('application/json')) {
     try {
       const parsed = JSON.parse(text);
@@ -947,9 +948,23 @@ export const fetchOpds2Feed = async (url: string, credentials?: { username: stri
           : '';
         return { status: resp.status, books: [], navLinks: [], facetGroups: [], pagination: {}, error: `Proxy denied access to host for ${targetLabel}.${protocolHint}` };
       }
+      if (errorSource === 'proxy' && typeof parsed?.error === 'string') {
+        return { status: resp.status, books: [], navLinks: [], facetGroups: [], pagination: {}, error: `The proxy itself denied the request for ${url}. ${parsed.error}` };
+      }
     } catch (e) {
       // Ignore invalid proxy JSON and continue with normal parsing.
     }
+  }
+  if (resp.status === 403 && errorSource === 'upstream') {
+    const upstreamStatus = resp.headers.get('x-mebooks-upstream-status') || '403';
+    return {
+      status: resp.status,
+      books: [],
+      navLinks: [],
+      facetGroups: [],
+      pagination: {},
+      error: `The proxy reached the upstream server, but the upstream server denied the request (${upstreamStatus}) for ${url}. This is not a proxy allowlist rejection.`,
+    };
   }
   if (contentType.includes('application/opds+json') || contentType.includes('application/json')) {
     const json = JSON.parse(text);

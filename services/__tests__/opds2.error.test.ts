@@ -63,4 +63,25 @@ describe('fetchOpds2Feed - error conditions', () => {
 
     await expect(fetchOpds2Feed(url, null)).rejects.toThrow();
   });
+
+  it('reports upstream 403s distinctly from proxy-generated 403s', async () => {
+    (globalThis as any).fetch = vi.fn(async () => ({
+      status: 403,
+      headers: {
+        get: (name: string) => {
+          const key = name.toLowerCase();
+          if (key === 'content-type') return 'text/plain';
+          if (key === 'x-mebooks-proxy-error-source') return 'upstream';
+          if (key === 'x-mebooks-upstream-status') return '403';
+          return null;
+        },
+      },
+      text: async () => 'Forbidden',
+    }));
+
+    const res = await fetchOpds2Feed(url, null);
+    expect(res.status).toBe(403);
+    expect(res.error).toContain('upstream server denied the request');
+    expect(res.error).toContain('not a proxy allowlist rejection');
+  });
 });
