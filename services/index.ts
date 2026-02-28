@@ -20,7 +20,7 @@ export { logger } from './logger';
 
 // OPDS services
 export {
-    fetchCatalogContent, filterBooksByAudience, filterBooksByFiction, filterBooksByMedia, getAvailableAudiences, getAvailableCategories, getAvailableCollections, getAvailableFictionModes, getAvailableMediaModes, getFormatFromMimeType,
+    fetchCatalogContent, filterBooksByAudience, filterBooksByFiction, filterBooksByMedia, filterBooksByPublication, getAvailableAudiences, getAvailableCategories, getAvailableCollections, getAvailableFictionModes, getAvailableMediaModes, getAvailablePublicationTypes, getFormatFromMimeType,
     groupBooksByMode, parseOpds1Xml,
 } from './opds';
 

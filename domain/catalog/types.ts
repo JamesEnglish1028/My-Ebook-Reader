@@ -247,4 +247,5 @@ export type CategorizationMode = 'subject' | 'flat';
 export type AudienceMode = 'all' | 'adult' | 'young-adult' | 'children';
 export type FictionMode = 'all' | 'fiction' | 'non-fiction';
 export type MediaMode = 'all' | 'epub' | 'pdf' | 'audiobook';
+export type PublicationMode = 'all' | string;
 export type CollectionMode = 'all' | string; // 'all' or specific collection name

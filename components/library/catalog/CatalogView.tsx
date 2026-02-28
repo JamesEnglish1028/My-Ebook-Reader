@@ -5,9 +5,11 @@ import {
   filterBooksByAudience,
   filterBooksByFiction,
   filterBooksByMedia,
+  filterBooksByPublication,
   getAvailableAudiences,
   getAvailableFictionModes,
   getAvailableMediaModes,
+  getAvailablePublicationTypes,
 } from '../../../services/opds';
 import type {
   AudienceMode,
@@ -18,6 +20,7 @@ import type {
   CatalogRegistry,
   FictionMode,
   MediaMode,
+  PublicationMode,
 } from '../../../types';
 import { Error as ErrorDisplay, Loading } from '../../shared';
 import { CatalogFilters, CatalogNavigation, CatalogSidebar } from '../catalog';
@@ -39,6 +42,7 @@ const CatalogView: React.FC<CatalogViewProps> = ({
   const [audienceMode, setAudienceMode] = useState<AudienceMode>('all');
   const [fictionMode, setFictionMode] = useState<FictionMode>('all');
   const [mediaMode, setMediaMode] = useState<MediaMode>('all');
+  const [publicationMode, setPublicationMode] = useState<PublicationMode>('all');
   const [catalogBooks, setCatalogBooks] = useState<CatalogBook[]>([]);
   const [pageHistory, setPageHistory] = useState<string[]>([]);
 
@@ -85,10 +89,12 @@ const CatalogView: React.FC<CatalogViewProps> = ({
     availableAudiences,
     availableFictionModes,
     availableMediaModes,
+    availablePublicationTypes,
   } = useMemo(() => ({
     availableAudiences: getAvailableAudiences(originalCatalogBooks),
     availableFictionModes: getAvailableFictionModes(originalCatalogBooks),
     availableMediaModes: getAvailableMediaModes(originalCatalogBooks),
+    availablePublicationTypes: getAvailablePublicationTypes(originalCatalogBooks),
   }), [originalCatalogBooks]);
 
   useEffect(() => {
@@ -97,12 +103,14 @@ const CatalogView: React.FC<CatalogViewProps> = ({
     const audienceFiltered = filterBooksByAudience(originalCatalogBooks, audienceMode);
     const fictionFiltered = filterBooksByFiction(audienceFiltered, fictionMode);
     const mediaFiltered = filterBooksByMedia(fictionFiltered, mediaMode);
+    const publicationFiltered = filterBooksByPublication(mediaFiltered, publicationMode);
 
-    setCatalogBooks(mediaFiltered);
+    setCatalogBooks(publicationFiltered);
   }, [
     audienceMode,
     fictionMode,
     mediaMode,
+    publicationMode,
     originalCatalogBooks,
   ]);
 
@@ -110,6 +118,7 @@ const CatalogView: React.FC<CatalogViewProps> = ({
     setAudienceMode('all');
     setFictionMode('all');
     setMediaMode('all');
+    setPublicationMode('all');
   };
 
   const handleBreadcrumbClick = (index: number) => {
@@ -229,12 +238,15 @@ const CatalogView: React.FC<CatalogViewProps> = ({
           availableAudiences={availableAudiences}
           availableFictionModes={availableFictionModes}
           availableMediaModes={availableMediaModes}
+          availablePublicationTypes={availablePublicationTypes}
           audienceMode={audienceMode}
           fictionMode={fictionMode}
           mediaMode={mediaMode}
+          publicationMode={publicationMode}
           onAudienceChange={setAudienceMode}
           onFictionChange={setFictionMode}
           onMediaChange={setMediaMode}
+          onPublicationChange={setPublicationMode}
         />
 
         {isEmptyFeed ? (

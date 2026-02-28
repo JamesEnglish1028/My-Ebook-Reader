@@ -1,4 +1,4 @@
-import type { AudienceMode, CatalogBook, CatalogFacetGroup, CatalogFacetLink, CatalogNavigationLink, CatalogPagination, CatalogWithCategories, CatalogWithCollections, CategorizationMode, Category, Collection, CollectionGroup, CollectionMode, FictionMode, MediaMode } from '../types';
+import type { AudienceMode, CatalogBook, CatalogFacetGroup, CatalogFacetLink, CatalogNavigationLink, CatalogPagination, CatalogWithCategories, CatalogWithCollections, CategorizationMode, Category, Collection, CollectionGroup, CollectionMode, FictionMode, MediaMode, PublicationMode } from '../types';
 
 import { logger } from './logger';
 import { parseOpds2Json } from './opds2';
@@ -1245,6 +1245,75 @@ export const getAvailableMediaModes = (books: CatalogBook[]): MediaMode[] => {
 
     const result = Array.from(modes);
     return result;
+};
+
+const publicationModeFromValue = (value?: string): PublicationMode | undefined => {
+    if (!value) return undefined;
+
+    const segment = value
+        .trim()
+        .split('/')
+        .filter(Boolean)
+        .pop() || value.trim();
+
+    const slug = segment
+        .replace(/([a-z0-9])([A-Z])/g, '$1-$2')
+        .replace(/[^a-zA-Z0-9]+/g, '-')
+        .replace(/^-+|-+$/g, '')
+        .toLowerCase();
+
+    return slug || undefined;
+};
+
+const getPublicationTypeLabel = (book: CatalogBook): string | undefined => {
+    if (book.publicationTypeLabel?.trim()) {
+        return book.publicationTypeLabel.trim();
+    }
+
+    if (book.schemaOrgType?.trim()) {
+        const segment = book.schemaOrgType
+            .trim()
+            .split('/')
+            .filter(Boolean)
+            .pop();
+        if (!segment) return undefined;
+        return segment.replace(/([a-z0-9])([A-Z])/g, '$1 $2');
+    }
+
+    if (book.format?.toUpperCase() === 'AUDIOBOOK') {
+        return 'Audiobook';
+    }
+
+    return undefined;
+};
+
+const getPublicationModeForBook = (book: CatalogBook): PublicationMode | undefined => {
+    return publicationModeFromValue(book.schemaOrgType)
+        || publicationModeFromValue(book.publicationTypeLabel)
+        || (book.format?.toUpperCase() === 'AUDIOBOOK' ? 'audiobook' : undefined);
+};
+
+export const filterBooksByPublication = (books: CatalogBook[], publicationMode: PublicationMode): CatalogBook[] => {
+    if (publicationMode === 'all') {
+        return books;
+    }
+
+    return books.filter((book) => getPublicationModeForBook(book) === publicationMode);
+};
+
+export const getAvailablePublicationTypes = (books: CatalogBook[]): Array<{ key: PublicationMode; label: string }> => {
+    const publicationTypes = new Map<PublicationMode, string>();
+
+    books.forEach((book) => {
+        const key = getPublicationModeForBook(book);
+        const label = getPublicationTypeLabel(book);
+
+        if (key && label && !publicationTypes.has(key)) {
+            publicationTypes.set(key, label);
+        }
+    });
+
+    return Array.from(publicationTypes.entries()).map(([key, label]) => ({ key, label }));
 };
 
 export const filterBooksByCollection = (books: CatalogBook[], collectionMode: CollectionMode, navLinks: CatalogNavigationLink[] = []): CatalogBook[] => {

@@ -1,6 +1,6 @@
 import React from 'react';
 
-import type { AudienceMode, FictionMode, MediaMode } from '../../../types';
+import type { AudienceMode, FictionMode, MediaMode, PublicationMode } from '../../../types';
 
 interface FilterOption<T> {
   key: T;
@@ -15,18 +15,24 @@ interface CatalogFiltersProps {
   availableFictionModes: string[];
   /** Available media modes */
   availableMediaModes: string[];
+  /** Available publication types */
+  availablePublicationTypes: Array<{ key: PublicationMode; label: string }>;
   /** Current audience filter */
   audienceMode: AudienceMode;
   /** Current fiction filter */
   fictionMode: FictionMode;
   /** Current media filter */
   mediaMode: MediaMode;
+  /** Current publication filter */
+  publicationMode: PublicationMode;
   /** Callback for audience filter change */
   onAudienceChange: (mode: AudienceMode) => void;
   /** Callback for fiction filter change */
   onFictionChange: (mode: FictionMode) => void;
   /** Callback for media filter change */
   onMediaChange: (mode: MediaMode) => void;
+  /** Callback for publication filter change */
+  onPublicationChange: (mode: PublicationMode) => void;
 }
 
 /**
@@ -39,12 +45,15 @@ const CatalogFilters: React.FC<CatalogFiltersProps> = ({
   availableAudiences,
   availableFictionModes,
   availableMediaModes,
+  availablePublicationTypes,
   audienceMode,
   fictionMode,
   mediaMode,
+  publicationMode,
   onAudienceChange,
   onFictionChange,
   onMediaChange,
+  onPublicationChange,
 }) => {
   // Build filter options with availability
   const audienceOptions: FilterOption<AudienceMode>[] = [
@@ -71,14 +80,18 @@ const CatalogFilters: React.FC<CatalogFiltersProps> = ({
   const showAudienceFilter = availableAudiences.length > 1;
   const showFictionFilter = availableFictionModes.length > 1;
   const showMediaFilter = availableMediaModes.length > 1;
+  const showPublicationFilter = availablePublicationTypes.length > 1;
 
-  const showAnyFilters = showAudienceFilter || showFictionFilter || showMediaFilter;
+  const showAnyFilters = showAudienceFilter || showFictionFilter || showMediaFilter || showPublicationFilter;
 
   if (!showAnyFilters) {
     return null;
   }
 
-  const activeFilterCount = Number(audienceMode !== 'all') + Number(fictionMode !== 'all') + Number(mediaMode !== 'all');
+  const activeFilterCount = Number(audienceMode !== 'all')
+    + Number(fictionMode !== 'all')
+    + Number(mediaMode !== 'all')
+    + Number(publicationMode !== 'all');
 
   return (
     <div className="mb-5 rounded-xl border border-slate-700/60 bg-slate-900/35 p-3">
@@ -88,7 +101,7 @@ const CatalogFilters: React.FC<CatalogFiltersProps> = ({
           {activeFilterCount > 0 ? `${activeFilterCount} active` : 'Local only'}
         </span>
       </div>
-      {(showAudienceFilter || showFictionFilter || showMediaFilter) && (
+      {(showAudienceFilter || showFictionFilter || showMediaFilter || showPublicationFilter) && (
         <div className="flex flex-wrap items-start gap-3">
           {showAudienceFilter && (
             <div className="flex flex-wrap items-center gap-2">
@@ -150,6 +163,27 @@ const CatalogFilters: React.FC<CatalogFiltersProps> = ({
                       }`}
                     >
                       {option.label.replace('All Media', 'All')}
+                    </button>
+                  ))}
+              </div>
+            </div>
+          )}
+
+          {showPublicationFilter && (
+            <div className="flex flex-wrap items-center gap-2">
+              <span className="text-xs font-medium uppercase tracking-[0.12em] text-slate-500">Publication</span>
+              <div className="flex flex-wrap gap-1.5">
+                {[{ key: 'all' as PublicationMode, label: 'All' }, ...availablePublicationTypes]
+                  .map((option) => (
+                    <button
+                      key={option.key}
+                      onClick={() => onPublicationChange(option.key)}
+                      className={`rounded-full px-2.5 py-1 text-xs font-medium transition-colors ${publicationMode === option.key
+                        ? 'bg-emerald-500/20 text-emerald-100 ring-1 ring-emerald-500/40'
+                        : 'bg-slate-800 text-slate-300 hover:bg-slate-700'
+                      }`}
+                    >
+                      {option.label}
                     </button>
                   ))}
               </div>
