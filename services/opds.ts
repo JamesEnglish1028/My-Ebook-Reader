@@ -456,8 +456,16 @@ export const fetchCatalogContent = async (url: string, baseUrl: string, forcedVe
                 if (proxiedResp.status === 403) {
                     try {
                         const parsed = contentType.includes('application/json') ? JSON.parse(responseText) : null;
-                        if (parsed && parsed.error && typeof parsed.error === 'string' && parsed.error.toLowerCase().includes('host')) {
-                            throw new Error(`Proxy denied access to host for ${url}. The proxy's HOST_ALLOWLIST may need to include the upstream host.`);
+                        if (parsed && parsed.error && typeof parsed.error === 'string') {
+                            const blockedHost = typeof parsed.host === 'string' ? parsed.host : '';
+                            const blockedProtocol = typeof parsed.protocol === 'string' ? parsed.protocol : '';
+                            if (parsed.error.toLowerCase().includes('host')) {
+                                const targetLabel = blockedHost || url;
+                                const protocolHint = blockedProtocol === 'http:'
+                                    ? ' This upstream is plain HTTP, so the proxy must explicitly allow that host and serve the browser over HTTPS.'
+                                    : '';
+                                throw new Error(`Proxy denied access to host for ${targetLabel}. The proxy's HOST_ALLOWLIST may need to include the upstream host.${protocolHint}`);
+                            }
                         }
                     } catch (e) {
                         // If parsing fails, still surface a helpful message

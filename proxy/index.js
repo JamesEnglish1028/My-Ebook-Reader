@@ -120,6 +120,9 @@ app.all('/proxy', async (req, res) => {
 
     let targetUrl;
     try { targetUrl = new URL(target); } catch (err) { return res.status(400).json({ error: 'Invalid URL' }); }
+    if (!['http:', 'https:'].includes(targetUrl.protocol)) {
+      return res.status(400).json({ error: 'Unsupported URL protocol', protocol: targetUrl.protocol });
+    }
 
   if (!ALLOW_ALL_HOSTS) {
     const hostname = targetUrl.hostname;
@@ -141,7 +144,7 @@ app.all('/proxy', async (req, res) => {
         }
       }
     }
-    if (!allowed) return res.status(403).json({ error: 'Host not allowed' });
+    if (!allowed) return res.status(403).json({ error: 'Host not allowed', host: hostname, protocol: targetUrl.protocol });
   }
 
     // Optional API key enforcement
@@ -232,7 +235,7 @@ app.all('/proxy', async (req, res) => {
     });
 
     // Ensure CORS headers remain present after copying upstream headers
-    res.setHeader('Access-Control-Allow-Origin', process.env.ALLOW_ORIGIN || '*');
+    res.setHeader('Access-Control-Allow-Origin', allowOrigin);
     res.setHeader('Access-Control-Allow-Credentials', 'true');
 
     // If upstream returned an error status, attempt to read the body and log it

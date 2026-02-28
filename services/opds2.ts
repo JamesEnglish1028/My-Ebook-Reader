@@ -904,7 +904,16 @@ function normalizeMediumFormatCode(schemaType: string | undefined, type?: string
 };
 
 export const fetchOpds2Feed = async (url: string, credentials?: { username: string; password: string } | null) => {
-  const proxyUrl = proxiedUrl(url);
+  let proxyUrl = proxiedUrl(url);
+  try {
+    const parsed = new URL(url);
+    const browserOrigin = (typeof window !== 'undefined' && window.location && window.location.origin) ? window.location.origin : '';
+    if (parsed.protocol === 'http:' && browserOrigin.startsWith('https://')) {
+      proxyUrl = await maybeProxyForCors(url);
+    }
+  } catch (e) {
+    // Ignore URL inspection failures and let the existing fetch path report them.
+  }
   const headers: Record<string, string> = {
     'Accept': 'application/opds+json, application/json, application/ld+json, */*',
   };
@@ -928,6 +937,20 @@ export const fetchOpds2Feed = async (url: string, credentials?: { username: stri
 
   const contentType = resp.headers.get('Content-Type') || '';
   const text = await safeReadText(resp);
+  if (resp.status === 403 && contentType.includes('application/json')) {
+    try {
+      const parsed = JSON.parse(text);
+      if (parsed?.error === 'Host not allowed') {
+        const targetLabel = typeof parsed.host === 'string' ? parsed.host : url;
+        const protocolHint = parsed.protocol === 'http:'
+          ? ' This upstream is plain HTTP, so the proxy must explicitly allow that host.'
+          : '';
+        return { status: resp.status, books: [], navLinks: [], facetGroups: [], pagination: {}, error: `Proxy denied access to host for ${targetLabel}.${protocolHint}` };
+      }
+    } catch (e) {
+      // Ignore invalid proxy JSON and continue with normal parsing.
+    }
+  }
   if (contentType.includes('application/opds+json') || contentType.includes('application/json')) {
     const json = JSON.parse(text);
     return { status: resp.status, ...(parseOpds2Json(json, url) as any) };

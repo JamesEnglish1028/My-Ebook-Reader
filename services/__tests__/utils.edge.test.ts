@@ -44,4 +44,27 @@ describe('utils.ts - proxiedUrl and maybeProxyForCors', () => {
     expect(result).toMatch(/corsproxy|proxy/);
     globalThis.fetch = origFetch;
   });
+
+  it('handles plain HTTP upstreams from an HTTPS app without probing directly', async () => {
+    const url = 'http://example.com/resource';
+    const expected = proxiedUrl(url);
+    const origFetch = globalThis.fetch;
+    const fetchMock = vi.fn();
+    const originalWindow = globalThis.window;
+    globalThis.fetch = fetchMock as any;
+    vi.stubGlobal('window', {
+      ...originalWindow,
+      location: { origin: 'https://app.example/' },
+    });
+
+    if (expected && expected !== url) {
+      await expect(maybeProxyForCors(url)).resolves.toBe(expected);
+    } else {
+      await expect(maybeProxyForCors(url)).rejects.toThrow(/plain HTTP/i);
+    }
+
+    expect(fetchMock).not.toHaveBeenCalled();
+    globalThis.fetch = origFetch;
+    vi.stubGlobal('window', originalWindow);
+  });
 });

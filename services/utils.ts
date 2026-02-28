@@ -114,6 +114,14 @@ const FORCE_PROXY = (typeof import.meta !== 'undefined' && (import.meta as any).
 // Dev-only: Skip CORS probe and use direct fetch (useful when proxy is unavailable)
 const SKIP_CORS_CHECK = (typeof import.meta !== 'undefined' && (import.meta as any).env && (import.meta as any).env.VITE_SKIP_CORS_CHECK === 'true');
 
+const getBrowserOrigin = (): string => {
+  try {
+    return (typeof window !== 'undefined' && window.location && window.location.origin) ? window.location.origin : '';
+  } catch (e) {
+    return '';
+  }
+};
+
 /**
  * Wraps a URL with a CORS proxy to prevent cross-origin issues.
  * @param url The URL to proxy.
@@ -184,12 +192,24 @@ export const maybeProxyForCors = async (url: string, skipProbe = false): Promise
       return '';
     }
   }
+  let parsedUrl: URL;
   try {
     // Validate URL first
-    new URL(url);
+    parsedUrl = new URL(url);
   } catch (e) {
     console.error('Invalid URL for maybeProxyForCors:', url);
     return '';
+  }
+
+  const browserOrigin = getBrowserOrigin();
+  const requiresSecureProxy = parsedUrl.protocol === 'http:' && browserOrigin.startsWith('https://');
+  if (requiresSecureProxy) {
+    const proxied = proxiedUrl(url);
+    if (proxied && proxied !== url) {
+      console.log('[maybeProxyForCors] HTTPS app detected plain HTTP upstream, forcing proxy:', url.substring(0, 80));
+      return proxied;
+    }
+    throw new Error('This resource uses plain HTTP and cannot be fetched directly from an HTTPS app. Configure an owned proxy via VITE_OWN_PROXY_URL, enable a proxy, or run the app over HTTP while debugging.');
   }
 
   // Skip the probe for open-access content (no authentication required)
@@ -238,7 +258,7 @@ export const maybeProxyForCors = async (url: string, skipProbe = false): Promise
     if (resp.status >= 200 && resp.status < 300) {
       const allow = resp.headers.get('access-control-allow-origin');
       try {
-        const origin = (typeof window !== 'undefined' && window.location && window.location.origin) ? window.location.origin : '';
+        const origin = getBrowserOrigin();
         console.log('[maybeProxyForCors] HEAD probe success', { url: url.substring(0, 80), status: resp.status, allow, origin });
         if (allow === '*' || (allow && origin && allow === origin)) {
           console.log('[maybeProxyForCors] CORS allows direct URL, skipping proxy');
