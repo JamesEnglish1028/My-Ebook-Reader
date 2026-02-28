@@ -29,6 +29,9 @@ describe('opds.ts - error handling and edge cases', () => {
       <link rel="previous" href="/prev"/>
       <link rel="first" href="/first"/>
       <link rel="last" href="/last"/>
+      <opensearch:totalResults xmlns:opensearch="http://a9.com/-/spec/opensearch/1.1/">42</opensearch:totalResults>
+      <opensearch:itemsPerPage xmlns:opensearch="http://a9.com/-/spec/opensearch/1.1/">10</opensearch:itemsPerPage>
+      <opensearch:startIndex xmlns:opensearch="http://a9.com/-/spec/opensearch/1.1/">1</opensearch:startIndex>
       <entry><title>Book</title><link rel="http://opds-spec.org/acquisition" href="/book.epub" type="application/epub+zip"/></entry>
     </feed>`;
     const { pagination } = parseOpds1Xml(xml, 'https://example.com/');
@@ -36,6 +39,9 @@ describe('opds.ts - error handling and edge cases', () => {
     expect(pagination.prev).toContain('/prev');
     expect(pagination.first).toContain('/first');
     expect(pagination.last).toContain('/last');
+    expect(pagination.totalResults).toBe(42);
+    expect(pagination.itemsPerPage).toBe(10);
+    expect(pagination.startIndex).toBe(1);
   });
 
   it('getFormatFromMimeType returns undefined for atom+xml', () => {

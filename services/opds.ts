@@ -321,6 +321,18 @@ export const parseOpds1Xml = (xmlText: string, baseUrl: string): { books: Catalo
         books.push(book);
     };
 
+    const feedEl = xmlDoc.documentElement;
+    const totalResultsRaw = getDirectChildText(feedEl, 'totalResults');
+    const itemsPerPageRaw = getDirectChildText(feedEl, 'itemsPerPage');
+    const startIndexRaw = getDirectChildText(feedEl, 'startIndex');
+    const totalResults = Number(totalResultsRaw);
+    const itemsPerPage = Number(itemsPerPageRaw);
+    const startIndex = Number(startIndexRaw);
+
+    if (Number.isFinite(totalResults)) pagination.totalResults = totalResults;
+    if (Number.isFinite(itemsPerPage)) pagination.itemsPerPage = itemsPerPage;
+    if (Number.isFinite(startIndex)) pagination.startIndex = startIndex;
+
     // Extract pagination links from feed-level link elements
     const feedLinks = Array.from(xmlDoc.querySelectorAll('feed > link'));
     feedLinks.forEach(link => {

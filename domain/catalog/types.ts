@@ -171,6 +171,9 @@ export interface CatalogPagination {
   prev?: string;
   first?: string;
   last?: string;
+  totalResults?: number;
+  itemsPerPage?: number;
+  startIndex?: number;
 }
 
 /**
