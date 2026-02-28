@@ -66,4 +66,36 @@ describe('OPDS format selection', () => {
     expect(b.format).toBe('EPUB');
     expect(b.downloadUrl).toContain('/borrow/indirect');
   });
+
+  it('OPDS1: resolves DRM wrapper chains to the underlying medium for badges', () => {
+    const xml = `<?xml version="1.0" encoding="utf-8"?>
+    <feed xmlns="http://www.w3.org/2005/Atom" xmlns:opds="http://opds-spec.org/2010/catalog">
+      <title>Test</title>
+      <entry>
+        <title>DRM EPUB</title>
+        <author><name>Author</name></author>
+        <link rel="http://opds-spec.org/acquisition/borrow" href="/borrow/drm-epub" type="application/atom+xml;type=entry;profile=opds-catalog">
+          <opds:indirectAcquisition type="application/vnd.adobe.adept+xml">
+            <opds:indirectAcquisition type="application/epub+zip" />
+          </opds:indirectAcquisition>
+        </link>
+      </entry>
+      <entry>
+        <title>DRM PDF</title>
+        <author><name>Author</name></author>
+        <link rel="http://opds-spec.org/acquisition/borrow" href="/borrow/drm-pdf" type="application/atom+xml;type=entry;profile=opds-catalog">
+          <opds:indirectAcquisition type="application/vnd.librarysimplified.bearer-token+json">
+            <opds:indirectAcquisition type="application/pdf" />
+          </opds:indirectAcquisition>
+        </link>
+      </entry>
+    </feed>`;
+
+    const { books } = parseOpds1Xml(xml, 'https://example.org/');
+    expect(books).toHaveLength(2);
+    expect(books[0].format).toBe('EPUB');
+    expect(books[0].acquisitionMediaType).toBe('application/epub+zip');
+    expect(books[1].format).toBe('PDF');
+    expect(books[1].acquisitionMediaType).toBe('application/pdf');
+  });
 });

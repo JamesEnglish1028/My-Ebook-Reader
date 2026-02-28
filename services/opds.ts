@@ -153,6 +153,30 @@ export const getFormatFromMimeType = (mimeType: string | undefined): string | un
     return undefined;
 };
 
+const getResolvedIndirectMediaType = (element: Element | null): string | undefined => {
+    if (!element) return undefined;
+
+    const children = Array.from(element.children);
+
+    for (const child of children) {
+        const local = (child.localName || child.nodeName || '').toLowerCase();
+        if (local !== 'indirectacquisition') continue;
+
+        const nestedResolved = getResolvedIndirectMediaType(child);
+        if (nestedResolved) return nestedResolved;
+
+        const childType = child.getAttribute('type') || undefined;
+        if (getFormatFromMimeType(childType)) return childType;
+    }
+
+    for (const child of children) {
+        const nestedResolved = getResolvedIndirectMediaType(child);
+        if (nestedResolved) return nestedResolved;
+    }
+
+    return undefined;
+};
+
 const getDirectChildText = (parent: Element, localName: string): string | undefined => {
     const child = Array.from(parent.children).find((node) => (node.localName || node.nodeName || '').toLowerCase() === localName.toLowerCase());
     const text = child?.textContent?.trim();
@@ -370,28 +394,11 @@ export const parseOpds1Xml = (xmlText: string, baseUrl: string): { books: Catalo
             const coverImage = coverImageHref ? new URL(coverImageHref, baseUrl).href : null;
             const downloadUrlHref = acquisitionLink?.getAttribute('href');
             const mimeType = acquisitionLink?.getAttribute('type') || '';
-            let format = getFormatFromMimeType(mimeType);
+            const resolvedIndirectMediaType = getResolvedIndirectMediaType(acquisitionLink as Element);
+            const resolvedMediaType = getFormatFromMimeType(mimeType) ? mimeType : resolvedIndirectMediaType;
+            let format = getFormatFromMimeType(resolvedMediaType || mimeType);
             if (isAudiobook) {
                 format = 'AUDIOBOOK';
-            } else if (!format) {
-                const findIndirectType = (el: Element | null): string | undefined => {
-                    if (!el) return undefined;
-                    for (const child of Array.from(el.children)) {
-                        const local = (child.localName || child.nodeName || '').toLowerCase();
-                        if (local === 'indirectacquisition') {
-                            const t = child.getAttribute('type');
-                            if (t) return t;
-                            const nested = findIndirectType(child);
-                            if (nested) return nested;
-                        } else {
-                            const nested = findIndirectType(child);
-                            if (nested) return nested;
-                        }
-                    }
-                    return undefined;
-                };
-                const indirect = findIndirectType(acquisitionLink as Element);
-                if (indirect) format = getFormatFromMimeType(indirect);
             }
             const publisher = (entry.querySelector('publisher')?.textContent || entry.querySelector('dc\\:publisher')?.textContent)?.trim();
             let distributor: string | undefined = undefined;
@@ -430,8 +437,8 @@ export const parseOpds1Xml = (xmlText: string, baseUrl: string): { books: Catalo
             const subjects = categories.map(cat => cat.label);
             if (downloadUrlHref) {
                 const downloadUrl = new URL(downloadUrlHref, baseUrl).href;
-                let finalMediaType = mimeType;
-                if (isAudiobook) {
+                let finalMediaType = resolvedMediaType || mimeType;
+                if (!finalMediaType && isAudiobook) {
                     finalMediaType = 'http://bib.schema.org/Audiobook';
                 }
                 addOrMergeBook({
