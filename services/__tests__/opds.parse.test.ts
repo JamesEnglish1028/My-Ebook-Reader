@@ -65,14 +65,14 @@ describe('OPDS1 parseOpds1Xml', () => {
   </entry>
 </feed>`;
 
-    const result = parseOpds1Xml(xml, 'https://example.com');
+    const result = parseOpds1Xml(xml, 'https://demo.palaceproject.io/catalog');
 
     expect(result.books).toHaveLength(1);
     expect(result.books[0].distributor).toBe('OAPEN');
     expect(result.books[0].availabilityStatus).toBe('unavailable');
     expect(result.books[0].collections).toEqual([
-      { title: 'OAPEN', href: 'https://example.com/collections/oapen' },
-      { title: 'Featured', href: 'https://example.com/collections/featured' },
+      { title: 'OAPEN', href: 'https://demo.palaceproject.io/collections/oapen' },
+      { title: 'Featured', href: 'https://demo.palaceproject.io/collections/featured' },
     ]);
     expect(result.navLinks.map((link) => link.title)).toEqual(['Featured']);
   });

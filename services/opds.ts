@@ -253,6 +253,20 @@ const getNestedAvailabilityStatus = (element: Element | null): string | undefine
     return undefined;
 };
 
+const isPalaceHost = (url: string): boolean => {
+    try {
+        const hostname = new URL(url).hostname.toLowerCase();
+        return hostname.endsWith('palace.io')
+            || hostname.endsWith('palaceproject.io')
+            || hostname.endsWith('thepalaceproject.org')
+            || hostname === 'palace.io'
+            || hostname.endsWith('.palace.io')
+            || hostname.endsWith('.thepalaceproject.org');
+    } catch {
+        return false;
+    }
+};
+
 /**
  * Parses OPDS 1 XML feeds into a standardized format.
  * Handles audiobook detection via schema:additionalType attributes.
@@ -281,6 +295,7 @@ export const parseOpds1Xml = (xmlText: string, baseUrl: string): { books: Catalo
     const pagination: CatalogPagination = {};
     const navLinkKeys = new Set<string>();
     const bookIndexes = new Map<string, number>();
+    const palaceFeed = isPalaceHost(baseUrl);
 
     const addNavLink = (link: CatalogNavigationLink) => {
         const key = `${link.rel}|${link.url}`;
@@ -403,7 +418,7 @@ export const parseOpds1Xml = (xmlText: string, baseUrl: string): { books: Catalo
             if (href && title) {
                 const fullUrl = new URL(href, baseUrl).href;
                 const normalizedTitle = title.trim();
-                const isDistributorMirror = distributor
+                const isDistributorMirror = palaceFeed && distributor
                     && normalizedTitle.toLowerCase() === distributor.toLowerCase();
                 if (!isDistributorMirror) {
                     addNavLink({
@@ -425,7 +440,7 @@ export const parseOpds1Xml = (xmlText: string, baseUrl: string): { books: Catalo
         const collectionNavLink = collectionLinks.find((link) => {
             const title = link.getAttribute('title')?.trim();
             if (!title) return false;
-            return !(distributor && title.toLowerCase() === distributor.toLowerCase());
+            return !(palaceFeed && distributor && title.toLowerCase() === distributor.toLowerCase());
         }) || null;
 
 

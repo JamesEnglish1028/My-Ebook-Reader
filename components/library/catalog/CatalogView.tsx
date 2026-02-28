@@ -190,19 +190,15 @@ const CatalogView: React.FC<CatalogViewProps> = ({
     setPageHistory([]);
   };
 
-  const normalizedFacetGroups = useMemo(() => {
-    const hiddenFacetGroups = new Set(['formats', 'availability', 'distributor', 'distributors']);
-
-    return facetGroups
-      .filter((group) => !hiddenFacetGroups.has(group.title.trim().toLowerCase()))
-      .map((group) => ({
+  const normalizedFacetGroups = useMemo(() => (
+    facetGroups.map((group) => ({
       ...group,
       links: group.links.map((link) => ({
         ...link,
         isActive: link.isActive ?? link.url === currentUrl,
       })),
-      }));
-  }, [currentUrl, facetGroups]);
+    }))
+  ), [currentUrl, facetGroups]);
 
   const displayNavigationLinks = useMemo(() => {
     if (!currentUrl) return navigationLinks;
