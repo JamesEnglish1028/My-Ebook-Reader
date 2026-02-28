@@ -442,6 +442,12 @@ export const parseOpds1Xml = (xmlText: string, baseUrl: string): { books: Catalo
             if (!title) return false;
             return !(palaceFeed && distributor && title.toLowerCase() === distributor.toLowerCase());
         }) || null;
+        const kindNavigationLink = allLinks.find((link) => {
+            const rel = (link.getAttribute('rel') || '').toLowerCase();
+            const type = (link.getAttribute('type') || '').toLowerCase();
+            if (rel.includes('opds-spec.org/acquisition')) return false;
+            return type.includes('profile=opds-catalog') && type.includes('kind=navigation');
+        }) || null;
 
 
         if (acquisitionLink) {
@@ -502,14 +508,14 @@ export const parseOpds1Xml = (xmlText: string, baseUrl: string): { books: Catalo
                     availabilityStatus: availabilityStatus || undefined,
                 });
             }
-        } else if (subsectionLink || collectionNavLink) {
-            const navSource = subsectionLink || collectionNavLink;
+        } else if (subsectionLink || collectionNavLink || kindNavigationLink) {
+            const navSource = subsectionLink || collectionNavLink || kindNavigationLink;
             const navUrl = navSource?.getAttribute('href');
             if (navUrl) {
                 addNavLink({
                     title,
                     url: new URL(navUrl, baseUrl).href,
-                    rel: subsectionLink ? 'subsection' : 'collection',
+                    rel: subsectionLink ? 'subsection' : collectionNavLink ? 'collection' : 'navigation',
                     type: navSource?.getAttribute('type') || undefined,
                     source: 'navigation',
                 });

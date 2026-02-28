@@ -76,4 +76,43 @@ describe('OPDS1 parseOpds1Xml', () => {
     ]);
     expect(result.navLinks.map((link) => link.title)).toEqual(['Featured']);
   });
+
+  it('treats entry links with MIME kind=navigation as OPDS1 navigation entries', () => {
+    const xml = `<?xml version="1.0" encoding="UTF-8"?>
+<feed xmlns="http://www.w3.org/2005/Atom">
+  <title>Navigation Feed</title>
+  <entry>
+    <title>All Journals (673)</title>
+    <link type="application/atom+xml;profile=opds-catalog;kind=navigation" href="http://opds.openedition.org/?platform=OJ&amp;core=publishers"/>
+    <id>http://opds.openedition.org/?platform=OJ&amp;core=publishers</id>
+    <content>All Journals Catalog</content>
+  </entry>
+  <entry>
+    <title>All books (16127)</title>
+    <link type="application/atom+xml;profile=opds-catalog;kind=navigation" href="http://opds.openedition.org/?platform=OB&amp;core=publishers"/>
+    <id>http://opds.openedition.org/?platform=OB&amp;core=publishers</id>
+    <content>All books Catalog</content>
+  </entry>
+</feed>`;
+
+    const result = parseOpds1Xml(xml, 'http://opds.openedition.org/');
+
+    expect(result.books).toHaveLength(0);
+    expect(result.navLinks).toEqual([
+      {
+        title: 'All Journals (673)',
+        url: 'http://opds.openedition.org/?platform=OJ&core=publishers',
+        rel: 'navigation',
+        type: 'application/atom+xml;profile=opds-catalog;kind=navigation',
+        source: 'navigation',
+      },
+      {
+        title: 'All books (16127)',
+        url: 'http://opds.openedition.org/?platform=OB&core=publishers',
+        rel: 'navigation',
+        type: 'application/atom+xml;profile=opds-catalog;kind=navigation',
+        source: 'navigation',
+      },
+    ]);
+  });
 });
