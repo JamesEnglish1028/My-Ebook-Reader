@@ -382,6 +382,9 @@ export const parseOpds1Xml = (xmlText: string, baseUrl: string): { books: Catalo
 
 export const fetchCatalogContent = async (url: string, baseUrl: string, forcedVersion: 'auto' | '1' | '2' = 'auto'): Promise<{ books: CatalogBook[], navLinks: CatalogNavigationLink[], facetGroups: CatalogFacetGroup[], pagination: CatalogPagination, error?: string }> => {
     try {
+        // Resolve relative links against the actual feed URL, not the catalog root.
+        // For direct fetches that follow redirects, prefer the final response URL.
+        let parseBaseUrl = url;
         // Some providers (notably Palace Project / palace.io, palaceproject.io, and thepalaceproject.org hosts) operate
         // primarily for native clients and don't expose CORS consistently. For
         // those hosts we should force requests through our owned proxy so the
@@ -473,7 +476,7 @@ export const fetchCatalogContent = async (url: string, baseUrl: string, forcedVe
                 if (forcedVersion === '1' && responseText.trim().startsWith('<')) {
                     // eslint-disable-next-line no-console
                     console.debug('[mebooks] Forcing OPDS1 (XML) parse for proxied response');
-                    return parseOpds1Xml(responseText, baseUrl);
+                    return parseOpds1Xml(responseText, parseBaseUrl);
                 }
 
                 // Enhanced logic to handle ambiguous Content-Type headers
@@ -482,13 +485,13 @@ export const fetchCatalogContent = async (url: string, baseUrl: string, forcedVe
                         console.warn('[mebooks] Attempting to parse OPDS2 JSON (proxied), response length:', responseText.length);
                         const jsonData = JSON.parse(responseText);
                         console.warn('[mebooks] Successfully parsed OPDS2 JSON (proxied), keys:', Object.keys(jsonData).slice(0, 5));
-                        return parseOpds2Json(jsonData, baseUrl);
+                        return parseOpds2Json(jsonData, parseBaseUrl);
                     } catch (e) {
                         // If parsing fails, check if the body looks like XML
                         if (responseText && responseText.trim().startsWith('<')) {
                             try {
                                 console.warn('[mebooks] Response body appears to be XML despite JSON Content-Type; attempting XML parse');
-                                return parseOpds1Xml(responseText, baseUrl);
+                                return parseOpds1Xml(responseText, parseBaseUrl);
                             } catch (xmlErr) {
                                 console.error('[mebooks] Failed to parse as XML after JSON Content-Type:', xmlErr);
                                 throw new Error('Failed to parse catalog content as both JSON and XML.');
@@ -500,7 +503,7 @@ export const fetchCatalogContent = async (url: string, baseUrl: string, forcedVe
                     }
                 } else if (contentType.includes('application/atom+xml') || contentType.includes('application/xml') || contentType.includes('text/xml') || responseText.trim().startsWith('<')) {
                     try {
-                        return parseOpds1Xml(responseText, baseUrl);
+                        return parseOpds1Xml(responseText, parseBaseUrl);
                     } catch (xmlErr) {
                         console.error('[mebooks] Failed to parse as XML:', xmlErr);
                         throw new Error('Failed to parse catalog content as XML.');
@@ -526,6 +529,9 @@ export const fetchCatalogContent = async (url: string, baseUrl: string, forcedVe
 
         const contentType = response.headers.get('Content-Type') || '';
         const responseText = await safeReadText(response);
+        if (isDirectFetch && response.url) {
+            parseBaseUrl = response.url;
+        }
 
         // If the proxy returned a JSON 403 error body, surface a clearer message
         if (response.status === 403 && contentType.includes('application/json')) {
@@ -551,7 +557,7 @@ export const fetchCatalogContent = async (url: string, baseUrl: string, forcedVe
         if (forcedVersion === '1' && responseText.trim().startsWith('<')) {
             // eslint-disable-next-line no-console
             console.debug('[mebooks] Forcing OPDS1 (XML) parse for direct response');
-            return parseOpds1Xml(responseText, baseUrl);
+            return parseOpds1Xml(responseText, parseBaseUrl);
         }
 
         console.warn('[mebooks] About to check JSON condition - forcedVersion:', forcedVersion, 'contentType includes opds+json:', contentType.includes('application/opds+json'));
@@ -561,14 +567,14 @@ export const fetchCatalogContent = async (url: string, baseUrl: string, forcedVe
                 console.warn('[mebooks] Attempting to parse OPDS2 JSON (direct), response length:', responseText.length);
                 const jsonData = JSON.parse(responseText);
                 console.warn('[mebooks] Successfully parsed OPDS2 JSON (direct), keys:', Object.keys(jsonData).slice(0, 5));
-                return parseOpds2Json(jsonData, baseUrl);
+                return parseOpds2Json(jsonData, parseBaseUrl);
             } catch (e) {
                 // Some Palace endpoints return Atom XML but incorrectly set Content-Type
                 // to application/json; if the body looks like XML, try parsing as XML.
                 if (responseText && responseText.trim().startsWith('<')) {
                     try {
                         console.warn('[mebooks] Direct response body appears to be XML despite JSON Content-Type; attempting XML parse');
-                        return parseOpds1Xml(responseText, baseUrl);
+                        return parseOpds1Xml(responseText, parseBaseUrl);
                     } catch (xmlErr) {
                         console.error('[mebooks] Failed to parse as XML after JSON Content-Type:', xmlErr);
                         throw new Error('Failed to parse catalog content as both JSON and XML.');
@@ -578,18 +584,18 @@ export const fetchCatalogContent = async (url: string, baseUrl: string, forcedVe
                 throw new Error(`Failed to parse JSON response for ${url}.`);
             }
         } else if (contentType.includes('application/atom+xml') || contentType.includes('application/xml') || contentType.includes('text/xml')) {
-            return parseOpds1Xml(responseText, baseUrl);
+            return parseOpds1Xml(responseText, parseBaseUrl);
         } else {
             // Attempt to auto-detect format if Content-Type is vague (e.g., text/plain)
             console.warn('[mebooks] Fell through to else block - forcedVersion:', forcedVersion, 'contentType:', contentType, 'response starts with {:', responseText.trim().startsWith('{'), 'response starts with <:', responseText.trim().startsWith('<'));
             if (forcedVersion !== '1' && responseText.trim().startsWith('{')) {
                 try {
                     const jsonData = JSON.parse(responseText);
-                    return parseOpds2Json(jsonData, baseUrl);
+                    return parseOpds2Json(jsonData, parseBaseUrl);
                 } catch (e) { /* Fall through to XML parsing */ }
             }
             if (responseText.trim().startsWith('<')) {
-                return parseOpds1Xml(responseText, baseUrl);
+                return parseOpds1Xml(responseText, parseBaseUrl);
             }
             throw new Error(`Unsupported or ambiguous catalog format. Content-Type: "${contentType}".`);
         }
