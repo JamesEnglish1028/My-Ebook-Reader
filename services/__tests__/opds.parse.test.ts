@@ -46,4 +46,34 @@ describe('OPDS1 parseOpds1Xml', () => {
     ]);
     expect(result.navLinks.map((link) => link.title)).toEqual(['Fiction', 'Featured']);
   });
+
+  it('parses availability/distributor metadata and keeps distributor mirror collections out of navigation', () => {
+    const xml = `<?xml version="1.0" encoding="UTF-8"?>
+<feed xmlns="http://www.w3.org/2005/Atom" xmlns:opds="http://opds-spec.org/2010/catalog" xmlns:bibframe="http://bibframe.org/vocab/">
+  <title>Distributor Feed</title>
+  <entry>
+    <title>Provider Book</title>
+    <id>urn:uuid:provider-book</id>
+    <author><name>Author</name></author>
+    <bibframe:distribution bibframe:ProviderName="OAPEN"/>
+    <link rel="http://opds-spec.org/acquisition/borrow" href="/borrow/provider" type="application/atom+xml;type=entry;profile=opds-catalog">
+      <opds:indirectAcquisition type="application/pdf" />
+      <opds:availability status="unavailable" />
+    </link>
+    <link rel="collection" href="/collections/oapen" title="OAPEN"/>
+    <link rel="collection" href="/collections/featured" title="Featured"/>
+  </entry>
+</feed>`;
+
+    const result = parseOpds1Xml(xml, 'https://example.com');
+
+    expect(result.books).toHaveLength(1);
+    expect(result.books[0].distributor).toBe('OAPEN');
+    expect(result.books[0].availabilityStatus).toBe('unavailable');
+    expect(result.books[0].collections).toEqual([
+      { title: 'OAPEN', href: 'https://example.com/collections/oapen' },
+      { title: 'Featured', href: 'https://example.com/collections/featured' },
+    ]);
+    expect(result.navLinks.map((link) => link.title)).toEqual(['Featured']);
+  });
 });

@@ -1,6 +1,6 @@
 import React from 'react';
 
-import type { AudienceMode, FictionMode, MediaMode, PublicationMode } from '../../../types';
+import type { AudienceMode, AvailabilityMode, DistributorMode, FictionMode, MediaMode, PublicationMode } from '../../../types';
 
 interface FilterOption<T> {
   key: T;
@@ -17,6 +17,10 @@ interface CatalogFiltersProps {
   availableMediaModes: string[];
   /** Available publication types */
   availablePublicationTypes: Array<{ key: PublicationMode; label: string }>;
+  /** Available availability states */
+  availableAvailabilityModes: Array<{ key: AvailabilityMode; label: string }>;
+  /** Available distributors */
+  availableDistributors: DistributorMode[];
   /** Current audience filter */
   audienceMode: AudienceMode;
   /** Current fiction filter */
@@ -25,6 +29,10 @@ interface CatalogFiltersProps {
   mediaMode: MediaMode;
   /** Current publication filter */
   publicationMode: PublicationMode;
+  /** Current availability filter */
+  availabilityMode: AvailabilityMode;
+  /** Current distributor filter */
+  distributorMode: DistributorMode;
   /** Callback for audience filter change */
   onAudienceChange: (mode: AudienceMode) => void;
   /** Callback for fiction filter change */
@@ -33,6 +41,10 @@ interface CatalogFiltersProps {
   onMediaChange: (mode: MediaMode) => void;
   /** Callback for publication filter change */
   onPublicationChange: (mode: PublicationMode) => void;
+  /** Callback for availability filter change */
+  onAvailabilityChange: (mode: AvailabilityMode) => void;
+  /** Callback for distributor filter change */
+  onDistributorChange: (mode: DistributorMode) => void;
 }
 
 /**
@@ -46,14 +58,20 @@ const CatalogFilters: React.FC<CatalogFiltersProps> = ({
   availableFictionModes,
   availableMediaModes,
   availablePublicationTypes,
+  availableAvailabilityModes,
+  availableDistributors,
   audienceMode,
   fictionMode,
   mediaMode,
   publicationMode,
+  availabilityMode,
+  distributorMode,
   onAudienceChange,
   onFictionChange,
   onMediaChange,
   onPublicationChange,
+  onAvailabilityChange,
+  onDistributorChange,
 }) => {
   // Build filter options with availability
   const audienceOptions: FilterOption<AudienceMode>[] = [
@@ -81,8 +99,10 @@ const CatalogFilters: React.FC<CatalogFiltersProps> = ({
   const showFictionFilter = availableFictionModes.length > 1;
   const showMediaFilter = availableMediaModes.length > 1;
   const showPublicationFilter = availablePublicationTypes.length > 1;
+  const showAvailabilityFilter = availableAvailabilityModes.length > 1;
+  const showDistributorFilter = availableDistributors.length > 1;
 
-  const showAnyFilters = showAudienceFilter || showFictionFilter || showMediaFilter || showPublicationFilter;
+  const showAnyFilters = showAudienceFilter || showFictionFilter || showMediaFilter || showPublicationFilter || showAvailabilityFilter || showDistributorFilter;
 
   if (!showAnyFilters) {
     return null;
@@ -91,7 +111,9 @@ const CatalogFilters: React.FC<CatalogFiltersProps> = ({
   const activeFilterCount = Number(audienceMode !== 'all')
     + Number(fictionMode !== 'all')
     + Number(mediaMode !== 'all')
-    + Number(publicationMode !== 'all');
+    + Number(publicationMode !== 'all')
+    + Number(availabilityMode !== 'all')
+    + Number(distributorMode !== 'all');
 
   return (
     <div className="mb-5 rounded-xl border border-slate-700/60 bg-slate-900/35 p-3">
@@ -101,7 +123,7 @@ const CatalogFilters: React.FC<CatalogFiltersProps> = ({
           {activeFilterCount > 0 ? `${activeFilterCount} active` : 'Local only'}
         </span>
       </div>
-      {(showAudienceFilter || showFictionFilter || showMediaFilter || showPublicationFilter) && (
+      {(showAudienceFilter || showFictionFilter || showMediaFilter || showPublicationFilter || showAvailabilityFilter || showDistributorFilter) && (
         <div className="flex flex-wrap items-start gap-3">
           {showAudienceFilter && (
             <div className="flex flex-wrap items-center gap-2">
@@ -184,6 +206,48 @@ const CatalogFilters: React.FC<CatalogFiltersProps> = ({
                       }`}
                     >
                       {option.label}
+                    </button>
+                  ))}
+              </div>
+            </div>
+          )}
+
+          {showAvailabilityFilter && (
+            <div className="flex flex-wrap items-center gap-2">
+              <span className="text-xs font-medium uppercase tracking-[0.12em] text-slate-500">Availability</span>
+              <div className="flex flex-wrap gap-1.5">
+                {[{ key: 'all' as AvailabilityMode, label: 'All' }, ...availableAvailabilityModes]
+                  .map((option) => (
+                    <button
+                      key={option.key}
+                      onClick={() => onAvailabilityChange(option.key)}
+                      className={`rounded-full px-2.5 py-1 text-xs font-medium transition-colors ${availabilityMode === option.key
+                        ? 'bg-lime-500/20 text-lime-100 ring-1 ring-lime-500/40'
+                        : 'bg-slate-800 text-slate-300 hover:bg-slate-700'
+                      }`}
+                    >
+                      {option.label}
+                    </button>
+                  ))}
+              </div>
+            </div>
+          )}
+
+          {showDistributorFilter && (
+            <div className="flex flex-wrap items-center gap-2">
+              <span className="text-xs font-medium uppercase tracking-[0.12em] text-slate-500">Distributor</span>
+              <div className="flex flex-wrap gap-1.5">
+                {['all', ...availableDistributors]
+                  .map((option) => (
+                    <button
+                      key={option}
+                      onClick={() => onDistributorChange(option as DistributorMode)}
+                      className={`rounded-full px-2.5 py-1 text-xs font-medium transition-colors ${distributorMode === option
+                        ? 'bg-fuchsia-500/20 text-fuchsia-100 ring-1 ring-fuchsia-500/40'
+                        : 'bg-slate-800 text-slate-300 hover:bg-slate-700'
+                      }`}
+                    >
+                      {option === 'all' ? 'All' : option}
                     </button>
                   ))}
               </div>

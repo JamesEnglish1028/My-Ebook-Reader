@@ -3,21 +3,27 @@ import React, { useEffect, useMemo, useState } from 'react';
 import { useCatalogContent } from '../../../hooks';
 import {
   filterBooksByAudience,
+  filterBooksByAvailability,
+  filterBooksByDistributor,
   filterBooksByFiction,
   filterBooksByMedia,
   filterBooksByPublication,
   getAvailableAudiences,
+  getAvailableAvailabilityModes,
+  getAvailableDistributors,
   getAvailableFictionModes,
   getAvailableMediaModes,
   getAvailablePublicationTypes,
 } from '../../../services/opds';
 import type {
   AudienceMode,
+  AvailabilityMode,
   Catalog,
   CatalogBook,
   CatalogFacetLink,
   CatalogNavigationLink,
   CatalogRegistry,
+  DistributorMode,
   FictionMode,
   MediaMode,
   PublicationMode,
@@ -43,6 +49,8 @@ const CatalogView: React.FC<CatalogViewProps> = ({
   const [fictionMode, setFictionMode] = useState<FictionMode>('all');
   const [mediaMode, setMediaMode] = useState<MediaMode>('all');
   const [publicationMode, setPublicationMode] = useState<PublicationMode>('all');
+  const [availabilityMode, setAvailabilityMode] = useState<AvailabilityMode>('all');
+  const [distributorMode, setDistributorMode] = useState<DistributorMode>('all');
   const [catalogBooks, setCatalogBooks] = useState<CatalogBook[]>([]);
   const [pageHistory, setPageHistory] = useState<string[]>([]);
 
@@ -90,11 +98,15 @@ const CatalogView: React.FC<CatalogViewProps> = ({
     availableFictionModes,
     availableMediaModes,
     availablePublicationTypes,
+    availableAvailabilityModes,
+    availableDistributors,
   } = useMemo(() => ({
     availableAudiences: getAvailableAudiences(originalCatalogBooks),
     availableFictionModes: getAvailableFictionModes(originalCatalogBooks),
     availableMediaModes: getAvailableMediaModes(originalCatalogBooks),
     availablePublicationTypes: getAvailablePublicationTypes(originalCatalogBooks),
+    availableAvailabilityModes: getAvailableAvailabilityModes(originalCatalogBooks),
+    availableDistributors: getAvailableDistributors(originalCatalogBooks),
   }), [originalCatalogBooks]);
 
   useEffect(() => {
@@ -104,13 +116,17 @@ const CatalogView: React.FC<CatalogViewProps> = ({
     const fictionFiltered = filterBooksByFiction(audienceFiltered, fictionMode);
     const mediaFiltered = filterBooksByMedia(fictionFiltered, mediaMode);
     const publicationFiltered = filterBooksByPublication(mediaFiltered, publicationMode);
+    const availabilityFiltered = filterBooksByAvailability(publicationFiltered, availabilityMode);
+    const distributorFiltered = filterBooksByDistributor(availabilityFiltered, distributorMode);
 
-    setCatalogBooks(publicationFiltered);
+    setCatalogBooks(distributorFiltered);
   }, [
     audienceMode,
     fictionMode,
     mediaMode,
     publicationMode,
+    availabilityMode,
+    distributorMode,
     originalCatalogBooks,
   ]);
 
@@ -119,6 +135,8 @@ const CatalogView: React.FC<CatalogViewProps> = ({
     setFictionMode('all');
     setMediaMode('all');
     setPublicationMode('all');
+    setAvailabilityMode('all');
+    setDistributorMode('all');
   };
 
   const handleBreadcrumbClick = (index: number) => {
@@ -172,15 +190,19 @@ const CatalogView: React.FC<CatalogViewProps> = ({
     setPageHistory([]);
   };
 
-  const normalizedFacetGroups = useMemo(() => (
-    facetGroups.map((group) => ({
+  const normalizedFacetGroups = useMemo(() => {
+    const hiddenFacetGroups = new Set(['formats', 'availability', 'distributor', 'distributors']);
+
+    return facetGroups
+      .filter((group) => !hiddenFacetGroups.has(group.title.trim().toLowerCase()))
+      .map((group) => ({
       ...group,
       links: group.links.map((link) => ({
         ...link,
         isActive: link.isActive ?? link.url === currentUrl,
       })),
-    }))
-  ), [currentUrl, facetGroups]);
+      }));
+  }, [currentUrl, facetGroups]);
 
   const displayNavigationLinks = useMemo(() => {
     if (!currentUrl) return navigationLinks;
@@ -239,14 +261,20 @@ const CatalogView: React.FC<CatalogViewProps> = ({
           availableFictionModes={availableFictionModes}
           availableMediaModes={availableMediaModes}
           availablePublicationTypes={availablePublicationTypes}
+          availableAvailabilityModes={availableAvailabilityModes}
+          availableDistributors={availableDistributors}
           audienceMode={audienceMode}
           fictionMode={fictionMode}
           mediaMode={mediaMode}
           publicationMode={publicationMode}
+          availabilityMode={availabilityMode}
+          distributorMode={distributorMode}
           onAudienceChange={setAudienceMode}
           onFictionChange={setFictionMode}
           onMediaChange={setMediaMode}
           onPublicationChange={setPublicationMode}
+          onAvailabilityChange={setAvailabilityMode}
+          onDistributorChange={setDistributorMode}
         />
 
         {isEmptyFeed ? (

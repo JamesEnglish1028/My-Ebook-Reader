@@ -56,6 +56,7 @@ export interface CatalogBook {
   acquisitionMediaType?: string; // e.g., application/epub+zip
   mediaType?: string; // e.g., http://schema.org/EBook
   isOpenAccess?: boolean; // True if acquisition link is open-access (no auth required)
+  availabilityStatus?: string; // e.g., available, unavailable
 
   // Multiple format options (when book is available in EPUB and PDF)
   alternativeFormats?: AcquisitionFormat[];
@@ -248,4 +249,6 @@ export type AudienceMode = 'all' | 'adult' | 'young-adult' | 'children';
 export type FictionMode = 'all' | 'fiction' | 'non-fiction';
 export type MediaMode = 'all' | 'epub' | 'pdf' | 'audiobook';
 export type PublicationMode = 'all' | string;
+export type AvailabilityMode = 'all' | string;
+export type DistributorMode = 'all' | string;
 export type CollectionMode = 'all' | string; // 'all' or specific collection name

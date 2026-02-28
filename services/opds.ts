@@ -1,4 +1,4 @@
-import type { AudienceMode, CatalogBook, CatalogFacetGroup, CatalogFacetLink, CatalogNavigationLink, CatalogPagination, CatalogWithCategories, CatalogWithCollections, CategorizationMode, Category, Collection, CollectionGroup, CollectionMode, FictionMode, MediaMode, PublicationMode } from '../types';
+import type { AudienceMode, AvailabilityMode, CatalogBook, CatalogFacetGroup, CatalogFacetLink, CatalogNavigationLink, CatalogPagination, CatalogWithCategories, CatalogWithCollections, CategorizationMode, Category, Collection, CollectionGroup, CollectionMode, DistributorMode, FictionMode, MediaMode, PublicationMode } from '../types';
 
 import { logger } from './logger';
 import { parseOpds2Json } from './opds2';
@@ -232,10 +232,26 @@ const mergeCatalogBooks = (existing: CatalogBook, incoming: CatalogBook): Catalo
     acquisitionMediaType: existing.acquisitionMediaType || incoming.acquisitionMediaType,
     collections: mergeCollections(existing.collections, incoming.collections),
     isOpenAccess: existing.isOpenAccess || incoming.isOpenAccess || undefined,
+    availabilityStatus: existing.availabilityStatus || incoming.availabilityStatus,
     schemaOrgType: existing.schemaOrgType || incoming.schemaOrgType,
     publicationTypeLabel: existing.publicationTypeLabel || incoming.publicationTypeLabel,
     mediumFormatCode: existing.mediumFormatCode || incoming.mediumFormatCode,
 });
+
+const getNestedAvailabilityStatus = (element: Element | null): string | undefined => {
+    if (!element) return undefined;
+
+    for (const child of Array.from(element.children)) {
+        const local = (child.localName || child.nodeName || '').toLowerCase();
+        if (local === 'availability') {
+            return child.getAttribute('status') || undefined;
+        }
+        const nested = getNestedAvailabilityStatus(child);
+        if (nested) return nested;
+    }
+
+    return undefined;
+};
 
 /**
  * Parses OPDS 1 XML feeds into a standardized format.
@@ -361,28 +377,56 @@ export const parseOpds1Xml = (xmlText: string, baseUrl: string): { books: Catalo
         }) || allLinks.find(link => (link.getAttribute('rel') || '').includes('opds-spec.org/acquisition'));
         const isOpenAccess = !!openAccessLink;
 
+        let distributor: string | undefined = undefined;
+        try {
+            const distributionElements = entry.getElementsByTagName('bibframe:distribution');
+            if (distributionElements.length > 0) {
+                const distributorRaw = distributionElements[0].getAttribute('bibframe:ProviderName')?.trim();
+                distributor = distributorRaw && distributorRaw.length > 0 ? distributorRaw : undefined;
+            }
+        } catch (error) {
+            try {
+                const distributionElements = entry.getElementsByTagName('distribution');
+                if (distributionElements.length > 0) {
+                    const distributorRaw = distributionElements[0].getAttribute('ProviderName')?.trim();
+                    distributor = distributorRaw && distributorRaw.length > 0 ? distributorRaw : undefined;
+                }
+            } catch (fallbackError) {
+                console.warn('Could not parse distributor information:', fallbackError);
+            }
+        }
+
         const collectionLinks = Array.from(entry.querySelectorAll('link[rel="collection"]'));
         const collections = collectionLinks.map(link => {
             const href = link.getAttribute('href');
             const title = link.getAttribute('title');
             if (href && title) {
                 const fullUrl = new URL(href, baseUrl).href;
-                addNavLink({
-                    title: title.trim(),
-                    url: fullUrl,
-                    rel: 'collection',
-                    type: link.getAttribute('type') || undefined,
-                    source: 'navigation',
-                });
+                const normalizedTitle = title.trim();
+                const isDistributorMirror = distributor
+                    && normalizedTitle.toLowerCase() === distributor.toLowerCase();
+                if (!isDistributorMirror) {
+                    addNavLink({
+                        title: normalizedTitle,
+                        url: fullUrl,
+                        rel: 'collection',
+                        type: link.getAttribute('type') || undefined,
+                        source: 'navigation',
+                    });
+                }
                 return {
-                    title: title.trim(),
+                    title: normalizedTitle,
                     href: fullUrl,
                 };
             }
             return null;
         }).filter((collection): collection is { title: string; href: string } => collection !== null);
         const subsectionLink = entry.querySelector('link[rel="subsection"], link[rel="http://opds-spec.org/subsection"]');
-        const collectionNavLink = collectionLinks[0] || null;
+        const collectionNavLink = collectionLinks.find((link) => {
+            const title = link.getAttribute('title')?.trim();
+            if (!title) return false;
+            return !(distributor && title.toLowerCase() === distributor.toLowerCase());
+        }) || null;
 
 
         if (acquisitionLink) {
@@ -400,25 +444,8 @@ export const parseOpds1Xml = (xmlText: string, baseUrl: string): { books: Catalo
             if (isAudiobook) {
                 format = 'AUDIOBOOK';
             }
+            const availabilityStatus = getNestedAvailabilityStatus(acquisitionLink as Element);
             const publisher = (entry.querySelector('publisher')?.textContent || entry.querySelector('dc\\:publisher')?.textContent)?.trim();
-            let distributor: string | undefined = undefined;
-            try {
-                const distributionElements = entry.getElementsByTagName('bibframe:distribution');
-                if (distributionElements.length > 0) {
-                    const distributorRaw = distributionElements[0].getAttribute('bibframe:ProviderName')?.trim();
-                    distributor = distributorRaw && distributorRaw.length > 0 ? distributorRaw : undefined;
-                }
-            } catch (error) {
-                try {
-                    const distributionElements = entry.getElementsByTagName('distribution');
-                    if (distributionElements.length > 0) {
-                        const distributorRaw = distributionElements[0].getAttribute('ProviderName')?.trim();
-                        distributor = distributorRaw && distributorRaw.length > 0 ? distributorRaw : undefined;
-                    }
-                } catch (fallbackError) {
-                    console.warn('Could not parse distributor information:', fallbackError);
-                }
-            }
             const publicationDate = (entry.querySelector('issued')?.textContent || entry.querySelector('dc\\:issued')?.textContent || entry.querySelector('published')?.textContent)?.trim();
             const providerId = getDirectChildText(entry, 'identifier') || getDirectChildText(entry, 'id');
             const categories = Array.from(entry.querySelectorAll('category')).map(cat => {
@@ -457,6 +484,7 @@ export const parseOpds1Xml = (xmlText: string, baseUrl: string): { books: Catalo
                     acquisitionMediaType: finalMediaType || undefined,
                     collections: collections.length > 0 ? collections : undefined,
                     isOpenAccess: isOpenAccess || undefined,
+                    availabilityStatus: availabilityStatus || undefined,
                 });
             }
         } else if (subsectionLink || collectionNavLink) {
@@ -1433,6 +1461,51 @@ export const getAvailablePublicationTypes = (books: CatalogBook[]): Array<{ key:
     });
 
     return Array.from(publicationTypes.entries()).map(([key, label]) => ({ key, label }));
+};
+
+export const filterBooksByAvailability = (books: CatalogBook[], availabilityMode: AvailabilityMode): CatalogBook[] => {
+    if (availabilityMode === 'all') {
+        return books;
+    }
+
+    return books.filter((book) => (book.availabilityStatus || 'available') === availabilityMode);
+};
+
+export const getAvailableAvailabilityModes = (books: CatalogBook[]): Array<{ key: AvailabilityMode; label: string }> => {
+    const labels: Record<string, string> = {
+        available: 'Available',
+        unavailable: 'Unavailable',
+        reserved: 'Reserved',
+        ready: 'Ready',
+    };
+    const modes = new Set<string>();
+
+    books.forEach((book) => {
+        modes.add(book.availabilityStatus || 'available');
+    });
+
+    return Array.from(modes)
+        .sort()
+        .map((key) => ({ key, label: labels[key] || key.replace(/-/g, ' ') }));
+};
+
+export const filterBooksByDistributor = (books: CatalogBook[], distributorMode: DistributorMode): CatalogBook[] => {
+    if (distributorMode === 'all') {
+        return books;
+    }
+
+    return books.filter((book) => (book.distributor || '').trim() === distributorMode);
+};
+
+export const getAvailableDistributors = (books: CatalogBook[]): DistributorMode[] => {
+    const distributors = new Set<DistributorMode>();
+
+    books.forEach((book) => {
+        const distributor = book.distributor?.trim();
+        if (distributor) distributors.add(distributor);
+    });
+
+    return Array.from(distributors).sort();
 };
 
 export const filterBooksByCollection = (books: CatalogBook[], collectionMode: CollectionMode, navLinks: CatalogNavigationLink[] = []): CatalogBook[] => {

@@ -215,9 +215,9 @@ describe('CatalogView pagination history', () => {
         books: [{ id: 'b1', title: 'Book 1', metadata: { title: 'Book 1' } }],
         facetGroups: [
           {
-            title: 'Formats',
+            title: 'Subjects',
             links: [
-              { title: 'Audiobooks', url: 'https://example.com/opds/catalog?format=audio', isActive: false },
+              { title: 'Fantasy', url: 'https://example.com/opds/catalog?subject=fantasy', isActive: false },
             ],
           },
         ],
@@ -235,13 +235,13 @@ describe('CatalogView pagination history', () => {
     ));
 
     await act(async () => {
-      fireEvent.click(await screen.findByRole('button', { name: 'Audiobooks' }));
+      fireEvent.click(await screen.findByRole('button', { name: 'Fantasy' }));
     });
 
     expect(setCatalogNavPath).toHaveBeenCalled();
     const updater = setCatalogNavPath.mock.calls[0][0];
     const nextPath = updater([{ name: initialCatalog.name, url: initialCatalog.url }]);
 
-    expect(nextPath).toEqual([{ name: 'Audiobooks', url: 'https://example.com/opds/catalog?format=audio' }]);
+    expect(nextPath).toEqual([{ name: 'Fantasy', url: 'https://example.com/opds/catalog?subject=fantasy' }]);
   });
 });
