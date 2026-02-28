@@ -230,18 +230,32 @@ export function buildOpenSearchUrl(
 export async function fetchOpenSearchDescription(
   descriptionUrl: string,
 ): Promise<OpenSearchDescriptionDocument> {
-  const fetchUrl = await maybeProxyForCors(descriptionUrl, true);
-  const response = await fetch(fetchUrl, {
-    method: 'GET',
-    headers: {
-      Accept: 'application/opensearchdescription+xml, application/xml, text/xml;q=0.9, */*;q=0.5',
-    },
-  });
+  try {
+    const fetchUrl = await maybeProxyForCors(descriptionUrl, true);
+    const response = await fetch(fetchUrl, {
+      method: 'GET',
+      headers: {
+        Accept: 'application/opensearchdescription+xml, application/xml, text/xml;q=0.9, */*;q=0.5',
+      },
+    });
 
-  if (!response.ok) {
-    throw new Error(`Failed to load OpenSearch description (${response.status}).`);
+    if (!response.ok) {
+      throw new Error(`Catalog search is unavailable because the OpenSearch description could not be loaded (${response.status}).`);
+    }
+
+    const xmlText = await response.text();
+    return parseOpenSearchDescription(xmlText, descriptionUrl);
+  } catch (error) {
+    if (error instanceof Error) {
+      if (
+        error.message.includes('Catalog search is unavailable')
+        || error.message.includes('Invalid OpenSearch description document.')
+        || error.message.includes('Failed to parse OpenSearch description document.')
+      ) {
+        throw error;
+      }
+    }
+
+    throw new Error('Catalog search is unavailable because the OpenSearch description could not be reached.');
   }
-
-  const xmlText = await response.text();
-  return parseOpenSearchDescription(xmlText, descriptionUrl);
 }

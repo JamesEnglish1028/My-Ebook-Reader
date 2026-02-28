@@ -23,5 +23,6 @@ export function useCatalogSearchDescription(
     },
     enabled: enabled && !!search?.descriptionUrl,
     staleTime: 10 * 60 * 1000,
+    retry: false,
   });
 }

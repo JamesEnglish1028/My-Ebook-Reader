@@ -48,6 +48,15 @@ describe('fetchOpenSearchDescription', () => {
 
     await expect(
       fetchOpenSearchDescription('https://catalog.example.org/opensearch.xml'),
-    ).rejects.toThrow('Failed to load OpenSearch description (404).');
+    ).rejects.toThrow('Catalog search is unavailable because the OpenSearch description could not be loaded (404).');
+  });
+
+  it('normalizes browser network failures into a stable user-facing error', async () => {
+    vi.spyOn(utils, 'maybeProxyForCors').mockResolvedValue('https://catalog.example.org/opensearch.xml');
+    vi.spyOn(global, 'fetch' as any).mockRejectedValue(new TypeError('NetworkError when attempting to fetch resource.'));
+
+    await expect(
+      fetchOpenSearchDescription('https://catalog.example.org/opensearch.xml'),
+    ).rejects.toThrow('Catalog search is unavailable because the OpenSearch description could not be reached.');
   });
 });
