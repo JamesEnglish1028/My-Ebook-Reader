@@ -20,7 +20,7 @@ interface CatalogNavigationProps {
  * CatalogNavigation - Displays breadcrumb trail and pagination controls
  *
  * Shows the navigation path through catalog sections and provides
- * Previous/Next buttons for paginated results.
+ * First/Previous/Next/Last buttons for paginated results.
  */
 const CatalogNavigation: React.FC<CatalogNavigationProps> = ({
   navPath,
@@ -30,7 +30,7 @@ const CatalogNavigation: React.FC<CatalogNavigationProps> = ({
   isLoading = false,
 }) => {
   const showBreadcrumbs = navPath.length > 0;
-  const showPagination = pagination && (pagination.prev || pagination.next) && !isLoading;
+  const showPagination = pagination && (pagination.first || pagination.prev || pagination.next || pagination.last) && !isLoading;
 
   return (
     <>
@@ -61,24 +61,44 @@ const CatalogNavigation: React.FC<CatalogNavigationProps> = ({
 
       {showPagination && (
         <div className="mt-6 flex items-center justify-between">
-          <button
-            onClick={() => pagination.prev && onPaginationClick(pagination.prev)}
-            disabled={!pagination.prev}
-            className="inline-flex items-center gap-2 rounded-md border border-slate-700 bg-slate-800 px-3 py-2 text-sm font-medium text-slate-200 transition-colors duration-200 hover:bg-slate-700 disabled:cursor-not-allowed disabled:opacity-50"
-            aria-label="Previous page"
-          >
-            <LeftArrowIcon className="h-4 w-4" />
-            <span>Previous</span>
-          </button>
-          <button
-            onClick={() => pagination.next && onPaginationClick(pagination.next)}
-            disabled={!pagination.next}
-            className="inline-flex items-center gap-2 rounded-md border border-slate-700 bg-slate-800 px-3 py-2 text-sm font-medium text-slate-200 transition-colors duration-200 hover:bg-slate-700 disabled:cursor-not-allowed disabled:opacity-50"
-            aria-label="Next page"
-          >
-            <span>Next</span>
-            <RightArrowIcon className="h-4 w-4" />
-          </button>
+          <div className="flex items-center gap-2">
+            <button
+              onClick={() => pagination.first && onPaginationClick(pagination.first)}
+              disabled={!pagination.first}
+              className="inline-flex items-center gap-2 rounded-md border border-slate-700 bg-slate-800 px-3 py-2 text-sm font-medium text-slate-200 transition-colors duration-200 hover:bg-slate-700 disabled:cursor-not-allowed disabled:opacity-50"
+              aria-label="First page"
+            >
+              <span>First</span>
+            </button>
+            <button
+              onClick={() => pagination.prev && onPaginationClick(pagination.prev)}
+              disabled={!pagination.prev}
+              className="inline-flex items-center gap-2 rounded-md border border-slate-700 bg-slate-800 px-3 py-2 text-sm font-medium text-slate-200 transition-colors duration-200 hover:bg-slate-700 disabled:cursor-not-allowed disabled:opacity-50"
+              aria-label="Previous page"
+            >
+              <LeftArrowIcon className="h-4 w-4" />
+              <span>Previous</span>
+            </button>
+          </div>
+          <div className="flex items-center gap-2">
+            <button
+              onClick={() => pagination.next && onPaginationClick(pagination.next)}
+              disabled={!pagination.next}
+              className="inline-flex items-center gap-2 rounded-md border border-slate-700 bg-slate-800 px-3 py-2 text-sm font-medium text-slate-200 transition-colors duration-200 hover:bg-slate-700 disabled:cursor-not-allowed disabled:opacity-50"
+              aria-label="Next page"
+            >
+              <span>Next</span>
+              <RightArrowIcon className="h-4 w-4" />
+            </button>
+            <button
+              onClick={() => pagination.last && onPaginationClick(pagination.last)}
+              disabled={!pagination.last}
+              className="inline-flex items-center gap-2 rounded-md border border-slate-700 bg-slate-800 px-3 py-2 text-sm font-medium text-slate-200 transition-colors duration-200 hover:bg-slate-700 disabled:cursor-not-allowed disabled:opacity-50"
+              aria-label="Last page"
+            >
+              <span>Last</span>
+            </button>
+          </div>
         </div>
       )}
     </>

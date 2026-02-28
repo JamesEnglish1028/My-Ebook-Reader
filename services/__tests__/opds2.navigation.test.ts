@@ -131,4 +131,32 @@ describe('parseOpds2Json - navigation/catalog inference', () => {
     });
     expect(navLinks).toHaveLength(0);
   });
+
+  it('promotes top-level start and up links as explicit navigation options', () => {
+    const json = {
+      metadata: { title: 'Nested Feed' },
+      links: [
+        { rel: 'start', href: '/catalog', type: 'application/opds+json' },
+        { rel: 'up', href: '/catalog/parent', type: 'application/opds+json', title: 'Parent Catalog' },
+      ],
+    };
+
+    const { navLinks } = parseOpds2Json(json, 'https://example.org/section/');
+    expect(navLinks).toContainEqual({
+      title: 'Home',
+      url: 'https://example.org/catalog',
+      rel: 'start',
+      type: 'application/opds+json',
+      isCatalog: false,
+      source: 'navigation',
+    });
+    expect(navLinks).toContainEqual({
+      title: 'Parent Catalog',
+      url: 'https://example.org/catalog/parent',
+      rel: 'up',
+      type: 'application/opds+json',
+      isCatalog: false,
+      source: 'navigation',
+    });
+  });
 });

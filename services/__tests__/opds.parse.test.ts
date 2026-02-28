@@ -189,4 +189,30 @@ describe('OPDS1 parseOpds1Xml', () => {
       }),
     );
   });
+
+  it('promotes feed-level start and up links as navigation options', () => {
+    const xml = `<?xml version="1.0" encoding="UTF-8"?>
+<feed xmlns="http://www.w3.org/2005/Atom">
+  <title>Nested Feed</title>
+  <link rel="start" href="/catalog" type="application/atom+xml;profile=opds-catalog" />
+  <link rel="up" href="/catalog/parent" type="application/atom+xml;profile=opds-catalog" title="Back to Parent" />
+</feed>`;
+
+    const result = parseOpds1Xml(xml, 'https://example.com/section/');
+
+    expect(result.navLinks).toContainEqual({
+      title: 'Home',
+      url: 'https://example.com/catalog',
+      rel: 'start',
+      type: 'application/atom+xml;profile=opds-catalog',
+      source: 'navigation',
+    });
+    expect(result.navLinks).toContainEqual({
+      title: 'Back to Parent',
+      url: 'https://example.com/catalog/parent',
+      rel: 'up',
+      type: 'application/atom+xml;profile=opds-catalog',
+      source: 'navigation',
+    });
+  });
 });

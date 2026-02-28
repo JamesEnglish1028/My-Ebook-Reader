@@ -394,6 +394,18 @@ export const parseOpds1Xml = (xmlText: string, baseUrl: string): { books: Catalo
                 return;
             }
 
+            if (rel.includes('start') || rel === 'up' || rel.endsWith('/up')) {
+                const fallbackTitle = rel.includes('start') ? 'Home' : 'Up';
+                addNavLink({
+                    title: link.getAttribute('title')?.trim() || fallbackTitle,
+                    url: fullUrl,
+                    rel: relRaw || fallbackTitle.toLowerCase(),
+                    type: linkType,
+                    source: 'navigation',
+                });
+                return;
+            }
+
             if (rel === 'collection' || rel.includes('subsection')) {
                 addNavLink({
                     title: link.getAttribute('title')?.trim() || fullUrl,
@@ -588,7 +600,7 @@ export const parseOpds1Xml = (xmlText: string, baseUrl: string): { books: Catalo
         if (!hasTitle && !hasLink) {
             throw new Error('The feed contains no entries.');
         }
-        return { books: [], navLinks: [], facetGroups, pagination };
+        return { books: [], navLinks, facetGroups, pagination, search };
     }
     // Throw if <feed> has entries but no OPDS content
     if (rootNodeName && (rootNodeName.toLowerCase() === 'feed' || rootNodeName.endsWith(':feed')) && entries.length > 0 && books.length === 0 && navLinks.length === 0) {

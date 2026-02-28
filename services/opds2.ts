@@ -132,12 +132,26 @@ function parseOpds2NavigationLinks(jsonData: any, baseUrl: string): CatalogNavig
   // Top-level links with navigation relations
   if (jsonData.links && Array.isArray(jsonData.links)) {
     (jsonData.links as Opds2Link[]).forEach((link) => {
-      const linkTitle = toNonEmptyString(link.title);
-      if (link.href && link.rel && linkTitle) {
+      if (link.href && link.rel) {
         const rels = normalizeRelValues(link.rel);
         const fullUrl = new URL(link.href, baseUrl).href;
+        const linkTitle = toNonEmptyString(link.title);
+        const isStart = rels.some((r: string) => r.includes('start'));
+        const isUp = rels.some((r: string) => r === 'up' || r.endsWith('/up'));
+        if (isStart || isUp) {
+          navLinks.push({
+            title: linkTitle || (isStart ? 'Home' : 'Up'),
+            url: fullUrl,
+            rel: rels[0] || (isStart ? 'start' : 'up'),
+            type: link.type,
+            isCatalog: false,
+            source: 'navigation',
+          });
+        }
         if (isOpdsNavigationTarget(link) && rels.some((r: string) => r.includes('collection') || r.includes('subsection') || r.includes('section'))) {
-          navLinks.push({ title: linkTitle, url: fullUrl, rel: rels[0] || '', type: link.type, isCatalog: false, source: 'navigation' });
+          if (linkTitle) {
+            navLinks.push({ title: linkTitle, url: fullUrl, rel: rels[0] || '', type: link.type, isCatalog: false, source: 'navigation' });
+          }
         }
       }
     });
