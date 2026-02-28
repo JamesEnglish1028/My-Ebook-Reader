@@ -181,16 +181,16 @@ const BookDetailView: React.FC<BookDetailViewProps> = ({ book, onBack, source, c
   // Import button state and modal
   const [showImportSuccess, setShowImportSuccess] = React.useState(false);
   const [isImporting, setIsImporting] = React.useState(false);
+  const normalizedFormat = book.format?.toUpperCase() || '';
   const effectiveMediaType = (bookAny.mediaType || bookAny.acquisitionMediaType || '') as string;
   const normalizedMediaType = effectiveMediaType.toLowerCase();
+  const hasSupportedBookFormat = normalizedFormat === 'PDF' || normalizedFormat === 'EPUB';
+  const hasSupportedBookMediaType =
+    normalizedMediaType === 'application/pdf' || normalizedMediaType === 'application/epub+zip';
 
   // Only allow import if format or mediaType is PDF or EPUB
   const isImportable = (() => {
-    const format = book.format?.toUpperCase();
-    return (
-      format === 'PDF' || format === 'EPUB' ||
-      normalizedMediaType === 'application/pdf' || normalizedMediaType === 'application/epub+zip'
-    );
+    return hasSupportedBookFormat || hasSupportedBookMediaType;
   })();
 
   const handleImportClick = async () => {
@@ -282,7 +282,7 @@ const BookDetailView: React.FC<BookDetailViewProps> = ({ book, onBack, source, c
                   <BookBadges book={book as CatalogBook | BookMetadata} />
                 </div>
                 {/* Warn if mediaType is missing or is text/html */}
-                {(!normalizedMediaType || normalizedMediaType === 'text/html') && (
+                {!hasSupportedBookFormat && (!normalizedMediaType || normalizedMediaType === 'text/html') && (
                   <div className="text-xs text-yellow-400 font-semibold">
                     Warning: This item may not be a valid book file (mediaType is {normalizedMediaType ? 'text/html' : 'missing'}).
                   </div>

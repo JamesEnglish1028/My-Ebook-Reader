@@ -73,4 +73,21 @@ describe('BookDetailView format badge and import button', () => {
       screen.queryByText(/Warning: This item may not be a valid book file/i),
     ).not.toBeInTheDocument();
   });
+
+  it('does not warn for imported library books when format is EPUB and mediaType fields are absent', () => {
+    const book = {
+      id: 42,
+      title: 'Imported EPUB Book',
+      author: 'Library Author',
+      coverImage: null,
+      format: 'EPUB',
+    } as any;
+
+    render(<BookDetailView {...baseProps} book={book} source="library" />);
+
+    expect(screen.getByText('EPUB')).toBeInTheDocument();
+    expect(
+      screen.queryByText(/Warning: This item may not be a valid book file/i),
+    ).not.toBeInTheDocument();
+  });
 });
