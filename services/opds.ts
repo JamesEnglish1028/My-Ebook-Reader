@@ -379,6 +379,30 @@ export const parseOpds1Xml = (xmlText: string, baseUrl: string): { books: Catalo
     return { books, navLinks, facetGroups, pagination };
 };
 
+const getProxy403Message = (url: string, contentType: string, responseText: string): string => {
+    if (contentType.includes('application/json')) {
+        try {
+            const parsed = JSON.parse(responseText);
+            if (parsed && parsed.error && typeof parsed.error === 'string') {
+                const blockedHost = typeof parsed.host === 'string' ? parsed.host : '';
+                const blockedProtocol = typeof parsed.protocol === 'string' ? parsed.protocol : '';
+                if (parsed.error.toLowerCase().includes('host')) {
+                    const targetLabel = blockedHost || url;
+                    const protocolHint = blockedProtocol === 'http:'
+                        ? ' This upstream is plain HTTP, so the proxy must explicitly allow that host and serve the browser over HTTPS.'
+                        : '';
+                    return `Proxy denied access to host for ${targetLabel}. The proxy's HOST_ALLOWLIST may need to include the upstream host.${protocolHint}`;
+                }
+                return `Proxy error: ${parsed.error}`;
+            }
+        } catch (e) {
+            // Fall through to the generic message if the proxy body is not valid JSON.
+        }
+    }
+
+    return `Proxy returned 403 for ${url}. The proxy may be blocking this host.`;
+};
+
 
 export const fetchCatalogContent = async (url: string, baseUrl: string, forcedVersion: 'auto' | '1' | '2' = 'auto'): Promise<{ books: CatalogBook[], navLinks: CatalogNavigationLink[], facetGroups: CatalogFacetGroup[], pagination: CatalogPagination, error?: string }> => {
     try {
@@ -454,23 +478,7 @@ export const fetchCatalogContent = async (url: string, baseUrl: string, forcedVe
 
                 // Detect proxy-level rejections (common when HOST_ALLOWLIST blocks the target)
                 if (proxiedResp.status === 403) {
-                    try {
-                        const parsed = contentType.includes('application/json') ? JSON.parse(responseText) : null;
-                        if (parsed && parsed.error && typeof parsed.error === 'string') {
-                            const blockedHost = typeof parsed.host === 'string' ? parsed.host : '';
-                            const blockedProtocol = typeof parsed.protocol === 'string' ? parsed.protocol : '';
-                            if (parsed.error.toLowerCase().includes('host')) {
-                                const targetLabel = blockedHost || url;
-                                const protocolHint = blockedProtocol === 'http:'
-                                    ? ' This upstream is plain HTTP, so the proxy must explicitly allow that host and serve the browser over HTTPS.'
-                                    : '';
-                                throw new Error(`Proxy denied access to host for ${targetLabel}. The proxy's HOST_ALLOWLIST may need to include the upstream host.${protocolHint}`);
-                            }
-                        }
-                    } catch (e) {
-                        // If parsing fails, still surface a helpful message
-                        throw new Error(`Proxy returned 403 for ${url}. The proxy may be blocking this host.`);
-                    }
+                    throw new Error(getProxy403Message(url, contentType, responseText));
                 }
 
                 if (contentType.includes('text/html') && responseText.trim().toLowerCase().startsWith('<!doctype html>')) {
@@ -530,10 +538,9 @@ export const fetchCatalogContent = async (url: string, baseUrl: string, forcedVe
                 errorMessage = `Could not access catalog (${statusInfo}). This catalog requires authentication (a login or password), which is not supported by this application.`;
             }
             if (response.status === 403 && !isDirectFetch) {
-                const httpHint = url.startsWith('http://')
-                    ? ' This feed uses plain HTTP, so it must be fetched through an HTTPS-capable proxy.'
-                    : '';
-                errorMessage = `Could not access catalog (${statusInfo}). The proxy or upstream server denied the request. This is often caused by proxy host restrictions or the remote server blocking proxy access.${httpHint}`;
+                const contentType = response.headers.get('Content-Type') || '';
+                const responseText = await safeReadText(response).catch(() => '');
+                errorMessage = getProxy403Message(url, contentType, responseText);
             }
             if (response.status === 429) {
                 errorMessage = `Could not access catalog (${statusInfo}). The request was rate-limited by the server or the proxy. Please wait a moment and try again.`;
@@ -545,18 +552,6 @@ export const fetchCatalogContent = async (url: string, baseUrl: string, forcedVe
         const responseText = await safeReadText(response);
         if (isDirectFetch && response.url) {
             parseBaseUrl = response.url;
-        }
-
-        // If the proxy returned a JSON 403 error body, surface a clearer message
-        if (response.status === 403 && contentType.includes('application/json')) {
-            try {
-                const parsed = JSON.parse(responseText);
-                if (parsed && parsed.error && typeof parsed.error === 'string') {
-                    throw new Error(`Proxy error: ${parsed.error}`);
-                }
-            } catch (e) {
-                throw new Error(`Proxy returned 403 for ${url}`);
-            }
         }
 
         // FIX: Add specific check for HTML response from a faulty proxy

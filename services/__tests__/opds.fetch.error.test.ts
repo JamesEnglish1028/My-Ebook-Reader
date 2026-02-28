@@ -29,4 +29,19 @@ describe('fetchCatalogContent error propagation', () => {
     expect(result.books).toEqual([]);
     expect(result.navLinks).toEqual([]);
   });
+
+  it('surfaces proxy host allowlist errors for proxied 403 responses', async () => {
+    const fetchMock = vi.spyOn(global, 'fetch' as any).mockResolvedValue(
+      new Response(JSON.stringify({ error: 'Host not allowed', host: 'legacy.example.org', protocol: 'http:' }), {
+        status: 403,
+        headers: { 'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*' },
+      }),
+    );
+
+    const result = await fetchCatalogContent('http://legacy.example.org/opds', 'http://legacy.example.org/', '1');
+
+    expect(fetchMock).toHaveBeenCalled();
+    expect(result.error).toContain('Proxy denied access to host for legacy.example.org');
+    expect(result.error).toContain('plain HTTP');
+  });
 });
