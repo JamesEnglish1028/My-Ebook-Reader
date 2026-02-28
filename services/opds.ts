@@ -1,4 +1,4 @@
-import type { AudienceMode, AvailabilityMode, CatalogBook, CatalogFacetGroup, CatalogFacetLink, CatalogNavigationLink, CatalogPagination, CatalogWithCategories, CatalogWithCollections, CategorizationMode, Category, Collection, CollectionGroup, CollectionMode, DistributorMode, FictionMode, MediaMode, PublicationMode } from '../types';
+import type { AudienceMode, AvailabilityMode, CatalogBook, CatalogFacetGroup, CatalogFacetLink, CatalogNavigationLink, CatalogPagination, CatalogSearchMetadata, CatalogWithCategories, CatalogWithCollections, CategorizationMode, Category, Collection, CollectionGroup, CollectionMode, DistributorMode, FictionMode, MediaMode, PublicationMode } from '../types';
 
 import { logger } from './logger';
 import { parseOpds2Json } from './opds2';
@@ -272,7 +272,7 @@ const isPalaceHost = (url: string): boolean => {
  * Handles audiobook detection via schema:additionalType attributes.
  * Supports Palace Project collection links and indirect acquisition chains.
  */
-export const parseOpds1Xml = (xmlText: string, baseUrl: string): { books: CatalogBook[], navLinks: CatalogNavigationLink[], facetGroups: CatalogFacetGroup[], pagination: CatalogPagination } => {
+export const parseOpds1Xml = (xmlText: string, baseUrl: string): { books: CatalogBook[], navLinks: CatalogNavigationLink[], facetGroups: CatalogFacetGroup[], pagination: CatalogPagination, search?: CatalogSearchMetadata } => {
     const parser = new DOMParser();
     const xmlDoc = parser.parseFromString(xmlText, 'application/xml');
 
@@ -293,6 +293,7 @@ export const parseOpds1Xml = (xmlText: string, baseUrl: string): { books: Catalo
     const navLinks: CatalogNavigationLink[] = [];
     const facetGroups: CatalogFacetGroup[] = [];
     const pagination: CatalogPagination = {};
+    let search: CatalogSearchMetadata | undefined;
     const navLinkKeys = new Set<string>();
     const bookIndexes = new Map<string, number>();
     const palaceFeed = isPalaceHost(baseUrl);
@@ -341,6 +342,7 @@ export const parseOpds1Xml = (xmlText: string, baseUrl: string): { books: Catalo
         const href = link.getAttribute('href');
         if (href) {
             const fullUrl = new URL(href, baseUrl).href;
+            const linkType = link.getAttribute('type') || undefined;
             // Be tolerant of rel variants and full URIs (e.g. rel="prev" or rel="http://opds-spec.org/rel/previous")
             if (rel.includes('next')) pagination.next = fullUrl;
             if (rel.includes('prev') || rel.includes('previous')) pagination.prev = fullUrl;
@@ -358,7 +360,7 @@ export const parseOpds1Xml = (xmlText: string, baseUrl: string): { books: Catalo
                 const facetLink: CatalogFacetLink = {
                     title,
                     url: fullUrl,
-                    type: link.getAttribute('type') || undefined,
+                    type: linkType,
                     rel: relRaw || undefined,
                     count: Number.isFinite(count) ? count : undefined,
                     isActive: activeFacetRaw === 'true' || activeFacetRaw === 'active',
@@ -373,11 +375,20 @@ export const parseOpds1Xml = (xmlText: string, baseUrl: string): { books: Catalo
             }
 
             if (rel === 'search') {
+                if (linkType?.toLowerCase().includes('application/opensearchdescription+xml')) {
+                    search ||= {
+                        descriptionUrl: fullUrl,
+                        type: linkType,
+                        title: link.getAttribute('title')?.trim() || 'Search',
+                        rel: relRaw || 'search',
+                    };
+                    return;
+                }
                 addNavLink({
                     title: link.getAttribute('title')?.trim() || 'Search',
                     url: fullUrl,
                     rel: relRaw || 'search',
-                    type: link.getAttribute('type') || undefined,
+                    type: linkType,
                     source: 'navigation',
                 });
                 return;
@@ -388,7 +399,7 @@ export const parseOpds1Xml = (xmlText: string, baseUrl: string): { books: Catalo
                     title: link.getAttribute('title')?.trim() || fullUrl,
                     url: fullUrl,
                     rel: relRaw || 'collection',
-                    type: link.getAttribute('type') || undefined,
+                    type: linkType,
                     source: 'navigation',
                 });
             }
@@ -584,7 +595,7 @@ export const parseOpds1Xml = (xmlText: string, baseUrl: string): { books: Catalo
         throw new Error('This appears to be a valid Atom feed, but it contains no recognizable OPDS book entries or navigation links. Please ensure the URL points to an OPDS catalog.');
     }
 
-    return { books, navLinks, facetGroups, pagination };
+    return { books, navLinks, facetGroups, pagination, search };
 };
 
 const getProxy403Message = (url: string, headers: Headers, contentType: string, responseText: string): string => {
@@ -622,7 +633,7 @@ const getProxy403Message = (url: string, headers: Headers, contentType: string, 
 };
 
 
-export const fetchCatalogContent = async (url: string, baseUrl: string, forcedVersion: 'auto' | '1' | '2' = 'auto'): Promise<{ books: CatalogBook[], navLinks: CatalogNavigationLink[], facetGroups: CatalogFacetGroup[], pagination: CatalogPagination, error?: string }> => {
+export const fetchCatalogContent = async (url: string, baseUrl: string, forcedVersion: 'auto' | '1' | '2' = 'auto'): Promise<{ books: CatalogBook[], navLinks: CatalogNavigationLink[], facetGroups: CatalogFacetGroup[], pagination: CatalogPagination, search?: CatalogSearchMetadata, error?: string }> => {
     try {
         // Resolve relative links against the actual feed URL, not the catalog root.
         // For direct fetches that follow redirects, prefer the final response URL.

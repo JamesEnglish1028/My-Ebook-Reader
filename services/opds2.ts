@@ -44,7 +44,7 @@ function normalizeRelValues(rel: unknown): string[] {
     .map((r) => normalizeRel(toLowerSafe(r)))
     .filter((r) => r.length > 0);
 }
-import type { CatalogBook, CatalogFacetGroup, CatalogFacetLink, CatalogNavigationLink, CatalogPagination } from '../types';
+import type { CatalogBook, CatalogFacetGroup, CatalogFacetLink, CatalogNavigationLink, CatalogPagination, CatalogSearchMetadata } from '../types';
 import type { Opds2Link, Opds2NavigationGroup, Opds2Publication } from '../types/opds2';
 
 function isOpdsNavigationTarget(link: Partial<Opds2Link> | undefined): boolean {
@@ -184,6 +184,25 @@ function parseOpds2FacetGroups(jsonData: any, baseUrl: string): CatalogFacetGrou
   });
 
   return groups;
+}
+
+function parseOpds2SearchLink(jsonData: any, baseUrl: string): CatalogSearchMetadata | undefined {
+  if (!Array.isArray(jsonData?.links)) return undefined;
+
+  const link = (jsonData.links as Opds2Link[]).find((candidate) => {
+    const rels = normalizeRelValues(candidate?.rel);
+    const type = toLowerSafe(candidate?.type);
+    return rels.some((rel) => rel.includes('search')) && type.includes('application/opensearchdescription+xml');
+  });
+
+  if (!link?.href) return undefined;
+
+  return {
+    descriptionUrl: new URL(link.href, baseUrl).href,
+    type: typeof link.type === 'string' ? link.type : undefined,
+    title: toNonEmptyString(link.title) || 'Search',
+    rel: normalizeRelValues(link.rel)[0] || 'search',
+  };
 }
 
 // Helper: Parse pagination links from OPDS2 feed
@@ -377,7 +396,7 @@ export function getCachedEtag(url: string) {
 }
 
 
-export const parseOpds2Json = (jsonData: any, baseUrl: string): { books: CatalogBook[], navLinks: CatalogNavigationLink[], facetGroups: CatalogFacetGroup[], pagination: CatalogPagination, error?: string } => {
+export const parseOpds2Json = (jsonData: any, baseUrl: string): { books: CatalogBook[], navLinks: CatalogNavigationLink[], facetGroups: CatalogFacetGroup[], pagination: CatalogPagination, search?: CatalogSearchMetadata, error?: string } => {
   logger.debug('[OPDS2] parseOpds2Json start', { baseUrl, typeofJson: typeof jsonData });
   try {
     if (typeof jsonData !== 'object' || jsonData === null) {
@@ -396,6 +415,7 @@ export const parseOpds2Json = (jsonData: any, baseUrl: string): { books: Catalog
   const navLinks: CatalogNavigationLink[] = parseOpds2NavigationLinks(jsonData, baseUrl);
   const facetGroups: CatalogFacetGroup[] = parseOpds2FacetGroups(jsonData, baseUrl);
   const pagination: CatalogPagination = parseOpds2Pagination(jsonData, baseUrl);
+  const search: CatalogSearchMetadata | undefined = parseOpds2SearchLink(jsonData, baseUrl);
 
   // pagination / top-level links
   if (jsonData.links && Array.isArray(jsonData.links)) {
@@ -895,7 +915,7 @@ function normalizeMediumFormatCode(schemaType: string | undefined, type?: string
   }
 
     logger.debug('[OPDS2] parseOpds2Json complete', { navLinks: navLinks.length, facetGroups: facetGroups.length, books: books.length, paginationKeys: Object.keys(pagination) });
-    return { books, navLinks, facetGroups, pagination };
+    return { books, navLinks, facetGroups, pagination, search };
   } catch (err) {
     const message = err instanceof Error ? err.message : 'Unknown OPDS2 parse error';
     logger.error('[OPDS2] parseOpds2Json error', err);

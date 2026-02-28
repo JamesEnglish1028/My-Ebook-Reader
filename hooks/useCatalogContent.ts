@@ -2,7 +2,13 @@ import { useQuery } from '@tanstack/react-query';
 
 import { opdsParserService } from '../domain/catalog';
 import { logger } from '../services/logger';
-import type { CatalogBook, CatalogFacetGroup, CatalogNavigationLink, CatalogPagination } from '../types';
+import type {
+  CatalogBook,
+  CatalogFacetGroup,
+  CatalogNavigationLink,
+  CatalogPagination,
+  CatalogSearchMetadata,
+} from '../types';
 
 // Query keys for catalog content
 export const catalogKeys = {
@@ -16,6 +22,7 @@ interface CatalogContentResult {
   navigationLinks: CatalogNavigationLink[];
   facetGroups: CatalogFacetGroup[];
   pagination: CatalogPagination;
+  search: CatalogSearchMetadata | null;
   error: string | null;
 }
 
@@ -53,6 +60,7 @@ export function useCatalogContent(
           navigationLinks: [],
           facetGroups: [],
           pagination: {},
+          search: null,
           error: 'No URL provided',
         };
       }
@@ -66,6 +74,7 @@ export function useCatalogContent(
           navigationLinks: [],
           facetGroups: [],
           pagination: {},
+          search: null,
           error: 'error' in result ? result.error : 'Failed to fetch catalog content',
         };
       }
@@ -88,6 +97,7 @@ export function useCatalogContent(
         navigationLinks: finalNavigationLinks,
         facetGroups: result.data.facetGroups,
         pagination: result.data.pagination,
+        search: result.data.search || null,
         error: null,
       };
     },

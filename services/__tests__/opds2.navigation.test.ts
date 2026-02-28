@@ -108,4 +108,27 @@ describe('parseOpds2Json - navigation/catalog inference', () => {
     expect(navLinks[0].title).toBe('Arts & Humanities OERs');
     expect(navLinks[0].type).toBe('application/opds+json');
   });
+
+  it('captures top-level OpenSearch description links as catalog search metadata', () => {
+    const json = {
+      metadata: { title: 'Feed' },
+      links: [
+        {
+          rel: 'search',
+          href: '/opensearch.xml',
+          type: 'application/opensearchdescription+xml',
+          title: 'Search catalog',
+        },
+      ],
+    };
+
+    const { navLinks, search } = parseOpds2Json(json, 'https://example.org/catalog/');
+    expect(search).toEqual({
+      descriptionUrl: 'https://example.org/opensearch.xml',
+      type: 'application/opensearchdescription+xml',
+      title: 'Search catalog',
+      rel: 'search',
+    });
+    expect(navLinks).toHaveLength(0);
+  });
 });

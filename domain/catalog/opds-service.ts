@@ -15,6 +15,7 @@ import type {
   CatalogFacetGroup,
   CatalogNavigationLink,
   CatalogPagination,
+  CatalogSearchMetadata,
 } from './types';
 
 /**
@@ -32,6 +33,7 @@ export interface ParsedCatalog {
   navigationLinks: CatalogNavigationLink[];
   facetGroups: CatalogFacetGroup[];
   pagination: CatalogPagination;
+  search?: CatalogSearchMetadata;
 }
 
 /**
@@ -81,6 +83,7 @@ export class OPDSParserService {
           navigationLinks: result.navLinks,
           facetGroups: result.facetGroups || [],
           pagination: result.pagination,
+          search: result.search,
         },
       };
     } catch (error) {
@@ -115,6 +118,7 @@ export class OPDSParserService {
           navigationLinks: result.navLinks,
           facetGroups: result.facetGroups || [],
           pagination: result.pagination,
+          search: result.search,
         },
       };
     } catch (error) {
@@ -154,6 +158,7 @@ export class OPDSParserService {
           navigationLinks: result.navLinks,
           facetGroups: result.facetGroups || [],
           pagination: result.pagination,
+          search: result.search,
         },
       };
     } catch (error) {

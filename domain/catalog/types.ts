@@ -164,6 +164,16 @@ export interface CatalogFacetGroup {
 }
 
 /**
+ * OpenSearch metadata advertised by a catalog feed.
+ */
+export interface CatalogSearchMetadata {
+  descriptionUrl: string;
+  type?: string;
+  title?: string;
+  rel?: string;
+}
+
+/**
  * Catalog pagination metadata
  */
 export interface CatalogPagination {
@@ -183,6 +193,7 @@ export interface CatalogWithCollections {
   books: CatalogBook[];
   navLinks: CatalogNavigationLink[];
   facetGroups?: CatalogFacetGroup[];
+  search?: CatalogSearchMetadata;
   pagination: CatalogPagination;
   collections: CollectionGroup[];
   uncategorizedBooks: CatalogBook[];
@@ -195,6 +206,7 @@ export interface CatalogWithCategories {
   books: CatalogBook[];
   navLinks: CatalogNavigationLink[];
   facetGroups?: CatalogFacetGroup[];
+  search?: CatalogSearchMetadata;
   pagination: CatalogPagination;
   categoryLanes: CategoryLane[];
   collectionLinks: Collection[];

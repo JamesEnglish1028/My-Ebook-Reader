@@ -164,7 +164,7 @@ describe('OPDS1 parseOpds1Xml', () => {
     expect(result.books[0].coverImage).toBe('https://example.com/covers/collab-thumb.png');
   });
 
-  it('promotes feed-level rel=search links as navigation options', () => {
+  it('captures OpenSearch description links as catalog search metadata', () => {
     const xml = `<?xml version="1.0" encoding="UTF-8"?>
 <feed xmlns="http://www.w3.org/2005/Atom">
   <title>Searchable Feed</title>
@@ -177,12 +177,16 @@ describe('OPDS1 parseOpds1Xml', () => {
 
     const result = parseOpds1Xml(xml, 'https://example.com/');
 
-    expect(result.navLinks).toContainEqual({
-      title: 'Search catalog',
-      url: 'https://example.com/search%7B?query}',
-      rel: 'search',
+    expect(result.search).toEqual({
+      descriptionUrl: 'https://example.com/search%7B?query}',
       type: 'application/opensearchdescription+xml',
-      source: 'navigation',
+      title: 'Search catalog',
+      rel: 'search',
     });
+    expect(result.navLinks).not.toContainEqual(
+      expect.objectContaining({
+        rel: 'search',
+      }),
+    );
   });
 });
