@@ -153,6 +153,66 @@ export const getFormatFromMimeType = (mimeType: string | undefined): string | un
     return undefined;
 };
 
+const getDirectChildText = (parent: Element, localName: string): string | undefined => {
+    const child = Array.from(parent.children).find((node) => (node.localName || node.nodeName || '').toLowerCase() === localName.toLowerCase());
+    const text = child?.textContent?.trim();
+    return text || undefined;
+};
+
+const mergeCollections = (existing?: Collection[], next?: Collection[]): Collection[] | undefined => {
+    const merged = new Map<string, Collection>();
+
+    (existing || []).forEach((collection) => {
+        merged.set(collection.href, collection);
+    });
+
+    (next || []).forEach((collection) => {
+        merged.set(collection.href, collection);
+    });
+
+    return merged.size > 0 ? Array.from(merged.values()) : undefined;
+};
+
+const mergeCategories = (existing?: Category[], next?: Category[]): Category[] | undefined => {
+    const merged = new Map<string, Category>();
+
+    (existing || []).forEach((category) => {
+        merged.set(`${category.scheme}|${category.term}|${category.label}`, category);
+    });
+
+    (next || []).forEach((category) => {
+        merged.set(`${category.scheme}|${category.term}|${category.label}`, category);
+    });
+
+    return merged.size > 0 ? Array.from(merged.values()) : undefined;
+};
+
+const mergeStrings = (existing?: string[], next?: string[]): string[] | undefined => {
+    const merged = Array.from(new Set([...(existing || []), ...(next || [])].filter(Boolean)));
+    return merged.length > 0 ? merged : undefined;
+};
+
+const mergeCatalogBooks = (existing: CatalogBook, incoming: CatalogBook): CatalogBook => ({
+    ...existing,
+    author: existing.author || incoming.author,
+    coverImage: existing.coverImage || incoming.coverImage,
+    downloadUrl: existing.downloadUrl || incoming.downloadUrl,
+    summary: existing.summary || incoming.summary,
+    publisher: existing.publisher || incoming.publisher,
+    publicationDate: existing.publicationDate || incoming.publicationDate,
+    providerId: existing.providerId || incoming.providerId,
+    distributor: existing.distributor || incoming.distributor,
+    subjects: mergeStrings(existing.subjects, incoming.subjects),
+    categories: mergeCategories(existing.categories, incoming.categories),
+    format: existing.format || incoming.format,
+    acquisitionMediaType: existing.acquisitionMediaType || incoming.acquisitionMediaType,
+    collections: mergeCollections(existing.collections, incoming.collections),
+    isOpenAccess: existing.isOpenAccess || incoming.isOpenAccess || undefined,
+    schemaOrgType: existing.schemaOrgType || incoming.schemaOrgType,
+    publicationTypeLabel: existing.publicationTypeLabel || incoming.publicationTypeLabel,
+    mediumFormatCode: existing.mediumFormatCode || incoming.mediumFormatCode,
+});
+
 /**
  * Parses OPDS 1 XML feeds into a standardized format.
  * Handles audiobook detection via schema:additionalType attributes.
@@ -179,6 +239,32 @@ export const parseOpds1Xml = (xmlText: string, baseUrl: string): { books: Catalo
     const navLinks: CatalogNavigationLink[] = [];
     const facetGroups: CatalogFacetGroup[] = [];
     const pagination: CatalogPagination = {};
+    const navLinkKeys = new Set<string>();
+    const bookIndexes = new Map<string, number>();
+
+    const addNavLink = (link: CatalogNavigationLink) => {
+        const key = `${link.rel}|${link.url}`;
+        if (navLinkKeys.has(key)) return;
+        navLinkKeys.add(key);
+        navLinks.push(link);
+    };
+
+    const addOrMergeBook = (book: CatalogBook) => {
+        const key = book.providerId || book.downloadUrl;
+        if (!key) {
+            books.push(book);
+            return;
+        }
+
+        const existingIndex = bookIndexes.get(key);
+        if (typeof existingIndex === 'number') {
+            books[existingIndex] = mergeCatalogBooks(books[existingIndex], book);
+            return;
+        }
+
+        bookIndexes.set(key, books.length);
+        books.push(book);
+    };
 
     // Extract pagination links from feed-level link elements
     const feedLinks = Array.from(xmlDoc.querySelectorAll('feed > link'));
@@ -216,6 +302,17 @@ export const parseOpds1Xml = (xmlText: string, baseUrl: string): { books: Catalo
                 } else {
                     facetGroups.push({ title: groupTitle, links: [facetLink] });
                 }
+                return;
+            }
+
+            if (rel === 'collection' || rel.includes('subsection')) {
+                addNavLink({
+                    title: link.getAttribute('title')?.trim() || fullUrl,
+                    url: fullUrl,
+                    rel: relRaw || 'collection',
+                    type: link.getAttribute('type') || undefined,
+                    source: 'navigation',
+                });
             }
         }
     });
@@ -240,7 +337,28 @@ export const parseOpds1Xml = (xmlText: string, baseUrl: string): { books: Catalo
         }) || allLinks.find(link => (link.getAttribute('rel') || '').includes('opds-spec.org/acquisition'));
         const isOpenAccess = !!openAccessLink;
 
+        const collectionLinks = Array.from(entry.querySelectorAll('link[rel="collection"]'));
+        const collections = collectionLinks.map(link => {
+            const href = link.getAttribute('href');
+            const title = link.getAttribute('title');
+            if (href && title) {
+                const fullUrl = new URL(href, baseUrl).href;
+                addNavLink({
+                    title: title.trim(),
+                    url: fullUrl,
+                    rel: 'collection',
+                    type: link.getAttribute('type') || undefined,
+                    source: 'navigation',
+                });
+                return {
+                    title: title.trim(),
+                    href: fullUrl,
+                };
+            }
+            return null;
+        }).filter((collection): collection is { title: string; href: string } => collection !== null);
         const subsectionLink = entry.querySelector('link[rel="subsection"], link[rel="http://opds-spec.org/subsection"]');
+        const collectionNavLink = collectionLinks[0] || null;
 
 
         if (acquisitionLink) {
@@ -295,8 +413,7 @@ export const parseOpds1Xml = (xmlText: string, baseUrl: string): { books: Catalo
                 }
             }
             const publicationDate = (entry.querySelector('issued')?.textContent || entry.querySelector('dc\\:issued')?.textContent || entry.querySelector('published')?.textContent)?.trim();
-            const identifiers = Array.from(entry.querySelectorAll('identifier, dc\\:identifier'));
-            const providerId = identifiers[0]?.textContent?.trim() || undefined;
+            const providerId = getDirectChildText(entry, 'identifier') || getDirectChildText(entry, 'id');
             const categories = Array.from(entry.querySelectorAll('category')).map(cat => {
                 const scheme = cat.getAttribute('scheme') || 'http://palace.io/subjects';
                 const term = cat.getAttribute('term')?.trim();
@@ -311,25 +428,13 @@ export const parseOpds1Xml = (xmlText: string, baseUrl: string): { books: Catalo
                 return null;
             }).filter((category): category is Category => category !== null);
             const subjects = categories.map(cat => cat.label);
-            const collectionLinks = Array.from(entry.querySelectorAll('link[rel="collection"]'));
-            const collections = collectionLinks.map(link => {
-                const href = link.getAttribute('href');
-                const title = link.getAttribute('title');
-                if (href && title) {
-                    return {
-                        title: title.trim(),
-                        href: new URL(href, baseUrl).href,
-                    };
-                }
-                return null;
-            }).filter((collection): collection is { title: string; href: string } => collection !== null);
             if (downloadUrlHref) {
                 const downloadUrl = new URL(downloadUrlHref, baseUrl).href;
                 let finalMediaType = mimeType;
                 if (isAudiobook) {
                     finalMediaType = 'http://bib.schema.org/Audiobook';
                 }
-                books.push({
+                addOrMergeBook({
                     title,
                     author,
                     coverImage,
@@ -347,10 +452,17 @@ export const parseOpds1Xml = (xmlText: string, baseUrl: string): { books: Catalo
                     isOpenAccess: isOpenAccess || undefined,
                 });
             }
-        } else if (subsectionLink) {
-            const navUrl = subsectionLink.getAttribute('href');
+        } else if (subsectionLink || collectionNavLink) {
+            const navSource = subsectionLink || collectionNavLink;
+            const navUrl = navSource?.getAttribute('href');
             if (navUrl) {
-                navLinks.push({ title, url: new URL(navUrl, baseUrl).href, rel: 'subsection', source: 'navigation' });
+                addNavLink({
+                    title,
+                    url: new URL(navUrl, baseUrl).href,
+                    rel: subsectionLink ? 'subsection' : 'collection',
+                    type: navSource?.getAttribute('type') || undefined,
+                    source: 'navigation',
+                });
             }
         }
     });

@@ -19,6 +19,22 @@ function wrap(node: React.ReactElement) {
   return node;
 }
 
+function createCatalogContentResult(data: Record<string, unknown>, overrides: Record<string, unknown> = {}) {
+  return {
+    data: {
+      books: [],
+      navigationLinks: [],
+      facetGroups: [],
+      pagination: {},
+      ...data,
+    },
+    isLoading: false,
+    error: null,
+    refetch: vi.fn(),
+    ...overrides,
+  } as any;
+}
+
 const initialCatalog = {
   id: 'cat-1',
   name: 'Test Catalog',
@@ -45,17 +61,19 @@ describe('CatalogView pagination history', () => {
   });
 
   it('navigates back using local history when feed omits prev', async () => {
-    mockUseCatalogContent.mockImplementation(() => ({
-      data: {
-        books: [{ id: 'b1', title: 'Book 1', metadata: { title: 'Book 1' } }],
-        navigationLinks: [],
-        facetGroups: [],
-        pagination: { next: 'https://example.com/opds/catalog?page=2' },
-      },
-      isLoading: false,
-      error: null,
-      refetch: vi.fn(),
-    }));
+    const pageTwoUrl = 'https://example.com/opds/catalog?page=2';
+    const initialResult = createCatalogContentResult({
+      books: [{ id: 'b1', title: 'Book 1', metadata: { title: 'Book 1' } }],
+      pagination: { next: pageTwoUrl },
+    });
+    const pageTwoResult = createCatalogContentResult({
+      books: [{ id: 'b2', title: 'Book 2', metadata: { title: 'Book 2' } }],
+      pagination: { next: undefined, prev: undefined },
+    });
+
+    mockUseCatalogContent.mockImplementation((url) => (
+      url === pageTwoUrl ? pageTwoResult : initialResult
+    ));
 
     const setCatalogNavPath = vi.fn();
 
@@ -72,19 +90,6 @@ describe('CatalogView pagination history', () => {
     const nextBtn = await screen.findByRole('button', { name: /next page/i });
     expect(nextBtn).toBeEnabled();
 
-    // Mock the hook for the second page: has no prev, but we will rely on local history
-    mockUseCatalogContent.mockReturnValueOnce({
-      data: {
-        books: [{ id: 'b2', title: 'Book 2', metadata: { title: 'Book 2' } }],
-        navigationLinks: [],
-        facetGroups: [],
-        pagination: { next: 'https://example.com/opds/catalog?page=3' },
-      },
-      isLoading: false,
-      error: null,
-      refetch: vi.fn(),
-    });
-
     // Simulate clicking Next; CatalogView will call setCatalogNavPath with new url
     await act(async () => {
       fireEvent.click(nextBtn);
@@ -93,26 +98,12 @@ describe('CatalogView pagination history', () => {
     // assert that setCatalogNavPath was invoked (navigation to new page)
     expect(setCatalogNavPath).toHaveBeenCalled();
 
-    // Now simulate that the component shows the second page and exposes a Previous synthesized
-    // Provide a return value for the hook representing page 2 with a synthesized prev absent from feed
-    mockUseCatalogContent.mockReturnValueOnce({
-      data: {
-        books: [{ id: 'b2', title: 'Book 2', metadata: { title: 'Book 2' } }],
-        navigationLinks: [],
-        facetGroups: [],
-        pagination: { next: undefined, prev: undefined },
-      },
-      isLoading: false,
-      error: null,
-      refetch: vi.fn(),
-    });
-
     // Re-render with the new nav path (page 2)
     await act(async () => {
       rerender(wrap(
         <CatalogView
           activeOpdsSource={initialCatalog as any}
-          catalogNavPath={[{ name: initialCatalog.name, url: 'https://example.com/opds/catalog?page=2' }]}
+          catalogNavPath={[{ name: initialCatalog.name, url: pageTwoUrl }]}
           setCatalogNavPath={setCatalogNavPath}
           onShowBookDetail={() => {}}
         />,
@@ -133,17 +124,28 @@ describe('CatalogView pagination history', () => {
   });
 
   it('clears history when switching active source or clicking breadcrumb', async () => {
-    mockUseCatalogContent.mockImplementation(() => ({
-      data: {
-        books: [{ id: 'b1', title: 'Book 1', metadata: { title: 'Book 1' } }],
-        navigationLinks: [],
-        facetGroups: [],
-        pagination: { next: 'https://example.com/opds/catalog?page=2' },
-      },
-      isLoading: false,
-      error: null,
-      refetch: vi.fn(),
-    }));
+    const pageTwoUrl = 'https://example.com/opds/catalog?page=2';
+    const initialResult = createCatalogContentResult({
+      books: [{ id: 'b1', title: 'Book 1', metadata: { title: 'Book 1' } }],
+      pagination: { next: pageTwoUrl },
+    });
+    const pageTwoResult = createCatalogContentResult({
+      books: [{ id: 'b2', title: 'Book 2', metadata: { title: 'Book 2' } }],
+      pagination: { next: 'https://example.com/opds/catalog?page=3' },
+    });
+    const loadingResult = createCatalogContentResult({}, { isLoading: true });
+    const resetResult = createCatalogContentResult({
+      books: [{ id: 'b1', title: 'Book 1', metadata: { title: 'Book 1' } }],
+      pagination: { next: undefined, prev: undefined },
+    });
+    let phase: 'initial' | 'registry' | 'reset' = 'initial';
+
+    mockUseCatalogContent.mockImplementation((url) => {
+      if (phase === 'registry' && url === registryCatalog.url) return loadingResult;
+      if (phase === 'reset' && url === initialCatalog.url) return resetResult;
+      if (url === pageTwoUrl) return pageTwoResult;
+      return initialResult;
+    });
 
     const setCatalogNavPath = vi.fn();
 
@@ -156,32 +158,25 @@ describe('CatalogView pagination history', () => {
       />,
     ));
 
-    // Simulate clicking Next to build history
-    mockUseCatalogContent.mockReturnValueOnce({
-      data: {
-        books: [{ id: 'b2', title: 'Book 2', metadata: { title: 'Book 2' } }],
-        navigationLinks: [],
-        facetGroups: [],
-        pagination: { next: 'https://example.com/opds/catalog?page=3' },
-      },
-      isLoading: false,
-      error: null,
-      refetch: vi.fn(),
-    });
-
     // Simulate Next
     const nextBtn = await screen.findByRole('button', { name: /next page/i });
     await act(async () => {
       fireEvent.click(nextBtn);
     });
 
-    // Now simulate switching to another active source (registry) which should reset history
-    mockUseCatalogContent.mockReturnValueOnce({
-      data: { books: [], navigationLinks: [], facetGroups: [], pagination: {} },
-      isLoading: true,
-      error: null,
-      refetch: vi.fn(),
+    await act(async () => {
+      rerender(wrap(
+        <CatalogView
+          activeOpdsSource={initialCatalog as any}
+          catalogNavPath={[{ name: initialCatalog.name, url: pageTwoUrl }]}
+          setCatalogNavPath={setCatalogNavPath}
+          onShowBookDetail={() => {}}
+        />,
+      ));
     });
+
+    // Now simulate switching to another active source (registry) which should reset history
+    phase = 'registry';
 
     await act(async () => {
       rerender(wrap(
@@ -198,17 +193,7 @@ describe('CatalogView pagination history', () => {
     expect(screen.queryByRole('button', { name: /previous page/i })).not.toBeInTheDocument();
 
     // Rerender back to original catalog and ensure history is cleared (no prev synthesized)
-    mockUseCatalogContent.mockReturnValueOnce({
-      data: {
-        books: [{ id: 'b1', title: 'Book 1', metadata: { title: 'Book 1' } }],
-        navigationLinks: [],
-        facetGroups: [],
-        pagination: { next: undefined, prev: undefined },
-      },
-      isLoading: false,
-      error: null,
-      refetch: vi.fn(),
-    });
+    phase = 'reset';
 
     await act(async () => {
       rerender(wrap(
@@ -223,5 +208,40 @@ describe('CatalogView pagination history', () => {
 
     // No Previous button should be present because history was reset
     expect(screen.queryByRole('button', { name: /previous page/i })).not.toBeInTheDocument();
+  });
+
+  it('relabels the active breadcrumb when selecting a facet', async () => {
+    mockUseCatalogContent.mockReturnValue(createCatalogContentResult({
+        books: [{ id: 'b1', title: 'Book 1', metadata: { title: 'Book 1' } }],
+        facetGroups: [
+          {
+            title: 'Formats',
+            links: [
+              { title: 'Audiobooks', url: 'https://example.com/opds/catalog?format=audio', isActive: false },
+            ],
+          },
+        ],
+    }));
+
+    const setCatalogNavPath = vi.fn();
+
+    render(wrap(
+      <CatalogView
+        activeOpdsSource={initialCatalog as any}
+        catalogNavPath={[{ name: initialCatalog.name, url: initialCatalog.url }]}
+        setCatalogNavPath={setCatalogNavPath}
+        onShowBookDetail={() => {}}
+      />,
+    ));
+
+    await act(async () => {
+      fireEvent.click(await screen.findByRole('button', { name: 'Audiobooks' }));
+    });
+
+    expect(setCatalogNavPath).toHaveBeenCalled();
+    const updater = setCatalogNavPath.mock.calls[0][0];
+    const nextPath = updater([{ name: initialCatalog.name, url: initialCatalog.url }]);
+
+    expect(nextPath).toEqual([{ name: 'Audiobooks', url: 'https://example.com/opds/catalog?format=audio' }]);
   });
 });

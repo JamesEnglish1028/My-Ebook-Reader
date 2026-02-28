@@ -162,10 +162,10 @@ const CatalogView: React.FC<CatalogViewProps> = ({
   const handleFacetSelect = (link: CatalogFacetLink) => {
     setCatalogNavPath((prev) => {
       if (prev.length === 0) {
-        return [{ name: activeOpdsSource.name, url: link.url }];
+        return [{ name: link.title, url: link.url }];
       }
       const next = [...prev];
-      next[next.length - 1] = { ...next[next.length - 1], url: link.url };
+      next[next.length - 1] = { ...next[next.length - 1], name: link.title, url: link.url };
       return next;
     });
     resetLocalFilters();
