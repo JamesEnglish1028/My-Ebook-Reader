@@ -115,4 +115,30 @@ describe('OPDS1 parseOpds1Xml', () => {
       },
     ]);
   });
+
+  it('treats entry links with MIME kind=acquisition as navigable catalog entries when no OPDS acquisition rel is present', () => {
+    const xml = `<?xml version="1.0" encoding="UTF-8"?>
+<feed xmlns="http://www.w3.org/2005/Atom">
+  <title>Acquisition Navigation Feed</title>
+  <entry>
+    <title>Anglophonia Caliban/Sigma (17)</title>
+    <link type="application/atom+xml;profile=opds-catalog;kind=acquisition" href="http://opds.openedition.org/?platform=OJ&amp;core=documents&amp;siteName=acs"/>
+    <id>https://journals.openedition.org/acs</id>
+    <summary type="text">Journal catalog entry</summary>
+  </entry>
+</feed>`;
+
+    const result = parseOpds1Xml(xml, 'http://opds.openedition.org/');
+
+    expect(result.books).toHaveLength(0);
+    expect(result.navLinks).toEqual([
+      {
+        title: 'Anglophonia Caliban/Sigma (17)',
+        url: 'http://opds.openedition.org/?platform=OJ&core=documents&siteName=acs',
+        rel: 'acquisition',
+        type: 'application/atom+xml;profile=opds-catalog;kind=acquisition',
+        source: 'navigation',
+      },
+    ]);
+  });
 });

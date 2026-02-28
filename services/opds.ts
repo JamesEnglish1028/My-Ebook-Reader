@@ -448,6 +448,12 @@ export const parseOpds1Xml = (xmlText: string, baseUrl: string): { books: Catalo
             if (rel.includes('opds-spec.org/acquisition')) return false;
             return type.includes('profile=opds-catalog') && type.includes('kind=navigation');
         }) || null;
+        const kindAcquisitionCatalogLink = allLinks.find((link) => {
+            const rel = (link.getAttribute('rel') || '').toLowerCase();
+            const type = (link.getAttribute('type') || '').toLowerCase();
+            if (rel.includes('opds-spec.org/acquisition')) return false;
+            return type.includes('profile=opds-catalog') && type.includes('kind=acquisition');
+        }) || null;
 
 
         if (acquisitionLink) {
@@ -508,14 +514,20 @@ export const parseOpds1Xml = (xmlText: string, baseUrl: string): { books: Catalo
                     availabilityStatus: availabilityStatus || undefined,
                 });
             }
-        } else if (subsectionLink || collectionNavLink || kindNavigationLink) {
-            const navSource = subsectionLink || collectionNavLink || kindNavigationLink;
+        } else if (subsectionLink || collectionNavLink || kindNavigationLink || kindAcquisitionCatalogLink) {
+            const navSource = subsectionLink || collectionNavLink || kindNavigationLink || kindAcquisitionCatalogLink;
             const navUrl = navSource?.getAttribute('href');
             if (navUrl) {
                 addNavLink({
                     title,
                     url: new URL(navUrl, baseUrl).href,
-                    rel: subsectionLink ? 'subsection' : collectionNavLink ? 'collection' : 'navigation',
+                    rel: subsectionLink
+                        ? 'subsection'
+                        : collectionNavLink
+                            ? 'collection'
+                            : kindAcquisitionCatalogLink && navSource === kindAcquisitionCatalogLink
+                                ? 'acquisition'
+                                : 'navigation',
                     type: navSource?.getAttribute('type') || undefined,
                     source: 'navigation',
                 });
