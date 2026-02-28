@@ -43,4 +43,27 @@ describe('CatalogSidebar', () => {
       expect.objectContaining({ title: 'Available now' }),
     );
   });
+
+  it('renders navigation thumbnails when provided', () => {
+    render(
+      <CatalogSidebar
+        navigationLinks={[
+          {
+            title: 'Anglophonia Caliban/Sigma (17)',
+            url: 'https://example.org/navigation/journal',
+            rel: 'acquisition',
+            thumbnail: 'https://example.org/images/journal.png',
+            source: 'navigation',
+          },
+        ]}
+        facetGroups={[]}
+        onNavigationSelect={vi.fn()}
+        onFacetSelect={vi.fn()}
+      />,
+    );
+
+    expect(
+      screen.getByRole('img', { name: 'Anglophonia Caliban/Sigma (17) thumbnail' }),
+    ).toHaveAttribute('src', 'https://example.org/images/journal.png');
+  });
 });

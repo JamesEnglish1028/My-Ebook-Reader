@@ -123,6 +123,7 @@ describe('OPDS1 parseOpds1Xml', () => {
   <entry>
     <title>Anglophonia Caliban/Sigma (17)</title>
     <link type="application/atom+xml;profile=opds-catalog;kind=acquisition" href="http://opds.openedition.org/?platform=OJ&amp;core=documents&amp;siteName=acs"/>
+    <link type="image/png" rel="http://opds-spec.org/image/thumbnail" href="https://www.openedition.org/docannexe/image/45659/vignetteACS-160x75.png"/>
     <id>https://journals.openedition.org/acs</id>
     <summary type="text">Journal catalog entry</summary>
   </entry>
@@ -137,6 +138,7 @@ describe('OPDS1 parseOpds1Xml', () => {
         url: 'http://opds.openedition.org/?platform=OJ&core=documents&siteName=acs',
         rel: 'acquisition',
         type: 'application/atom+xml;profile=opds-catalog;kind=acquisition',
+        thumbnail: 'https://www.openedition.org/docannexe/image/45659/vignetteACS-160x75.png',
         source: 'navigation',
       },
     ]);

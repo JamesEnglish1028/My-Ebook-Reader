@@ -128,6 +128,7 @@ export interface CatalogNavigationLink {
   url: string;
   rel: string;
   type?: string;
+  thumbnail?: string;
   isCatalog?: boolean;
   source?: 'navigation' | 'group' | 'registry' | 'compat';
 

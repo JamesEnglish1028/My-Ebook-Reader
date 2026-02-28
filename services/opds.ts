@@ -488,6 +488,10 @@ export const parseOpds1Xml = (xmlText: string, baseUrl: string): { books: Catalo
             if (rel.includes('opds-spec.org/acquisition')) return false;
             return type.includes('profile=opds-catalog') && type.includes('kind=acquisition');
         }) || null;
+        const coverLink = entry.querySelector('link[rel="http://opds-spec.org/image"]')
+            || entry.querySelector('link[rel="http://opds-spec.org/image/thumbnail"]');
+        const coverImageHref = coverLink?.getAttribute('href');
+        const coverImage = coverImageHref ? new URL(coverImageHref, baseUrl).href : null;
 
 
         if (acquisitionLink) {
@@ -497,10 +501,6 @@ export const parseOpds1Xml = (xmlText: string, baseUrl: string): { books: Catalo
                 .filter((name): name is string => !!name);
             const author = authorNames[0] || 'Unknown Author';
             const summary = entry.querySelector('summary')?.textContent?.trim() || entry.querySelector('content')?.textContent?.trim() || null;
-            const coverLink = entry.querySelector('link[rel="http://opds-spec.org/image"]')
-                || entry.querySelector('link[rel="http://opds-spec.org/image/thumbnail"]');
-            const coverImageHref = coverLink?.getAttribute('href');
-            const coverImage = coverImageHref ? new URL(coverImageHref, baseUrl).href : null;
             const downloadUrlHref = acquisitionLink?.getAttribute('href');
             const mimeType = acquisitionLink?.getAttribute('type') || '';
             const resolvedIndirectMediaType = getResolvedIndirectMediaType(acquisitionLink as Element);
@@ -568,6 +568,7 @@ export const parseOpds1Xml = (xmlText: string, baseUrl: string): { books: Catalo
                                 ? 'acquisition'
                                 : 'navigation',
                     type: navSource?.getAttribute('type') || undefined,
+                    thumbnail: coverImage || undefined,
                     source: 'navigation',
                 });
             }

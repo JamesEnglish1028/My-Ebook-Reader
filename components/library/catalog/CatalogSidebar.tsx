@@ -1,6 +1,7 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 
 import { useFocusTrap } from '../../../hooks';
+import { proxiedUrl } from '../../../services/utils';
 import type { CatalogFacetGroup, CatalogFacetLink, CatalogNavigationLink } from '../../../types';
 import { CloseIcon } from '../../icons';
 
@@ -110,7 +111,22 @@ const CatalogSidebar: React.FC<CatalogSidebarProps> = ({
         }`}
         aria-current={isActive ? 'page' : undefined}
       >
-        {link.title}
+        <span className="flex items-center gap-2.5">
+          {link.thumbnail && (
+            <img
+              src={link.thumbnail}
+              alt={`${link.title} thumbnail`}
+              className="h-10 w-8 flex-shrink-0 rounded object-cover"
+              loading="lazy"
+              onError={(event) => {
+                const img = event.currentTarget as HTMLImageElement;
+                img.onerror = null as any;
+                img.src = proxiedUrl(link.thumbnail as string);
+              }}
+            />
+          )}
+          <span className="min-w-0 truncate">{link.title}</span>
+        </span>
       </button>
     );
   };
