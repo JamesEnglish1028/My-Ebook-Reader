@@ -231,7 +231,7 @@ export async function fetchOpenSearchDescription(
   descriptionUrl: string,
 ): Promise<OpenSearchDescriptionDocument> {
   try {
-    const fetchUrl = await maybeProxyForCors(descriptionUrl, true);
+    const fetchUrl = await maybeProxyForCors(descriptionUrl);
     const response = await fetch(fetchUrl, {
       method: 'GET',
       headers: {

@@ -28,7 +28,6 @@ describe('fetchOpenSearchDescription', () => {
 
     expect(utils.maybeProxyForCors).toHaveBeenCalledWith(
       'https://catalog.example.org/opensearch.xml',
-      true,
     );
     expect(fetchMock).toHaveBeenCalledWith(
       'https://proxy.example.org/opensearch.xml',
@@ -58,5 +57,31 @@ describe('fetchOpenSearchDescription', () => {
     await expect(
       fetchOpenSearchDescription('https://catalog.example.org/opensearch.xml'),
     ).rejects.toThrow('Catalog search is unavailable because the OpenSearch description could not be reached.');
+  });
+
+  it('uses the proxied URL when CORS probing selects a proxy', async () => {
+    vi.spyOn(utils, 'maybeProxyForCors').mockResolvedValue('https://proxy.example.org?url=https%3A%2F%2Fcatalog.example.org%2Fopensearch.xml');
+    const fetchMock = vi.spyOn(global, 'fetch' as any).mockResolvedValue(
+      new Response(
+        `<?xml version="1.0" encoding="UTF-8"?>
+<OpenSearchDescription xmlns="http://a9.com/-/spec/opensearch/1.1/">
+  <ShortName>Catalog Search</ShortName>
+  <Url type="application/atom+xml;profile=opds-catalog" template="/search{?searchTerms}" />
+</OpenSearchDescription>`,
+        {
+          status: 200,
+          headers: { 'Content-Type': 'application/opensearchdescription+xml' },
+        },
+      ),
+    );
+
+    await fetchOpenSearchDescription('https://catalog.example.org/opensearch.xml');
+
+    expect(fetchMock).toHaveBeenCalledWith(
+      'https://proxy.example.org?url=https%3A%2F%2Fcatalog.example.org%2Fopensearch.xml',
+      expect.objectContaining({
+        method: 'GET',
+      }),
+    );
   });
 });
