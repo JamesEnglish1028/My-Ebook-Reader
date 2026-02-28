@@ -241,7 +241,32 @@ const CatalogView: React.FC<CatalogViewProps> = ({
   };
 
   const handleNavigationSelect = (link: CatalogNavigationLink) => {
-    setCatalogNavPath((prev) => [...prev, { name: link.title, url: link.url }]);
+    setCatalogNavPath((prev) => {
+      const rel = (link.rel || '').toLowerCase();
+      const rootPath = prev.length > 0
+        ? prev
+        : [{ name: activeOpdsSource.name, url: activeOpdsSource.url }];
+      const existingIndex = rootPath.findIndex((item) => item.url === link.url);
+
+      if (existingIndex >= 0) {
+        return rootPath.slice(0, existingIndex + 1);
+      }
+
+      if (rel.includes('start')) {
+        return [{ name: activeOpdsSource.name, url: activeOpdsSource.url }];
+      }
+
+      if (rel === 'up' || rel.endsWith('/up')) {
+        if (rootPath.length > 1) {
+          const next = [...rootPath];
+          next[next.length - 1] = { name: link.title, url: link.url };
+          return next;
+        }
+        return [{ name: activeOpdsSource.name, url: link.url }];
+      }
+
+      return [...rootPath, { name: link.title, url: link.url }];
+    });
     resetLocalFilters();
     setPageHistory([]);
   };

@@ -251,4 +251,55 @@ describe('CatalogView pagination history', () => {
 
     expect(nextPath).toEqual([{ name: 'Fantasy', url: 'https://example.com/opds/catalog?subject=fantasy' }]);
   });
+
+  it('collapses breadcrumbs instead of appending when following start or up links', async () => {
+    mockUseCatalogContent.mockReturnValue(createCatalogContentResult({
+      books: [],
+      navigationLinks: [
+        { title: 'Home', url: initialCatalog.url, rel: 'start', source: 'navigation' },
+        { title: 'Back to Section', url: 'https://example.com/opds/catalog/section', rel: 'up', source: 'navigation' },
+      ],
+    }));
+
+    const setCatalogNavPath = vi.fn();
+
+    render(wrap(
+      <CatalogView
+        activeOpdsSource={initialCatalog as any}
+        catalogNavPath={[
+          { name: initialCatalog.name, url: initialCatalog.url },
+          { name: 'Fantasy', url: 'https://example.com/opds/catalog?subject=fantasy' },
+        ]}
+        setCatalogNavPath={setCatalogNavPath}
+        onShowBookDetail={() => {}}
+      />,
+    ));
+
+    await act(async () => {
+      fireEvent.click(await screen.findByRole('button', { name: 'Home' }));
+    });
+
+    const startUpdater = setCatalogNavPath.mock.calls[0][0];
+    const startPath = startUpdater([
+      { name: initialCatalog.name, url: initialCatalog.url },
+      { name: 'Fantasy', url: 'https://example.com/opds/catalog?subject=fantasy' },
+    ]);
+    expect(startPath).toEqual([
+      { name: initialCatalog.name, url: initialCatalog.url },
+    ]);
+
+    await act(async () => {
+      fireEvent.click(screen.getByRole('button', { name: 'Back to Section' }));
+    });
+
+    const upUpdater = setCatalogNavPath.mock.calls[1][0];
+    const upPath = upUpdater([
+      { name: initialCatalog.name, url: initialCatalog.url },
+      { name: 'Fantasy', url: 'https://example.com/opds/catalog?subject=fantasy' },
+    ]);
+    expect(upPath).toEqual([
+      { name: initialCatalog.name, url: initialCatalog.url },
+      { name: 'Back to Section', url: 'https://example.com/opds/catalog/section' },
+    ]);
+  });
 });
