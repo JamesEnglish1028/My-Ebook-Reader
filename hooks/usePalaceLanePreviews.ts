@@ -13,7 +13,7 @@ interface UsePalaceLanePreviewsOptions {
 }
 
 const DEFAULT_PREVIEW_BOOKS = 10;
-const MAX_CONCURRENT_PREVIEW_FETCHES = 3;
+const MAX_CONCURRENT_PREVIEW_FETCHES = 1;
 const PALACE_PREVIEW_ACCEPT_HEADER = 'application/atom+xml;profile=opds-catalog, application/opds+json;q=0.9, application/xml, text/xml, application/json;q=0.8, */*;q=0.5';
 
 const isPalaceHost = (url: string): boolean => {
@@ -43,6 +43,10 @@ const isCrossOriginWithoutProxy = (url: string): boolean => {
 
 const hasStablePreviewSnapshot = (preview?: CatalogLanePreview): boolean =>
   Boolean(preview && (preview.books.length > 0 || preview.hasChildNavigation));
+
+const delay = (ms: number) => new Promise((resolve) => {
+  setTimeout(resolve, ms);
+});
 
 export function usePalaceLanePreviews({
   enabled,
@@ -147,7 +151,7 @@ export function usePalaceLanePreviews({
 
         if (palaceLane && proxyUrl !== link.url) {
           try {
-            const response = await fetch(proxyUrl, {
+            const fetchPalacePreview = async () => fetch(proxyUrl, {
               method: 'GET',
               mode: 'cors',
               credentials: 'omit',
@@ -155,6 +159,14 @@ export function usePalaceLanePreviews({
                 Accept: PALACE_PREVIEW_ACCEPT_HEADER,
               },
             });
+
+            let response: Response;
+            try {
+              response = await fetchPalacePreview();
+            } catch (error) {
+              await delay(400);
+              response = await fetchPalacePreview();
+            }
 
             if (!response.ok) {
               return {

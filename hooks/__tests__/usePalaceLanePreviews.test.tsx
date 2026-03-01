@@ -27,7 +27,7 @@ function deferred<T>() {
 }
 
 describe('usePalaceLanePreviews', () => {
-  it('limits concurrent preview fetches and starts queued lanes as earlier ones finish', async () => {
+  it('fetches Palace lane previews one at a time and starts the next lane after the previous one finishes', async () => {
     const links = [
       { title: 'Lane 1', url: 'https://catalog.example.org/lane-1', rel: 'collection' },
       { title: 'Lane 2', url: 'https://catalog.example.org/lane-2', rel: 'collection' },
@@ -50,8 +50,9 @@ describe('usePalaceLanePreviews', () => {
       requestedUrls: links.map((link) => link.url),
     }));
 
-    await waitFor(() => expect(fetchCatalogMock).toHaveBeenCalledTimes(3));
-    expect(fetchCatalogMock).not.toHaveBeenCalledWith('https://catalog.example.org/lane-4', expect.anything(), expect.anything());
+    await waitFor(() => expect(fetchCatalogMock).toHaveBeenCalledTimes(1));
+    expect(fetchCatalogMock).toHaveBeenCalledWith('https://catalog.example.org/lane-1', 'https://catalog.example.org/catalog', '1');
+    expect(fetchCatalogMock).not.toHaveBeenCalledWith('https://catalog.example.org/lane-2', expect.anything(), expect.anything());
 
     await act(async () => {
       responses[0].resolve({
@@ -63,8 +64,8 @@ describe('usePalaceLanePreviews', () => {
       });
     });
 
-    await waitFor(() => expect(fetchCatalogMock).toHaveBeenCalledTimes(4));
-    expect(fetchCatalogMock).toHaveBeenCalledWith('https://catalog.example.org/lane-4', 'https://catalog.example.org/catalog', '1');
+    await waitFor(() => expect(fetchCatalogMock).toHaveBeenCalledTimes(2));
+    expect(fetchCatalogMock).toHaveBeenCalledWith('https://catalog.example.org/lane-2', 'https://catalog.example.org/catalog', '1');
 
     await act(async () => {
       responses.slice(1).forEach((response) => {
