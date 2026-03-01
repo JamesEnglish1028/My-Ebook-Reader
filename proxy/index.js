@@ -200,8 +200,15 @@ app.all('/proxy', async (req, res) => {
     const isLoansRequest = targetUrl.pathname.toLowerCase().includes('/loans');
     const incomingAuthorization = req.headers.authorization;
     const hadAuthorization = typeof incomingAuthorization === 'string' && incomingAuthorization.length > 0;
-    if ((targetHost.includes('palace') || targetHost.includes('palaceproject.io')) && req.headers && req.headers.origin) {
+    const isPalaceTarget = targetHost.includes('palace')
+      || targetHost.includes('palaceproject.io')
+      || targetHost.includes('thepalaceproject.org');
+    if (isPalaceTarget && req.headers && req.headers.origin) {
       upstreamHeaders['origin'] = req.headers.origin;
+    }
+    if (isPalaceTarget && hadAuthorization) {
+      // Match Palace's recommended authenticated request shape more closely.
+      upstreamHeaders['accept-language'] = '';
     }
 
     if (isLoansRequest && hadAuthorization) {
