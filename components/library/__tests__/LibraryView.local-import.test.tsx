@@ -8,12 +8,20 @@ import LibraryView from '../LibraryView';
 
 const importButtonSpy = vi.fn();
 const localLibraryViewSpy = vi.fn();
+const authState = {
+  user: null,
+  isLoggedIn: false,
+  signIn: vi.fn(),
+  reauthorizeDrive: vi.fn(),
+  signOut: vi.fn(),
+  tokenClient: null,
+  isInitialized: true,
+  authStatus: 'ready' as const,
+  authError: null as string | null,
+};
 
 vi.mock('../../../contexts/AuthContext', () => ({
-  useAuth: () => ({
-    user: null,
-    isLoggedIn: false,
-  }),
+  useAuth: () => authState,
 }));
 
 vi.mock('../../../hooks', () => ({
@@ -62,6 +70,11 @@ vi.mock('../local', () => ({
 describe('LibraryView local import menu', () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    authState.user = null;
+    authState.isLoggedIn = false;
+    authState.isInitialized = true;
+    authState.authStatus = 'ready';
+    authState.authError = null;
   });
 
   it('backs up to Drive after a successful local import', async () => {
@@ -164,5 +177,36 @@ describe('LibraryView local import menu', () => {
       alwaysShowLabel: true,
     });
     expect((importButtonSpy.mock.calls.at(-1)?.[0] as { onActivate?: unknown })?.onActivate).toBeUndefined();
+  });
+
+  it('shows a Log In action in the main menu when logged out', () => {
+    const queryClient = new QueryClient();
+
+    render(
+      <QueryClientProvider client={queryClient}>
+        <LibraryView
+          libraryRefreshFlag={0}
+          syncStatus={{ state: 'idle', message: '' }}
+          onAutoBackupToDrive={vi.fn().mockResolvedValue(undefined)}
+          onOpenBook={vi.fn()}
+          onShowBookDetail={vi.fn()}
+          processAndSaveBook={vi.fn().mockResolvedValue({ success: true })}
+          importStatus={{ isLoading: false, message: '', error: null }}
+          setImportStatus={vi.fn()}
+          activeOpdsSource={null}
+          setActiveOpdsSource={vi.fn()}
+          catalogNavPath={[]}
+          setCatalogNavPath={vi.fn()}
+          onOpenCloudSyncModal={vi.fn()}
+          onOpenLocalStorageModal={vi.fn()}
+          onShowAbout={vi.fn()}
+        />
+      </QueryClientProvider>,
+    );
+
+    fireEvent.click(screen.getByRole('button', { name: /Open main menu/i }));
+    fireEvent.click(screen.getByRole('button', { name: /^Log In$/i }));
+
+    expect(authState.signIn).toHaveBeenCalledTimes(1);
   });
 });

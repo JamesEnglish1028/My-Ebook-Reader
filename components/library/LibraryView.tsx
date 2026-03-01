@@ -71,7 +71,7 @@ const LibraryView: React.FC<LibraryViewProps> = ({
   // Use libraryRefreshFlag to trigger refreshes in child components if needed
   // React Query client for cache invalidation
   const queryClient = useQueryClient();
-  const { user, isLoggedIn } = useAuth();
+  const { user, isLoggedIn, signIn, authStatus, isInitialized } = useAuth();
   const { uiTheme, setUiTheme } = useUiTheme();
 
   // Catalog management
@@ -335,6 +335,7 @@ const LibraryView: React.FC<LibraryViewProps> = ({
       : syncStatus.state === 'syncing'
         ? 'theme-text-info'
         : 'theme-text-muted';
+  const canSignIn = isInitialized && authStatus !== 'initializing' && authStatus !== 'not_configured';
 
   return (
     <div className="container mx-auto p-4 md:p-8 theme-text-primary">
@@ -428,6 +429,21 @@ const LibraryView: React.FC<LibraryViewProps> = ({
                   <p className={`mt-2 text-[11px] leading-tight ${syncSummaryTone}`}>{syncSummary}</p>
                 </div>
                 <ul className="theme-text-primary p-1.5">
+                  {!isLoggedIn && (
+                    <li>
+                      <button
+                        onClick={() => {
+                          signIn();
+                          setIsSettingsMenuOpen(false);
+                        }}
+                        disabled={!canSignIn}
+                        className="theme-text-secondary theme-hover-surface block w-full rounded-sm px-2.5 py-2 text-left text-[13px] font-medium disabled:cursor-not-allowed disabled:opacity-60"
+                      >
+                        Log In
+                      </button>
+                    </li>
+                  )}
+                  {!isLoggedIn && <li className="theme-divider my-1 border-t" />}
                   {!isBrowsingOpds && (
                     <li>
                       <ImportButton

@@ -1,6 +1,6 @@
 import React from 'react';
 
-import { fireEvent, render, screen } from '@testing-library/react';
+import { render, screen } from '@testing-library/react';
 import { describe, expect, it, vi } from 'vitest';
 import { useAuth } from '../../contexts/AuthContext';
 import SettingsModal from '../SettingsModal';
@@ -14,7 +14,7 @@ vi.mock('../../contexts/AuthContext', () => ({
 }));
 
 describe('SettingsModal auth states', () => {
-  it('renders not-configured message and disables sign-in button', () => {
+  it('renders not-configured message and directs users to the main menu login', () => {
     const authValue: ReturnType<typeof useAuth> = {
       user: null,
       isLoggedIn: false,
@@ -45,15 +45,15 @@ describe('SettingsModal auth states', () => {
     );
 
     expect(screen.getByText(/Google sync is not configured/i)).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: /Google Sync Not Configured/i })).toBeDisabled();
+    expect(screen.getByText(/Use the main menu's Log In action/i)).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: /Google Sync Not Configured/i })).not.toBeInTheDocument();
   });
 
-  it('uses retry label when auth setup is in error state', () => {
-    const signIn = vi.fn();
+  it('shows the auth error but no inline sign-in action when auth setup fails', () => {
     const authValue: ReturnType<typeof useAuth> = {
       user: null,
       isLoggedIn: false,
-      signIn,
+      signIn: vi.fn(),
       reauthorizeDrive: vi.fn(),
       signOut: vi.fn(),
       tokenClient: null,
@@ -79,8 +79,7 @@ describe('SettingsModal auth states', () => {
       />,
     );
 
-    const retryButton = screen.getByRole('button', { name: /Retry Google Setup/i });
-    fireEvent.click(retryButton);
-    expect(signIn).toHaveBeenCalledTimes(1);
+    expect(screen.getByText(/Google SDK timed out/i)).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: /Retry Google Setup/i })).not.toBeInTheDocument();
   });
 });
