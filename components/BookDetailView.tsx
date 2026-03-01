@@ -40,6 +40,13 @@ const formatDate = (dateString: string | number): string => {
   return date.toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric', timeZone: 'UTC' });
 };
 
+const formatPublicationDate = (dateString: string | number | undefined): string | undefined => {
+  if (!dateString) return undefined;
+  const date = new Date(typeof dateString === 'number' ? dateString : dateString);
+  if (isNaN(date.getTime())) return String(dateString);
+  return date.toLocaleDateString('en-GB', { year: 'numeric', month: 'long', day: 'numeric', timeZone: 'UTC' });
+};
+
 // BookAnnotationsAside component
 const BookAnnotationsAside: React.FC<{
   libraryBook: BookMetadata;
@@ -128,6 +135,7 @@ interface AnimationData {
 const BookDetailView: React.FC<BookDetailViewProps> = ({ book, onBack, source, catalogName, userCitationFormat = 'apa', onReadBook, onImportFromCatalog, importStatus, setImportStatus }) => {
   const bookAny = book as any;
   const publisherText = typeof bookAny.publisher === 'string' ? bookAny.publisher : bookAny.publisher?.name;
+  const publicationDateText = formatPublicationDate(bookAny.publicationDate);
   const libraryBookForAnnotations: BookMetadata = {
     id: bookAny.id ?? 0,
     title: book.title,
@@ -314,8 +322,8 @@ const BookDetailView: React.FC<BookDetailViewProps> = ({ book, onBack, source, c
             {publisherText && (
               <li><span className="font-semibold text-slate-200">Publisher:</span> <span className="text-slate-400">{publisherText}</span></li>
             )}
-            {bookAny.publicationDate && (
-              <li><span className="font-semibold text-slate-200">Published:</span> <span className="text-slate-400">{bookAny.publicationDate}</span></li>
+            {publicationDateText && (
+              <li><span className="font-semibold text-slate-200">Published:</span> <span className="text-slate-400">{publicationDateText}</span></li>
             )}
             {bookAny.language && (
               <li><span className="font-semibold text-slate-200">Language:</span> <span className="text-slate-400">{bookAny.language}</span></li>
