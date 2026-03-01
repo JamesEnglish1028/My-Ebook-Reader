@@ -415,6 +415,18 @@ export const parseOpds1Xml = (xmlText: string, baseUrl: string): { books: Catalo
                     type: linkType,
                     source: 'navigation',
                 });
+                return;
+            }
+
+            const normalizedType = (linkType || '').toLowerCase();
+            if (normalizedType.includes('profile=opds-catalog') && (normalizedType.includes('kind=navigation') || normalizedType.includes('kind=acquisition'))) {
+                addNavLink({
+                    title: link.getAttribute('title')?.trim() || fullUrl,
+                    url: fullUrl,
+                    rel: relRaw || (normalizedType.includes('kind=acquisition') ? 'acquisition' : 'navigation'),
+                    type: linkType,
+                    source: 'navigation',
+                });
             }
         }
     });

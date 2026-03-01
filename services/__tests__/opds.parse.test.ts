@@ -234,4 +234,38 @@ describe('OPDS1 parseOpds1Xml', () => {
       source: 'navigation',
     });
   });
+
+  it('promotes feed-level OPDS catalog kind links without collection rels', () => {
+    const xml = `<?xml version="1.0" encoding="UTF-8"?>
+<feed xmlns="http://www.w3.org/2005/Atom">
+  <title>Nested Feed</title>
+  <link
+    href="/catalog/fiction"
+    type="application/atom+xml;profile=opds-catalog;kind=navigation"
+    title="Fiction"
+  />
+  <link
+    href="/catalog/nonfiction"
+    type="application/atom+xml;profile=opds-catalog;kind=acquisition"
+    title="Non-Fiction"
+  />
+</feed>`;
+
+    const result = parseOpds1Xml(xml, 'https://example.com/section/');
+
+    expect(result.navLinks).toContainEqual({
+      title: 'Fiction',
+      url: 'https://example.com/catalog/fiction',
+      rel: 'navigation',
+      type: 'application/atom+xml;profile=opds-catalog;kind=navigation',
+      source: 'navigation',
+    });
+    expect(result.navLinks).toContainEqual({
+      title: 'Non-Fiction',
+      url: 'https://example.com/catalog/nonfiction',
+      rel: 'acquisition',
+      type: 'application/atom+xml;profile=opds-catalog;kind=acquisition',
+      source: 'navigation',
+    });
+  });
 });
