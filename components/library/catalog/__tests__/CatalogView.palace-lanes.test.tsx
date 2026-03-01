@@ -168,4 +168,82 @@ describe('CatalogView Palace swim lanes', () => {
       }));
     });
   });
+
+  it('uses Palace facet links as swim lanes when navigation links are absent', () => {
+    const palaceCatalog = {
+      id: 'palace-1',
+      name: 'Palace Catalog',
+      url: 'https://demo.palaceproject.io/catalog',
+      opdsVersion: '1',
+    };
+
+    vi.mocked(useCatalogContent).mockReturnValue({
+      data: {
+        books: [
+          {
+            title: 'Grid Book',
+            author: 'Author',
+            coverImage: null,
+            downloadUrl: 'https://demo.palaceproject.io/books/grid.epub',
+            summary: null,
+          },
+        ],
+        navigationLinks: [],
+        facetGroups: [
+          {
+            title: 'Collections',
+            links: [
+              {
+                title: 'Fiction',
+                url: 'https://demo.palaceproject.io/groups/fiction',
+                rel: 'facet',
+              },
+            ],
+          },
+        ],
+        pagination: {},
+        search: null,
+      },
+      isLoading: false,
+      error: null,
+      refetch: vi.fn(),
+    } as any);
+
+    vi.mocked(useResolvedCatalogSearch).mockReturnValue({
+      data: null,
+      isLoading: false,
+      error: null,
+    } as any);
+
+    vi.mocked(usePalaceLanePreviews).mockReturnValue({
+      lanePreviews: [
+        {
+          link: {
+            title: 'Fiction',
+            url: 'https://demo.palaceproject.io/groups/fiction',
+            rel: 'facet',
+            source: 'compat',
+          },
+          books: [],
+          isLoading: false,
+          hasFetched: true,
+          hasChildNavigation: true,
+        },
+      ],
+      isLoading: false,
+      hasAnyBooks: false,
+    });
+
+    render(
+      <CatalogView
+        activeOpdsSource={palaceCatalog as any}
+        catalogNavPath={[{ name: palaceCatalog.name, url: palaceCatalog.url }]}
+        setCatalogNavPath={vi.fn()}
+        onShowBookDetail={vi.fn()}
+      />,
+    );
+
+    expect(screen.getByRole('button', { name: /open fiction/i })).toBeInTheDocument();
+    expect(screen.queryByLabelText('Grid Book by Author')).not.toBeInTheDocument();
+  });
 });

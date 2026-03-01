@@ -341,13 +341,36 @@ const CatalogView: React.FC<CatalogViewProps> = ({
     const filtered = navigationLinks.filter((link) => link.url !== currentUrl);
     return filtered.length > 0 ? filtered : navigationLinks;
   }, [currentUrl, navigationLinks]);
+  const palaceFacetLaneLinks = useMemo(() => (
+    normalizedFacetGroups.flatMap((group) => group.links.map((link) => ({
+      title: link.title,
+      url: link.url,
+      rel: link.rel || 'facet',
+      type: link.type,
+      source: 'compat' as const,
+      isCatalog: false,
+    })))
+  ), [normalizedFacetGroups]);
   const palaceLaneLinks = useMemo(() => (
-    displayNavigationLinks.filter((link) => {
-      const rel = (link.rel || '').toLowerCase();
-      if (!link.url || !link.title) return false;
-      return !(rel.includes('start') || rel === 'up' || rel.endsWith('/up'));
-    })
-  ), [displayNavigationLinks]);
+    (() => {
+      const filteredNavigation = displayNavigationLinks.filter((link) => {
+        const rel = (link.rel || '').toLowerCase();
+        if (!link.url || !link.title) return false;
+        return !(rel.includes('start') || rel === 'up' || rel.endsWith('/up'));
+      });
+      if (filteredNavigation.length > 0) {
+        return filteredNavigation;
+      }
+
+      const seen = new Set<string>();
+      return palaceFacetLaneLinks.filter((link) => {
+        if (!link.url || !link.title) return false;
+        if (seen.has(link.url)) return false;
+        seen.add(link.url);
+        return true;
+      });
+    })()
+  ), [displayNavigationLinks, palaceFacetLaneLinks]);
   const searchTemplateParams = resolvedSearch?.activeTemplate?.params || [];
   const primarySearchParam = searchTemplateParams.find((param) => param.name === 'searchTerms')
     || searchTemplateParams.find((param) => param.name === 'query')
@@ -399,8 +422,9 @@ const CatalogView: React.FC<CatalogViewProps> = ({
     baseUrl: activeOpdsSource?.url || '',
     requestedUrls: requestedLaneUrls,
   });
-  const hasSidebarContent = (!usePalaceSwimLanes && displayNavigationLinks.length > 0)
-    || normalizedFacetGroups.some((group) => group.links.length > 0);
+  const hasSidebarContent = !usePalaceSwimLanes
+    && (displayNavigationLinks.length > 0
+      || normalizedFacetGroups.some((group) => group.links.length > 0));
 
   useEffect(() => {
     if (!usePalaceSwimLanes || isLanePreviewsLoading) {
@@ -466,6 +490,19 @@ const CatalogView: React.FC<CatalogViewProps> = ({
       }
       return nextUrls;
     });
+  };
+  const handleLaneOpen = (link: CatalogNavigationLink) => {
+    if (link.source === 'compat') {
+      const facetLink = normalizedFacetGroups
+        .flatMap((group) => group.links)
+        .find((candidate) => candidate.url === link.url && candidate.title === link.title);
+      if (facetLink) {
+        handleFacetSelect(facetLink);
+        return;
+      }
+    }
+
+    handleNavigationSelect(link);
   };
 
   return (
@@ -580,7 +617,7 @@ const CatalogView: React.FC<CatalogViewProps> = ({
                 hasFetched={lane.hasFetched}
                 hasChildNavigation={lane.hasChildNavigation}
                 onRequestPreview={requestLanePreview}
-                onOpenLane={handleNavigationSelect}
+                onOpenLane={handleLaneOpen}
                 onBookClick={handleCatalogBookClick}
               />
             ))}
