@@ -13,6 +13,16 @@ interface BookCardProps {
   isFocused?: boolean;
 }
 
+const shouldPreferProxyForCatalogCover = (url: string): boolean => {
+  try {
+    const hostname = new URL(url).hostname.toLowerCase();
+    return hostname === 'biblioboard.com'
+      || hostname.endsWith('.biblioboard.com');
+  } catch {
+    return false;
+  }
+};
+
 /**
  * BookCard - Reusable card component for displaying books
  *
@@ -62,11 +72,14 @@ const BookCard = React.forwardRef<HTMLDivElement, BookCardProps>(({
   const proxiedCatalogCoverImage = isCatalogBook(book) && book.coverImage
     ? proxiedUrl(book.coverImage)
     : null;
-  const [coverImageSrc, setCoverImageSrc] = useState<string | null>(coverImage);
+  const initialCoverImageSrc = isCatalogBook(book) && book.coverImage && shouldPreferProxyForCatalogCover(book.coverImage)
+    ? proxiedCatalogCoverImage
+    : coverImage;
+  const [coverImageSrc, setCoverImageSrc] = useState<string | null>(initialCoverImageSrc);
 
   useEffect(() => {
-    setCoverImageSrc(coverImage);
-  }, [coverImage]);
+    setCoverImageSrc(initialCoverImageSrc);
+  }, [initialCoverImageSrc]);
 
   const contributors = isCatalogBook(book) ? book.contributors ?? [] : [];
   const categories = isCatalogBook(book)

@@ -403,6 +403,24 @@ const CatalogView: React.FC<CatalogViewProps> = ({
     || normalizedFacetGroups.some((group) => group.links.length > 0);
 
   useEffect(() => {
+    if (!usePalaceSwimLanes || isLanePreviewsLoading) {
+      return;
+    }
+
+    const nextUnrequestedLane = palaceLaneLinks.find((link) => !requestedLaneUrls.includes(link.url));
+    if (!nextUnrequestedLane) {
+      return;
+    }
+
+    setRequestedLaneUrls((prev) => {
+      if (prev.includes(nextUnrequestedLane.url)) {
+        return prev;
+      }
+      return [...prev, nextUnrequestedLane.url];
+    });
+  }, [isLanePreviewsLoading, palaceLaneLinks, requestedLaneUrls, usePalaceSwimLanes]);
+
+  useEffect(() => {
     if (activeSearchQuery || searchActionError || searchError) {
       setIsSearchOpen(true);
     }
