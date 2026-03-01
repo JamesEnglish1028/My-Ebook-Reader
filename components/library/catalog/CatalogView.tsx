@@ -421,6 +421,7 @@ const CatalogView: React.FC<CatalogViewProps> = ({
 
   const hasBooks = catalogBooks.length > 0;
   const hasOriginalBooks = originalCatalogBooks.length > 0;
+  const hasNavigationOnlyContent = !hasOriginalBooks && hasSidebarContent;
   const isEmptyFeed = !hasOriginalBooks && !hasSidebarContent;
 
   return (
@@ -534,6 +535,13 @@ const CatalogView: React.FC<CatalogViewProps> = ({
           <div className="theme-text-primary py-12 text-center">
             <p className="theme-text-secondary mb-2 text-lg">No books match your current filters</p>
             <p className="theme-text-muted text-sm">Try adjusting the local filters to see more books</p>
+          </div>
+        ) : hasNavigationOnlyContent ? (
+          <div className="theme-surface-elevated theme-text-primary rounded-lg py-12 text-center">
+            <p className="theme-text-secondary mb-2 text-lg">Choose a catalog section</p>
+            <p className="theme-text-muted text-sm">
+              Use the navigation and facet options to open a collection from this OPDS catalog.
+            </p>
           </div>
         ) : null}
       </main>
