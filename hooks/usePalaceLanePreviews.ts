@@ -14,7 +14,7 @@ interface UsePalaceLanePreviewsOptions {
 
 const DEFAULT_PREVIEW_BOOKS = 10;
 const MAX_CONCURRENT_PREVIEW_FETCHES = 3;
-const OPDS1_ACCEPT_HEADER = 'application/atom+xml;profile=opds-catalog, application/xml, text/xml, */*';
+const PALACE_PREVIEW_ACCEPT_HEADER = 'application/atom+xml;profile=opds-catalog, application/opds+json;q=0.9, application/xml, text/xml, application/json;q=0.8, */*;q=0.5';
 
 const isPalaceHost = (url: string): boolean => {
   try {
@@ -63,13 +63,11 @@ export function usePalaceLanePreviews({
 
   useEffect(() => {
     if (!enabled || normalizedLinks.length === 0) {
-      lanePreviewMapRef.current = {};
-      setLanePreviewMap({});
       return;
     }
 
     setLanePreviewMap((prev) => {
-      const next: Record<string, CatalogLanePreview> = {};
+      const next: Record<string, CatalogLanePreview> = { ...prev };
 
       normalizedLinks.forEach((link) => {
         next[link.url] = prev[link.url] || {
@@ -147,7 +145,7 @@ export function usePalaceLanePreviews({
               mode: 'cors',
               credentials: 'omit',
               headers: {
-                Accept: OPDS1_ACCEPT_HEADER,
+                Accept: PALACE_PREVIEW_ACCEPT_HEADER,
               },
             });
 
@@ -162,7 +160,7 @@ export function usePalaceLanePreviews({
             }
 
             const responseText = await response.text();
-            const parsed = await opdsParserService.parseOPDS1(responseText, link.url);
+            const parsed = await opdsParserService.parseOPDS(responseText, link.url);
 
             if (!parsed.success) {
               return {
