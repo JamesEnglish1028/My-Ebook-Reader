@@ -20,6 +20,7 @@ interface LibraryViewProps {
     state: 'idle' | 'syncing' | 'success' | 'error';
     message: string;
   };
+  onAutoBackupToDrive: () => Promise<void>;
   onOpenBook: (id: number, animationData: CoverAnimationData, format?: string) => void;
   onShowBookDetail: (book: BookMetadata | CatalogBook, source: 'library' | 'catalog', catalogName?: string) => void;
   processAndSaveBook: (
@@ -51,6 +52,7 @@ interface LibraryViewProps {
  * Manages the header, navigation, and source selection.
  */
 const LibraryView: React.FC<LibraryViewProps> = ({
+  onAutoBackupToDrive,
   onOpenBook,
   onShowBookDetail,
   processAndSaveBook,
@@ -180,6 +182,7 @@ const LibraryView: React.FC<LibraryViewProps> = ({
     }
 
     const file = files[0];
+    setIsSettingsMenuOpen(false);
     console.log('[LibraryView] File selected:', file.name, file.type, file.size);
 
     // If file size is 0, the file object is already invalid
@@ -239,6 +242,8 @@ const LibraryView: React.FC<LibraryViewProps> = ({
           await queryClient.invalidateQueries({ queryKey: bookKeys.all });
           console.log('[LibraryView] Books query cache invalidated');
 
+          void onAutoBackupToDrive();
+
           setImportStatus({ isLoading: false, message: 'Import successful!', error: null });
           setTimeout(() => setImportStatus({ isLoading: false, message: '', error: null }), 2000);
         } else if (!result.success && result.bookRecord && result.existingBook) {
@@ -288,7 +293,7 @@ const LibraryView: React.FC<LibraryViewProps> = ({
       logger.error('Error replacing book:', error);
       setImportStatus({ isLoading: false, message: '', error: 'Failed to replace the book in the library.' });
     }
-  }, [activeOpdsSource, duplicateBook, existingBook, queryClient, setImportStatus]);
+}, [activeOpdsSource, duplicateBook, existingBook, queryClient, setImportStatus]);
 
   const handleAddAnyway = useCallback(async () => {
     if (!duplicateBook) return;
@@ -428,7 +433,6 @@ const LibraryView: React.FC<LibraryViewProps> = ({
                       <ImportButton
                         isLoading={importStatus.isLoading}
                         onFileChange={handleFileChange}
-                        onActivate={() => setIsSettingsMenuOpen(false)}
                         alwaysShowLabel={true}
                         className="theme-text-primary theme-hover-surface w-full justify-start rounded-sm border-0 bg-transparent px-2.5 py-2 text-[13px] font-medium"
                       />

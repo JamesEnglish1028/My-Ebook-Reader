@@ -322,6 +322,7 @@ const AppInner: React.FC = () => {
             onReturnToLibrary={handleReturnToLibrary}
             onReadBook={handleOpenBook}
             onImportFromCatalog={handleImportFromCatalog}
+            onAutoBackupToDrive={handleUploadToDrive}
             onOpenBook={handleOpenBook}
             onShowBookDetail={handleShowBookDetail}
             syncStatus={syncStatus}

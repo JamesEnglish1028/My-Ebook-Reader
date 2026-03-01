@@ -43,6 +43,7 @@ export interface ViewRendererProps {
     state: 'idle' | 'syncing' | 'success' | 'error';
     message: string;
   };
+  onAutoBackupToDrive: () => Promise<void>;
   onOpenBook: (id: number, animationData: CoverAnimationData, format?: string) => void;
   onShowBookDetail: (book: BookMetadata | CatalogBook, source: 'library' | 'catalog', catalogName?: string) => void;
   userCitationFormat: 'apa' | 'mla' | 'chicago';
@@ -91,6 +92,7 @@ export const ViewRenderer: React.FC<ViewRendererProps> = (props) => {
     detailViewData,
     onReturnToLibrary,
     onImportFromCatalog,
+    onAutoBackupToDrive,
     onOpenBook,
     onShowBookDetail,
     syncStatus,
@@ -220,6 +222,7 @@ export const ViewRenderer: React.FC<ViewRendererProps> = (props) => {
             onShowAbout={onShowAbout}
             libraryRefreshFlag={libraryRefreshFlag}
             syncStatus={syncStatus}
+            onAutoBackupToDrive={onAutoBackupToDrive}
           />
         </ErrorBoundary>
       );
