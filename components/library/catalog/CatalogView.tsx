@@ -1,6 +1,7 @@
 import React, { useEffect, useMemo, useState } from 'react';
 
 import { useCatalogContent, useResolvedCatalogSearch } from '../../../hooks';
+import { usePalaceLanePreviews } from '../../../hooks/usePalaceLanePreviews';
 import { buildOpenSearchUrl } from '../../../services';
 import {
   filterBooksByAudience,
@@ -33,7 +34,7 @@ import type {
 } from '../../../types';
 import { Error as ErrorDisplay, Loading } from '../../shared';
 import { AdjustmentsVerticalIcon, SearchIcon } from '../../icons';
-import { CatalogFilters, CatalogNavigation, CatalogSearch, CatalogSidebar } from '../catalog';
+import { CatalogFilters, CatalogNavigation, CatalogSearch, CatalogSidebar, CatalogSwimLane } from '../catalog';
 import { BookGrid, EmptyState } from '../shared';
 
 interface CatalogViewProps {
@@ -42,6 +43,20 @@ interface CatalogViewProps {
   setCatalogNavPath: React.Dispatch<React.SetStateAction<{ name: string; url: string }[]>>;
   onShowBookDetail: (book: CatalogBook, source: 'catalog', catalogName?: string) => void;
 }
+
+const isPalaceHost = (url: string): boolean => {
+  try {
+    const hostname = new URL(url).hostname.toLowerCase();
+    return hostname.endsWith('palace.io')
+      || hostname.endsWith('palaceproject.io')
+      || hostname.endsWith('thepalaceproject.org')
+      || hostname === 'palace.io'
+      || hostname.endsWith('.palace.io')
+      || hostname.endsWith('.thepalaceproject.org');
+  } catch {
+    return false;
+  }
+};
 
 const CatalogView: React.FC<CatalogViewProps> = ({
   activeOpdsSource,
@@ -65,6 +80,7 @@ const CatalogView: React.FC<CatalogViewProps> = ({
   const [searchActionError, setSearchActionError] = useState<string | null>(null);
   const [isSearchOpen, setIsSearchOpen] = useState(false);
   const [isFiltersOpen, setIsFiltersOpen] = useState(false);
+  const [requestedLaneUrls, setRequestedLaneUrls] = useState<string[]>([]);
 
   const currentUrl = catalogNavPath.length > 0
     ? catalogNavPath[catalogNavPath.length - 1].url
@@ -325,9 +341,13 @@ const CatalogView: React.FC<CatalogViewProps> = ({
     const filtered = navigationLinks.filter((link) => link.url !== currentUrl);
     return filtered.length > 0 ? filtered : navigationLinks;
   }, [currentUrl, navigationLinks]);
-
-  const hasSidebarContent = displayNavigationLinks.length > 0
-    || normalizedFacetGroups.some((group) => group.links.length > 0);
+  const palaceLaneLinks = useMemo(() => (
+    displayNavigationLinks.filter((link) => {
+      const rel = (link.rel || '').toLowerCase();
+      if (!link.url || !link.title) return false;
+      return !(rel.includes('start') || rel === 'up' || rel.endsWith('/up'));
+    })
+  ), [displayNavigationLinks]);
   const searchTemplateParams = resolvedSearch?.activeTemplate?.params || [];
   const primarySearchParam = searchTemplateParams.find((param) => param.name === 'searchTerms')
     || searchTemplateParams.find((param) => param.name === 'query')
@@ -352,6 +372,35 @@ const CatalogView: React.FC<CatalogViewProps> = ({
     || availablePublicationTypes.length > 1
     || availableAvailabilityModes.length > 1
     || availableDistributors.length > 1;
+  const usePalaceSwimLanes = isPalaceHost(activeOpdsSource?.url || '')
+    && palaceLaneLinks.length > 0
+    && !activeSearchQuery;
+
+  useEffect(() => {
+    if (!usePalaceSwimLanes) {
+      setRequestedLaneUrls([]);
+      return;
+    }
+
+    setRequestedLaneUrls((prev) => {
+      const seed = palaceLaneLinks.slice(0, 2).map((link) => link.url);
+      const merged = new Set([...seed, ...prev.filter((url) => palaceLaneLinks.some((link) => link.url === url))]);
+      return Array.from(merged);
+    });
+  }, [palaceLaneLinks, usePalaceSwimLanes]);
+
+  const {
+    lanePreviews,
+    isLoading: isLanePreviewsLoading,
+    hasAnyBooks: hasLanePreviewBooks,
+  } = usePalaceLanePreviews({
+    enabled: usePalaceSwimLanes,
+    links: palaceLaneLinks,
+    baseUrl: activeOpdsSource?.url || '',
+    requestedUrls: requestedLaneUrls,
+  });
+  const hasSidebarContent = (!usePalaceSwimLanes && displayNavigationLinks.length > 0)
+    || normalizedFacetGroups.some((group) => group.links.length > 0);
 
   useEffect(() => {
     if (activeSearchQuery || searchActionError || searchError) {
@@ -382,7 +431,11 @@ const CatalogView: React.FC<CatalogViewProps> = ({
 
   const hasBooks = catalogBooks.length > 0;
   const hasOriginalBooks = originalCatalogBooks.length > 0;
-  const isEmptyFeed = !hasOriginalBooks && !hasSidebarContent;
+  const shouldShowPalaceLanes = usePalaceSwimLanes && (lanePreviews.length > 0 || isLanePreviewsLoading || hasLanePreviewBooks);
+  const isEmptyFeed = !hasOriginalBooks && !hasSidebarContent && !shouldShowPalaceLanes;
+  const requestLanePreview = (link: CatalogNavigationLink) => {
+    setRequestedLaneUrls((prev) => (prev.includes(link.url) ? prev : [...prev, link.url]));
+  };
 
   return (
     <div className="flex flex-col lg:flex-row gap-6">
@@ -483,7 +536,25 @@ const CatalogView: React.FC<CatalogViewProps> = ({
           />
         )}
 
-        {isEmptyFeed ? (
+        {shouldShowPalaceLanes ? (
+          <div>
+            {lanePreviews.map((lane) => (
+              <CatalogSwimLane
+                key={lane.link.url}
+                laneTitle={lane.link.title}
+                laneLink={lane.link}
+                books={lane.books}
+                isLoading={lane.isLoading}
+                error={lane.error}
+                hasFetched={lane.hasFetched}
+                hasChildNavigation={lane.hasChildNavigation}
+                onRequestPreview={requestLanePreview}
+                onOpenLane={handleNavigationSelect}
+                onBookClick={handleCatalogBookClick}
+              />
+            ))}
+          </div>
+        ) : isEmptyFeed ? (
           <EmptyState variant="catalog" />
         ) : hasBooks ? (
           <BookGrid

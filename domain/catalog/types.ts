@@ -113,6 +113,18 @@ export interface CategoryLane {
 }
 
 /**
+ * Navigation-driven swim lane preview for Palace-style OPDS 1 catalogs.
+ */
+export interface CatalogLanePreview {
+  link: CatalogNavigationLink;
+  books: CatalogBook[];
+  isLoading: boolean;
+  error?: string;
+  hasFetched?: boolean;
+  hasChildNavigation?: boolean;
+}
+
+/**
  * Collection group for UI display
  */
 export interface CollectionGroup {
