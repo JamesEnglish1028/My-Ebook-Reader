@@ -158,7 +158,7 @@ const CatalogFilters: React.FC<CatalogFiltersProps> = ({
                       key={option.key}
                       onClick={() => onFictionChange(option.key)}
                       className={`rounded-full px-2.5 py-1 text-xs font-medium transition-colors ${fictionMode === option.key
-                        ? 'bg-amber-500/20 text-amber-100 ring-1 ring-amber-500/40'
+                        ? 'theme-nav-link-active border'
                         : 'theme-pill theme-hover-surface'
                       }`}
                     >
@@ -180,7 +180,7 @@ const CatalogFilters: React.FC<CatalogFiltersProps> = ({
                       key={option.key}
                       onClick={() => onMediaChange(option.key)}
                       className={`rounded-full px-2.5 py-1 text-xs font-medium transition-colors ${mediaMode === option.key
-                        ? 'bg-cyan-500/20 text-cyan-100 ring-1 ring-cyan-500/40'
+                        ? 'theme-nav-link-active border'
                         : 'theme-pill theme-hover-surface'
                       }`}
                     >
@@ -201,7 +201,7 @@ const CatalogFilters: React.FC<CatalogFiltersProps> = ({
                       key={option.key}
                       onClick={() => onPublicationChange(option.key)}
                       className={`rounded-full px-2.5 py-1 text-xs font-medium transition-colors ${publicationMode === option.key
-                        ? 'bg-emerald-500/20 text-emerald-100 ring-1 ring-emerald-500/40'
+                        ? 'theme-nav-link-active border'
                         : 'theme-pill theme-hover-surface'
                       }`}
                     >
@@ -222,7 +222,7 @@ const CatalogFilters: React.FC<CatalogFiltersProps> = ({
                       key={option.key}
                       onClick={() => onAvailabilityChange(option.key)}
                       className={`rounded-full px-2.5 py-1 text-xs font-medium transition-colors ${availabilityMode === option.key
-                        ? 'bg-lime-500/20 text-lime-100 ring-1 ring-lime-500/40'
+                        ? 'theme-nav-link-active border'
                         : 'theme-pill theme-hover-surface'
                       }`}
                     >
@@ -243,7 +243,7 @@ const CatalogFilters: React.FC<CatalogFiltersProps> = ({
                       key={option}
                       onClick={() => onDistributorChange(option as DistributorMode)}
                       className={`rounded-full px-2.5 py-1 text-xs font-medium transition-colors ${distributorMode === option
-                        ? 'bg-fuchsia-500/20 text-fuchsia-100 ring-1 ring-fuchsia-500/40'
+                        ? 'theme-nav-link-active border'
                         : 'theme-pill theme-hover-surface'
                       }`}
                     >
