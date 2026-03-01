@@ -252,6 +252,16 @@ function parseOpds2SearchLink(jsonData: any, baseUrl: string): CatalogSearchMeta
 // Helper: Parse pagination links from OPDS2 feed
 function parseOpds2Pagination(jsonData: any, baseUrl: string): CatalogPagination {
   const pagination: CatalogPagination = {};
+  const numberOfItems = Number(jsonData?.metadata?.numberOfItems);
+  const itemsPerPage = Number(jsonData?.metadata?.itemsPerPage);
+  const currentPage = Number(jsonData?.metadata?.currentPage);
+
+  if (Number.isFinite(numberOfItems)) pagination.totalResults = numberOfItems;
+  if (Number.isFinite(itemsPerPage)) pagination.itemsPerPage = itemsPerPage;
+  if (Number.isFinite(currentPage) && Number.isFinite(itemsPerPage) && currentPage > 0 && itemsPerPage > 0) {
+    pagination.startIndex = ((currentPage - 1) * itemsPerPage) + 1;
+  }
+
   if (jsonData.links && Array.isArray(jsonData.links)) {
     (jsonData.links as Opds2Link[]).forEach((link) => {
       if (link.href && link.rel) {

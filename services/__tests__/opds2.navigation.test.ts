@@ -224,4 +224,28 @@ describe('parseOpds2Json - navigation/catalog inference', () => {
       source: 'navigation',
     });
   });
+
+  it('maps OPDS 2 feed metadata counts into shared pagination fields', () => {
+    const json = {
+      metadata: {
+        title: 'Search Results',
+        numberOfItems: 1,
+        itemsPerPage: 25,
+        currentPage: 1,
+      },
+      links: [
+        { rel: 'first', href: '/search?page=1&page_size=25', type: 'application/opds+json' },
+        { rel: 'last', href: '/search?page=1&page_size=25', type: 'application/opds+json' },
+      ],
+    };
+
+    const { pagination } = parseOpds2Json(json, 'https://example.org/opds/');
+    expect(pagination).toMatchObject({
+      totalResults: 1,
+      itemsPerPage: 25,
+      startIndex: 1,
+      first: 'https://example.org/search?page=1&page_size=25',
+      last: 'https://example.org/search?page=1&page_size=25',
+    });
+  });
 });
