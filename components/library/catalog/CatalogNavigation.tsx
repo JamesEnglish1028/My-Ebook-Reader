@@ -14,6 +14,8 @@ interface CatalogNavigationProps {
   onPaginationClick: (url: string) => void;
   /** Whether catalog is currently loading */
   isLoading?: boolean;
+  /** Optional right-side action controls */
+  actions?: React.ReactNode;
 }
 
 /**
@@ -28,6 +30,7 @@ const CatalogNavigation: React.FC<CatalogNavigationProps> = ({
   onBreadcrumbClick,
   onPaginationClick,
   isLoading = false,
+  actions,
 }) => {
   const showBreadcrumbs = navPath.length > 0;
   const showPagination = pagination && (pagination.first || pagination.prev || pagination.next || pagination.last) && !isLoading;
@@ -55,84 +58,84 @@ const CatalogNavigation: React.FC<CatalogNavigationProps> = ({
   }, [isLoading, pagination]);
 
   return (
-    <div className={(showBreadcrumbs || paginationSummary || showPagination) ? 'mb-5 space-y-4' : undefined}>
-      {showBreadcrumbs && (
-        <nav
-          aria-label="breadcrumb"
-          className="theme-surface theme-border theme-text-secondary flex flex-wrap items-center gap-y-1 rounded-lg border px-3 py-2 text-sm"
-        >
-          {navPath.map((item, index) => (
-            <React.Fragment key={index}>
-              <button
-                onClick={() => onBreadcrumbClick(index)}
-                className={`truncate transition-colors hover:text-sky-300 ${index === navPath.length - 1
-                  ? 'theme-text-primary font-medium'
-                  : ''
-                }`}
-                aria-current={index === navPath.length - 1 ? 'page' : undefined}
-              >
-                {item.name}
-              </button>
-              {index < navPath.length - 1 && (
-                <ChevronRightIcon className="w-4 h-4 mx-1 flex-shrink-0" />
-              )}
-            </React.Fragment>
-          ))}
-        </nav>
-      )}
-
-      {(paginationSummary || showPagination) && (
-        <div className="theme-surface theme-border space-y-3 rounded-xl border p-3">
-          {paginationSummary && (
-            <p className="theme-text-secondary text-sm" aria-live="polite">
-              {paginationSummary}
-            </p>
+    <div className={(showBreadcrumbs || paginationSummary || showPagination || actions) ? 'mb-5' : undefined}>
+      <div className="theme-surface theme-border rounded-xl border px-3 py-2">
+        <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
+          {showBreadcrumbs ? (
+            <nav
+              aria-label="breadcrumb"
+              className="theme-text-secondary flex min-w-0 flex-wrap items-center gap-y-1 text-sm"
+            >
+              {navPath.map((item, index) => (
+                <React.Fragment key={index}>
+                  <button
+                    onClick={() => onBreadcrumbClick(index)}
+                    className={`truncate transition-colors hover:text-sky-300 ${index === navPath.length - 1
+                      ? 'theme-text-primary font-medium'
+                      : ''
+                    }`}
+                    aria-current={index === navPath.length - 1 ? 'page' : undefined}
+                  >
+                    {item.name}
+                  </button>
+                  {index < navPath.length - 1 && (
+                    <ChevronRightIcon className="mx-1 h-4 w-4 flex-shrink-0" />
+                  )}
+                </React.Fragment>
+              ))}
+            </nav>
+          ) : (
+            <div />
           )}
 
-          {showPagination && (
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-2">
+          <div className="flex flex-wrap items-center justify-end gap-2">
+            {paginationSummary && (
+              <p className="theme-text-muted mr-1 text-xs sm:text-sm" aria-live="polite">
+                {paginationSummary}
+              </p>
+            )}
+
+            {showPagination && (
+              <div className="theme-surface-muted theme-border flex items-center gap-1 rounded-lg border p-1">
                 <button
                   onClick={() => pagination.first && onPaginationClick(pagination.first)}
                   disabled={!pagination.first}
-                  className="theme-button-neutral theme-hover-surface inline-flex items-center gap-2 rounded-md border px-3 py-2 text-sm font-medium transition-colors duration-200 disabled:cursor-not-allowed disabled:opacity-50"
+                  className="theme-button-neutral theme-hover-surface rounded-md border px-2 py-1 text-xs font-medium transition-colors duration-200 disabled:cursor-not-allowed disabled:opacity-50"
                   aria-label="First page"
                 >
-                  <span>First</span>
+                  First
                 </button>
                 <button
                   onClick={() => pagination.prev && onPaginationClick(pagination.prev)}
                   disabled={!pagination.prev}
-                  className="theme-button-neutral theme-hover-surface inline-flex items-center gap-2 rounded-md border px-3 py-2 text-sm font-medium transition-colors duration-200 disabled:cursor-not-allowed disabled:opacity-50"
+                  className="theme-button-neutral theme-hover-surface inline-flex items-center rounded-md border px-2 py-1 text-xs font-medium transition-colors duration-200 disabled:cursor-not-allowed disabled:opacity-50"
                   aria-label="Previous page"
                 >
                   <LeftArrowIcon className="h-4 w-4" />
-                  <span>Previous</span>
                 </button>
-              </div>
-              <div className="flex items-center gap-2">
                 <button
                   onClick={() => pagination.next && onPaginationClick(pagination.next)}
                   disabled={!pagination.next}
-                  className="theme-button-neutral theme-hover-surface inline-flex items-center gap-2 rounded-md border px-3 py-2 text-sm font-medium transition-colors duration-200 disabled:cursor-not-allowed disabled:opacity-50"
+                  className="theme-button-neutral theme-hover-surface inline-flex items-center rounded-md border px-2 py-1 text-xs font-medium transition-colors duration-200 disabled:cursor-not-allowed disabled:opacity-50"
                   aria-label="Next page"
                 >
-                  <span>Next</span>
                   <RightArrowIcon className="h-4 w-4" />
                 </button>
                 <button
                   onClick={() => pagination.last && onPaginationClick(pagination.last)}
                   disabled={!pagination.last}
-                  className="theme-button-neutral theme-hover-surface inline-flex items-center gap-2 rounded-md border px-3 py-2 text-sm font-medium transition-colors duration-200 disabled:cursor-not-allowed disabled:opacity-50"
+                  className="theme-button-neutral theme-hover-surface rounded-md border px-2 py-1 text-xs font-medium transition-colors duration-200 disabled:cursor-not-allowed disabled:opacity-50"
                   aria-label="Last page"
                 >
-                  <span>Last</span>
+                  Last
                 </button>
               </div>
-            </div>
-          )}
+            )}
+
+            {actions}
+          </div>
         </div>
-      )}
+      </div>
     </div>
   );
 };

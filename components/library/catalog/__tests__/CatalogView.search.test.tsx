@@ -91,6 +91,10 @@ describe('CatalogView search', () => {
     );
 
     await act(async () => {
+      fireEvent.click(await screen.findByRole('button', { name: /open catalog search/i }));
+    });
+
+    await act(async () => {
       fireEvent.change(
         await screen.findByRole('searchbox', { name: /search this catalog/i }),
         { target: { value: 'history of science' } },
@@ -144,6 +148,10 @@ describe('CatalogView search', () => {
         onShowBookDetail={() => {}}
       />,
     );
+
+    await act(async () => {
+      fireEvent.click(await screen.findByRole('button', { name: /open catalog search/i }));
+    });
 
     await act(async () => {
       fireEvent.change(
@@ -249,6 +257,10 @@ describe('CatalogView search', () => {
     );
 
     await act(async () => {
+      fireEvent.click(await screen.findByRole('button', { name: /open catalog search/i }));
+    });
+
+    await act(async () => {
       fireEvent.change(
         await screen.findByRole('searchbox', { name: /search query/i }),
         { target: { value: 'archives' } },
@@ -309,6 +321,10 @@ describe('CatalogView search', () => {
         onShowBookDetail={() => {}}
       />,
     );
+
+    await act(async () => {
+      fireEvent.click(await screen.findByRole('button', { name: /open catalog search/i }));
+    });
 
     await act(async () => {
       fireEvent.change(

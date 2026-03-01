@@ -32,6 +32,7 @@ import type {
   CatalogSearchTemplateParameter,
 } from '../../../types';
 import { Error as ErrorDisplay, Loading } from '../../shared';
+import { AdjustmentsVerticalIcon, SearchIcon } from '../../icons';
 import { CatalogFilters, CatalogNavigation, CatalogSearch, CatalogSidebar } from '../catalog';
 import { BookGrid, EmptyState } from '../shared';
 
@@ -62,6 +63,8 @@ const CatalogView: React.FC<CatalogViewProps> = ({
   const [searchOriginPath, setSearchOriginPath] = useState<{ name: string; url: string }[] | null>(null);
   const [catalogSearch, setCatalogSearch] = useState<CatalogSearchMetadata | null>(null);
   const [searchActionError, setSearchActionError] = useState<string | null>(null);
+  const [isSearchOpen, setIsSearchOpen] = useState(false);
+  const [isFiltersOpen, setIsFiltersOpen] = useState(false);
 
   const currentUrl = catalogNavPath.length > 0
     ? catalogNavPath[catalogNavPath.length - 1].url
@@ -336,6 +339,31 @@ const CatalogView: React.FC<CatalogViewProps> = ({
   const primarySearchPlaceholder = primarySearchParam?.name === 'query'
     ? 'Enter search keywords'
     : 'Search this catalog';
+  const activeFilterCount = Number(audienceMode !== 'all')
+    + Number(fictionMode !== 'all')
+    + Number(mediaMode !== 'all')
+    + Number(publicationMode !== 'all')
+    + Number(availabilityMode !== 'all')
+    + Number(distributorMode !== 'all');
+  const hasSearchControl = !!catalogSearch;
+  const hasFilterControl = availableAudiences.length > 1
+    || availableFictionModes.length > 1
+    || availableMediaModes.length > 1
+    || availablePublicationTypes.length > 1
+    || availableAvailabilityModes.length > 1
+    || availableDistributors.length > 1;
+
+  useEffect(() => {
+    if (activeSearchQuery || searchActionError || searchError) {
+      setIsSearchOpen(true);
+    }
+  }, [activeSearchQuery, searchActionError, searchError]);
+
+  useEffect(() => {
+    if (activeFilterCount > 0) {
+      setIsFiltersOpen(true);
+    }
+  }, [activeFilterCount]);
 
   if (isLoading) {
     return <Loading variant="spinner" message="Loading catalog..." />;
@@ -378,9 +406,43 @@ const CatalogView: React.FC<CatalogViewProps> = ({
           onBreadcrumbClick={handleBreadcrumbClick}
           onPaginationClick={handlePaginationClick}
           isLoading={isLoading}
+          actions={(
+            <>
+              {hasSearchControl && (
+                <button
+                  type="button"
+                  onClick={() => setIsSearchOpen((prev) => !prev)}
+                  className={`theme-button-neutral theme-hover-surface inline-flex items-center gap-1.5 rounded-lg border px-2.5 py-1.5 text-xs font-medium transition-colors ${
+                    isSearchOpen ? 'theme-nav-link-active' : ''
+                  }`}
+                  aria-label={isSearchOpen ? 'Hide catalog search' : 'Open catalog search'}
+                  title="Catalog search"
+                >
+                  <SearchIcon className="h-4 w-4" />
+                  <span className="hidden sm:inline">Search</span>
+                </button>
+              )}
+              {hasFilterControl && (
+                <button
+                  type="button"
+                  onClick={() => setIsFiltersOpen((prev) => !prev)}
+                  className={`theme-button-neutral theme-hover-surface inline-flex items-center gap-1.5 rounded-lg border px-2.5 py-1.5 text-xs font-medium transition-colors ${
+                    isFiltersOpen ? 'theme-nav-link-active' : ''
+                  }`}
+                  aria-label={isFiltersOpen ? 'Hide filters' : 'Open filters'}
+                  title={activeFilterCount > 0 ? `${activeFilterCount} active filters` : 'Filters'}
+                >
+                  <AdjustmentsVerticalIcon className="h-4 w-4" />
+                  <span className="hidden sm:inline">
+                    {activeFilterCount > 0 ? `Filters (${activeFilterCount})` : 'Filters'}
+                  </span>
+                </button>
+              )}
+            </>
+          )}
         />
 
-        {catalogSearch && (
+        {catalogSearch && isSearchOpen && (
           <CatalogSearch
             value={searchInput}
             onChange={setSearchInput}
@@ -398,26 +460,28 @@ const CatalogView: React.FC<CatalogViewProps> = ({
           />
         )}
 
-        <CatalogFilters
-          availableAudiences={availableAudiences}
-          availableFictionModes={availableFictionModes}
-          availableMediaModes={availableMediaModes}
-          availablePublicationTypes={availablePublicationTypes}
-          availableAvailabilityModes={availableAvailabilityModes}
-          availableDistributors={availableDistributors}
-          audienceMode={audienceMode}
-          fictionMode={fictionMode}
-          mediaMode={mediaMode}
-          publicationMode={publicationMode}
-          availabilityMode={availabilityMode}
-          distributorMode={distributorMode}
-          onAudienceChange={setAudienceMode}
-          onFictionChange={setFictionMode}
-          onMediaChange={setMediaMode}
-          onPublicationChange={setPublicationMode}
-          onAvailabilityChange={setAvailabilityMode}
-          onDistributorChange={setDistributorMode}
-        />
+        {isFiltersOpen && (
+          <CatalogFilters
+            availableAudiences={availableAudiences}
+            availableFictionModes={availableFictionModes}
+            availableMediaModes={availableMediaModes}
+            availablePublicationTypes={availablePublicationTypes}
+            availableAvailabilityModes={availableAvailabilityModes}
+            availableDistributors={availableDistributors}
+            audienceMode={audienceMode}
+            fictionMode={fictionMode}
+            mediaMode={mediaMode}
+            publicationMode={publicationMode}
+            availabilityMode={availabilityMode}
+            distributorMode={distributorMode}
+            onAudienceChange={setAudienceMode}
+            onFictionChange={setFictionMode}
+            onMediaChange={setMediaMode}
+            onPublicationChange={setPublicationMode}
+            onAvailabilityChange={setAvailabilityMode}
+            onDistributorChange={setDistributorMode}
+          />
+        )}
 
         {isEmptyFeed ? (
           <EmptyState variant="catalog" />
