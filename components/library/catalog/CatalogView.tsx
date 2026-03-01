@@ -1,7 +1,6 @@
 import React, { useEffect, useMemo, useState } from 'react';
 
 import { useCatalogContent, useResolvedCatalogSearch } from '../../../hooks';
-import { usePalaceLanePreviews } from '../../../hooks/usePalaceLanePreviews';
 import { buildOpenSearchUrl } from '../../../services';
 import {
   filterBooksByAudience,
@@ -34,7 +33,7 @@ import type {
 } from '../../../types';
 import { Error as ErrorDisplay, Loading } from '../../shared';
 import { AdjustmentsVerticalIcon, SearchIcon } from '../../icons';
-import { CatalogFilters, CatalogNavigation, CatalogSearch, CatalogSidebar, CatalogSwimLane } from '../catalog';
+import { CatalogFilters, CatalogNavigation, CatalogSearch, CatalogSidebar } from '../catalog';
 import { BookGrid, EmptyState } from '../shared';
 
 interface CatalogViewProps {
@@ -100,7 +99,6 @@ const CatalogView: React.FC<CatalogViewProps> = ({
   const [searchActionError, setSearchActionError] = useState<string | null>(null);
   const [isSearchOpen, setIsSearchOpen] = useState(false);
   const [isFiltersOpen, setIsFiltersOpen] = useState(false);
-  const [requestedLaneUrls, setRequestedLaneUrls] = useState<string[]>([]);
 
   const currentUrl = catalogNavPath.length > 0
     ? catalogNavPath[catalogNavPath.length - 1].url
@@ -360,40 +358,13 @@ const CatalogView: React.FC<CatalogViewProps> = ({
 
   const displayNavigationLinks = useMemo(() => {
     if (!currentUrl) return navigationLinks;
-    const filtered = navigationLinks.filter((link) => link.url !== currentUrl);
+    const filtered = navigationLinks.filter((link) => {
+      if (link.url === currentUrl) return false;
+      if (isPalaceHost(activeOpdsSource?.url || '') && isUnsupportedPalaceLoansLink(link.title, link.url, link.rel, link.type)) return false;
+      return true;
+    });
     return filtered.length > 0 ? filtered : navigationLinks;
-  }, [currentUrl, navigationLinks]);
-  const palaceFacetLaneLinks = useMemo(() => (
-    normalizedFacetGroups.flatMap((group) => group.links.map((link) => ({
-      title: link.title,
-      url: link.url,
-      rel: link.rel || 'facet',
-      type: link.type,
-      source: 'compat' as const,
-      isCatalog: false,
-    })))
-  ), [normalizedFacetGroups]);
-  const palaceLaneLinks = useMemo(() => (
-    (() => {
-      const filteredNavigation = displayNavigationLinks.filter((link) => {
-        const rel = (link.rel || '').toLowerCase();
-        if (!link.url || !link.title) return false;
-        if (isPalaceHost(activeOpdsSource?.url || '') && isUnsupportedPalaceLoansLink(link.title, link.url, link.rel, link.type)) return false;
-        return !(rel.includes('start') || rel === 'up' || rel.endsWith('/up'));
-      });
-      if (filteredNavigation.length > 0) {
-        return filteredNavigation;
-      }
-
-      const seen = new Set<string>();
-      return palaceFacetLaneLinks.filter((link) => {
-        if (!link.url || !link.title) return false;
-        if (seen.has(link.url)) return false;
-        seen.add(link.url);
-        return true;
-      });
-    })()
-  ), [activeOpdsSource?.url, displayNavigationLinks, palaceFacetLaneLinks]);
+  }, [activeOpdsSource?.url, currentUrl, navigationLinks]);
   const searchTemplateParams = resolvedSearch?.activeTemplate?.params || [];
   const primarySearchParam = searchTemplateParams.find((param) => param.name === 'searchTerms')
     || searchTemplateParams.find((param) => param.name === 'query')
@@ -418,53 +389,8 @@ const CatalogView: React.FC<CatalogViewProps> = ({
     || availablePublicationTypes.length > 1
     || availableAvailabilityModes.length > 1
     || availableDistributors.length > 1;
-  const usePalaceSwimLanes = isPalaceHost(activeOpdsSource?.url || '')
-    && palaceLaneLinks.length > 0
-    && !activeSearchQuery;
-
-  useEffect(() => {
-    if (!usePalaceSwimLanes) {
-      setRequestedLaneUrls([]);
-      return;
-    }
-
-    setRequestedLaneUrls((prev) => {
-      const seed = palaceLaneLinks.slice(0, 2).map((link) => link.url);
-      const merged = new Set([...seed, ...prev.filter((url) => palaceLaneLinks.some((link) => link.url === url))]);
-      return Array.from(merged);
-    });
-  }, [palaceLaneLinks, usePalaceSwimLanes]);
-
-  const {
-    lanePreviews,
-    isLoading: isLanePreviewsLoading,
-    hasAnyBooks: hasLanePreviewBooks,
-  } = usePalaceLanePreviews({
-    enabled: usePalaceSwimLanes,
-    links: palaceLaneLinks,
-    baseUrl: activeOpdsSource?.url || '',
-    requestedUrls: requestedLaneUrls,
-  });
   const hasSidebarContent = displayNavigationLinks.length > 0
     || normalizedFacetGroups.some((group) => group.links.length > 0);
-
-  useEffect(() => {
-    if (!usePalaceSwimLanes || isLanePreviewsLoading) {
-      return;
-    }
-
-    const nextUnrequestedLane = palaceLaneLinks.find((link) => !requestedLaneUrls.includes(link.url));
-    if (!nextUnrequestedLane) {
-      return;
-    }
-
-    setRequestedLaneUrls((prev) => {
-      if (prev.includes(nextUnrequestedLane.url)) {
-        return prev;
-      }
-      return [...prev, nextUnrequestedLane.url];
-    });
-  }, [isLanePreviewsLoading, palaceLaneLinks, requestedLaneUrls, usePalaceSwimLanes]);
 
   useEffect(() => {
     if (activeSearchQuery || searchActionError || searchError) {
@@ -495,37 +421,7 @@ const CatalogView: React.FC<CatalogViewProps> = ({
 
   const hasBooks = catalogBooks.length > 0;
   const hasOriginalBooks = originalCatalogBooks.length > 0;
-  const shouldShowPalaceLanes = usePalaceSwimLanes && (lanePreviews.length > 0 || isLanePreviewsLoading || hasLanePreviewBooks);
-  const isEmptyFeed = !hasOriginalBooks && !hasSidebarContent && !shouldShowPalaceLanes;
-  const requestLanePreview = (link: CatalogNavigationLink) => {
-    setRequestedLaneUrls((prev) => {
-      const targetIndex = palaceLaneLinks.findIndex((candidate) => candidate.url === link.url);
-      if (targetIndex === -1) {
-        return prev.includes(link.url) ? prev : [...prev, link.url];
-      }
-
-      const orderedUrls = palaceLaneLinks.slice(0, targetIndex + 1).map((candidate) => candidate.url);
-      const retainedPrev = prev.filter((url) => palaceLaneLinks.some((candidate) => candidate.url === url));
-      const nextUrls = Array.from(new Set([...orderedUrls, ...retainedPrev]));
-      if (nextUrls.length === prev.length && nextUrls.every((url, index) => prev[index] === url)) {
-        return prev;
-      }
-      return nextUrls;
-    });
-  };
-  const handleLaneOpen = (link: CatalogNavigationLink) => {
-    if (link.source === 'compat') {
-      const facetLink = normalizedFacetGroups
-        .flatMap((group) => group.links)
-        .find((candidate) => candidate.url === link.url && candidate.title === link.title);
-      if (facetLink) {
-        handleFacetSelect(facetLink);
-        return;
-      }
-    }
-
-    handleNavigationSelect(link);
-  };
+  const isEmptyFeed = !hasOriginalBooks && !hasSidebarContent;
 
   return (
     <div className="flex flex-col lg:flex-row gap-6">
@@ -626,25 +522,7 @@ const CatalogView: React.FC<CatalogViewProps> = ({
           />
         )}
 
-        {shouldShowPalaceLanes ? (
-          <div>
-            {lanePreviews.map((lane) => (
-              <CatalogSwimLane
-                key={lane.link.url}
-                laneTitle={lane.link.title}
-                laneLink={lane.link}
-                books={lane.books}
-                isLoading={lane.isLoading}
-                error={lane.error}
-                hasFetched={lane.hasFetched}
-                hasChildNavigation={lane.hasChildNavigation}
-                onRequestPreview={requestLanePreview}
-                onOpenLane={handleLaneOpen}
-                onBookClick={handleCatalogBookClick}
-              />
-            ))}
-          </div>
-        ) : isEmptyFeed ? (
+        {isEmptyFeed ? (
           <EmptyState variant="catalog" />
         ) : hasBooks ? (
           <BookGrid
