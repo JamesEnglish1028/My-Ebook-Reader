@@ -136,7 +136,7 @@ const CatalogFilters: React.FC<CatalogFiltersProps> = ({
                       key={option.key}
                       onClick={() => onAudienceChange(option.key)}
                       className={`rounded-full px-2.5 py-1 text-xs font-medium transition-colors ${audienceMode === option.key
-                        ? 'bg-sky-500/20 text-sky-100 ring-1 ring-sky-500/40'
+                        ? 'theme-nav-link-active border'
                         : 'theme-pill theme-hover-surface'
                       }`}
                     >

@@ -181,7 +181,7 @@ const CatalogSidebar: React.FC<CatalogSidebarProps> = ({
                             <button
                               ref={viewAllButtonRef}
                               onClick={openNavigationModal}
-                              className="rounded-md border border-sky-500/30 bg-sky-500/10 px-2.5 py-1.5 text-xs font-medium text-sky-200 transition-colors hover:bg-sky-500/20"
+                              className="theme-nav-link rounded-md border px-2.5 py-1.5 text-xs font-medium transition-colors"
                             >
                               View all ({filteredNavigationLinks.length})
                             </button>

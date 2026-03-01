@@ -55,11 +55,11 @@ const CatalogNavigation: React.FC<CatalogNavigationProps> = ({
   }, [isLoading, pagination]);
 
   return (
-    <>
+    <div className={(showBreadcrumbs || paginationSummary || showPagination) ? 'mb-5 space-y-4' : undefined}>
       {showBreadcrumbs && (
         <nav
           aria-label="breadcrumb"
-          className="theme-surface theme-border theme-text-secondary mb-4 flex flex-wrap items-center gap-y-1 rounded-lg border px-3 py-2 text-sm"
+          className="theme-surface theme-border theme-text-secondary flex flex-wrap items-center gap-y-1 rounded-lg border px-3 py-2 text-sm"
         >
           {navPath.map((item, index) => (
             <React.Fragment key={index}>
@@ -82,7 +82,7 @@ const CatalogNavigation: React.FC<CatalogNavigationProps> = ({
       )}
 
       {(paginationSummary || showPagination) && (
-        <div className="mt-6 space-y-3">
+        <div className="space-y-3">
           {paginationSummary && (
             <p className="theme-text-secondary text-sm" aria-live="polite">
               {paginationSummary}
@@ -133,7 +133,7 @@ const CatalogNavigation: React.FC<CatalogNavigationProps> = ({
           )}
         </div>
       )}
-    </>
+    </div>
   );
 };
 
