@@ -351,8 +351,10 @@ const BookDetailView: React.FC<BookDetailViewProps> = ({ book, onBack, source, c
           )}
         </div>
         {/* Book Details Section (accessibility, provider) INSIDE container */}
-        <div className="theme-surface-elevated theme-border space-y-6 rounded-lg border p-6 md:mb-4 md:mr-6 md:mt-4 md:p-8">
-          <h3 className="theme-text-primary mb-4 text-xl font-bold">Book Details</h3>
+        <div className="md:mb-4 md:mr-6 md:mt-4">
+          <h3 className="theme-text-primary mb-3 text-xl font-bold">Book Details</h3>
+          <div className="theme-divider mb-5 border-t" />
+          <div className="theme-surface-elevated rounded-lg p-6 md:p-8">
           <ul className="space-y-2 text-base">
             <li>
               <span className="theme-text-primary font-semibold">Catalog Provider:</span> <span className="theme-text-secondary">{bookAny.providerName || (source === 'catalog' ? catalogName : 'Imported locally')}</span>
@@ -399,6 +401,7 @@ const BookDetailView: React.FC<BookDetailViewProps> = ({ book, onBack, source, c
               </li>
             )}
           </ul>
+          </div>
         </div>
       </div>
     </div>
