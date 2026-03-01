@@ -13,8 +13,8 @@ import type {
 // Query keys for catalog content
 export const catalogKeys = {
   all: ['catalogs'] as const,
-  content: (url: string, baseUrl: string, opdsVersion: string) =>
-    ['catalogs', 'content', url, baseUrl, opdsVersion] as const,
+  content: (url: string, baseUrl: string, opdsVersion: string, authKey: string) =>
+    ['catalogs', 'content', url, baseUrl, opdsVersion, authKey] as const,
 };
 
 interface CatalogContentResult {
@@ -50,9 +50,11 @@ export function useCatalogContent(
   baseUrl: string,
   opdsVersion: 'auto' | '1' | '2' = 'auto',
   enabled: boolean = true,
+  credentials?: { username: string; password: string } | null,
+  authKey: string = '',
 ) {
   return useQuery({
-    queryKey: catalogKeys.content(url || '', baseUrl, opdsVersion),
+    queryKey: catalogKeys.content(url || '', baseUrl, opdsVersion, authKey),
     queryFn: async (): Promise<CatalogContentResult> => {
       if (!url) {
         return {
@@ -67,7 +69,7 @@ export function useCatalogContent(
 
       logger.debug(`[useCatalogContent] Fetching: ${url}`);
 
-      const result = await opdsParserService.fetchCatalog(url, baseUrl, opdsVersion);
+      const result = await opdsParserService.fetchCatalog(url, baseUrl, opdsVersion, credentials);
       if (!result.success) {
         return {
           books: [],

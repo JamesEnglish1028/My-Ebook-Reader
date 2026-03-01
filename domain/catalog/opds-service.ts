@@ -51,6 +51,7 @@ export class OPDSParserService {
     url: string,
     baseUrl: string,
     opdsVersion: OPDSVersion = 'auto',
+    credentials?: { username: string; password: string } | null,
   ): Promise<ParserResult<ParsedCatalog>> {
     try {
       const hostname = (() => {
@@ -70,7 +71,7 @@ export class OPDSParserService {
         hostname.endsWith('.thepalaceproject.org');
 
       const forcedVersion: OPDSVersion = isPalaceHost ? '1' : opdsVersion;
-      const result = await fetchCatalogContent(url, baseUrl, forcedVersion);
+      const result = await fetchCatalogContent(url, baseUrl, forcedVersion, credentials);
 
       if (result.error) {
         return { success: false, error: result.error };

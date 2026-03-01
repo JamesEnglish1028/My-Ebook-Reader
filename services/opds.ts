@@ -297,24 +297,7 @@ export const parseOpds1Xml = (xmlText: string, baseUrl: string): { books: Catalo
     const navLinkKeys = new Set<string>();
     const bookIndexes = new Map<string, number>();
     const palaceFeed = isPalaceHost(baseUrl);
-    const isUnsupportedPalaceBookshelfLink = (link: CatalogNavigationLink): boolean => {
-        if (!palaceFeed) return false;
-
-        const title = link.title.trim().toLowerCase();
-        const rel = (link.rel || '').toLowerCase();
-        const type = (link.type || '').toLowerCase();
-        if (title !== 'loans') {
-            return false;
-        }
-
-        return rel.includes('acquisition')
-            || rel.includes('loan')
-            || type.includes('kind=acquisition')
-            || type.includes('profile=opds-catalog');
-    };
-
     const addNavLink = (link: CatalogNavigationLink) => {
-        if (isUnsupportedPalaceBookshelfLink(link)) return;
         const key = `${link.rel}|${link.url}`;
         if (navLinkKeys.has(key)) return;
         navLinkKeys.add(key);
@@ -687,7 +670,12 @@ const getProxy403Message = (url: string, headers: Headers, contentType: string, 
 };
 
 
-export const fetchCatalogContent = async (url: string, baseUrl: string, forcedVersion: 'auto' | '1' | '2' = 'auto'): Promise<{ books: CatalogBook[], navLinks: CatalogNavigationLink[], facetGroups: CatalogFacetGroup[], pagination: CatalogPagination, search?: CatalogSearchMetadata, error?: string }> => {
+export const fetchCatalogContent = async (
+    url: string,
+    baseUrl: string,
+    forcedVersion: 'auto' | '1' | '2' = 'auto',
+    credentials?: { username: string; password: string } | null,
+): Promise<{ books: CatalogBook[], navLinks: CatalogNavigationLink[], facetGroups: CatalogFacetGroup[], pagination: CatalogPagination, search?: CatalogSearchMetadata, error?: string }> => {
     try {
         // Resolve relative links against the actual feed URL, not the catalog root.
         // For direct fetches that follow redirects, prefer the final response URL.
@@ -723,13 +711,18 @@ export const fetchCatalogContent = async (url: string, baseUrl: string, forcedVe
         logger.debug('fetchCatalogContent fetch details', { fetchUrl, acceptHeader });
         // Determine whether this is a direct fetch (so we can include credentials)
         const isDirectFetch = fetchUrl === url;
+        const requestHeaders: Record<string, string> = {
+            'Accept': acceptHeader,
+        };
+        if (credentials) {
+            requestHeaders.Authorization = `Basic ${btoa(`${credentials.username}:${credentials.password}`)}`;
+        }
+
         const response = await fetch(fetchUrl, {
             method: 'GET',
             mode: 'cors',
             credentials: isDirectFetch ? 'include' : 'omit',
-            headers: {
-                'Accept': acceptHeader,
-            },
+            headers: requestHeaders,
         });
 
         // Diagnostic: log the initial response status and Content-Type as observed
@@ -749,9 +742,7 @@ export const fetchCatalogContent = async (url: string, baseUrl: string, forcedVe
             const proxyFetchUrl = proxiedUrl(url);
             const proxiedResp = await fetch(proxyFetchUrl, {
                 method: 'GET',
-                headers: {
-                    'Accept': acceptHeader,
-                },
+                headers: requestHeaders,
             });
             // Replace response with proxied response for parsing below
             if (proxiedResp) {
@@ -818,7 +809,9 @@ export const fetchCatalogContent = async (url: string, baseUrl: string, forcedVe
             const statusInfo = `${response.status}${response.statusText ? ` ${response.statusText}` : ''}`;
             let errorMessage = `The catalog server responded with an error (${statusInfo}). Please check the catalog URL.`;
             if (response.status === 401 || (response.status === 403 && isDirectFetch)) {
-                errorMessage = `Could not access catalog (${statusInfo}). This catalog requires authentication (a login or password), which is not supported by this application.`;
+                errorMessage = credentials
+                    ? `Could not access catalog (${statusInfo}). The provided catalog credentials were rejected. Please verify your barcode and PIN.`
+                    : `Could not access catalog (${statusInfo}). This catalog requires authentication before it can be opened.`;
             }
             if (response.status === 403 && !isDirectFetch) {
                 const contentType = response.headers.get('Content-Type') || '';

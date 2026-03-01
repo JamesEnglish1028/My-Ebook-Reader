@@ -15,9 +15,30 @@ interface Props {
   onRetry?: () => void;
   // Optional URL to probe for direct access (prefer this over probing the auth link)
   probeUrl?: string | null;
+  usernameLabel?: string;
+  passwordLabel?: string;
+  usernamePlaceholder?: string;
+  passwordPlaceholder?: string;
+  descriptionOverride?: string;
+  saveLabel?: string;
 }
 
-const OpdsCredentialsModal: React.FC<Props> = ({ isOpen, host, authDocument, onClose, onSubmit, onOpenAuthLink, onRetry, probeUrl }) => {
+const OpdsCredentialsModal: React.FC<Props> = ({
+  isOpen,
+  host,
+  authDocument,
+  onClose,
+  onSubmit,
+  onOpenAuthLink,
+  onRetry,
+  probeUrl,
+  usernameLabel,
+  passwordLabel,
+  usernamePlaceholder,
+  passwordPlaceholder,
+  descriptionOverride,
+  saveLabel,
+}) => {
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
   const [save, setSave] = useState(false);
@@ -66,6 +87,14 @@ const OpdsCredentialsModal: React.FC<Props> = ({ isOpen, host, authDocument, onC
   const description = authDocument?.description || authDocument?.instructions || null;
   const logo = authDocument?.logo || authDocument?.image || null;
   const links: any[] = Array.isArray(authDocument?.links) ? authDocument.links : [];
+  const resolvedDescription = descriptionOverride
+    || description
+    || `This catalog at ${host} requires credentials to access the requested content.`;
+  const resolvedUsernameLabel = usernameLabel || 'Username';
+  const resolvedPasswordLabel = passwordLabel || 'Password';
+  const resolvedUsernamePlaceholder = usernamePlaceholder || authDocument?.username_placeholder || 'Username';
+  const resolvedPasswordPlaceholder = passwordPlaceholder || authDocument?.password_placeholder || 'Password';
+  const resolvedSaveLabel = saveLabel || 'Save credential for this host';
   return (
     <div className="theme-shell fixed inset-0 z-50 flex items-center justify-center bg-opacity-75 p-4">
       <div ref={modalRef} className="theme-surface-elevated theme-border theme-text-primary w-full max-w-md rounded-lg border p-6">
@@ -73,7 +102,7 @@ const OpdsCredentialsModal: React.FC<Props> = ({ isOpen, host, authDocument, onC
           {logo && <img src={logo} alt="provider logo" className="w-12 h-12 object-contain" />}
           <div>
             <h3 className="text-lg font-semibold">{realmFromAuth ? `Login to ${realmFromAuth}` : 'Authentication required'}</h3>
-            <p className="theme-text-secondary text-sm">This catalog at <span className="font-mono">{host}</span> requires credentials to access the requested content.</p>
+            <p className="theme-text-secondary text-sm">{resolvedDescription}</p>
           </div>
 
           {/* Polling status and auto-retry */}
@@ -177,18 +206,18 @@ const OpdsCredentialsModal: React.FC<Props> = ({ isOpen, host, authDocument, onC
           </div>
         )}
 
-        <label htmlFor="opds-username" className="theme-text-secondary mb-1 block text-sm">Username</label>
-        <input id="opds-username" aria-label="username" placeholder={authDocument?.username_placeholder || 'Username'} value={username} onChange={(e) => setUsername(e.target.value)} className="theme-input mb-3 w-full rounded border p-2" />
+        <label htmlFor="opds-username" className="theme-text-secondary mb-1 block text-sm">{resolvedUsernameLabel}</label>
+        <input id="opds-username" aria-label="username" placeholder={resolvedUsernamePlaceholder} value={username} onChange={(e) => setUsername(e.target.value)} className="theme-input mb-3 w-full rounded border p-2" />
 
-        <label htmlFor="opds-password" className="theme-text-secondary mb-1 block text-sm">Password</label>
-        <input id="opds-password" aria-label="password" placeholder={authDocument?.password_placeholder || 'Password'} type="password" value={password} onChange={(e) => setPassword(e.target.value)} className="theme-input mb-3 w-full rounded border p-2" />
+        <label htmlFor="opds-password" className="theme-text-secondary mb-1 block text-sm">{resolvedPasswordLabel}</label>
+        <input id="opds-password" aria-label="password" placeholder={resolvedPasswordPlaceholder} type="password" value={password} onChange={(e) => setPassword(e.target.value)} className="theme-input mb-3 w-full rounded border p-2" />
 
         {authDocument?.username_hint && <div className="theme-text-muted mb-2 text-xs">Hint: {authDocument.username_hint}</div>}
         {authDocument?.password_hint && <div className="theme-text-muted mb-2 text-xs">Password: {authDocument.password_hint}</div>}
 
         <div className="flex items-center gap-2 mb-4">
           <input id="saveCred" type="checkbox" checked={save} onChange={(e) => setSave(e.target.checked)} />
-          <label htmlFor="saveCred" className="theme-text-secondary text-sm">Save credential for this host</label>
+          <label htmlFor="saveCred" className="theme-text-secondary text-sm">{resolvedSaveLabel}</label>
         </div>
 
         <div className="flex justify-end gap-2">

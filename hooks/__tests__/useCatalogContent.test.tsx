@@ -34,7 +34,7 @@ describe('useCatalogContent', () => {
     );
     const { result } = renderHook(() => useCatalogContent('url', 'base', 'auto'), { wrapper });
     await waitFor(() => expect(result.current.data).toBeDefined());
-    expect(opdsParserService.fetchCatalog).toHaveBeenCalledWith('url', 'base', 'auto');
+    expect(opdsParserService.fetchCatalog).toHaveBeenCalledWith('url', 'base', 'auto', undefined);
     expect(result.current.data?.books[0].title).toBe('Book 1');
     expect(result.current.data?.navigationLinks).toEqual([]);
     expect(result.current.data?.facetGroups).toEqual([]);

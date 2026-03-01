@@ -1,7 +1,7 @@
 import React, { useEffect, useMemo, useState } from 'react';
 
 import { useCatalogContent, useResolvedCatalogSearch } from '../../../hooks';
-import { buildOpenSearchUrl } from '../../../services';
+import { buildOpenSearchUrl, findCredentialForUrl, saveOpdsCredential } from '../../../services';
 import {
   filterBooksByAudience,
   filterBooksByAvailability,
@@ -31,6 +31,7 @@ import type {
   CatalogSearchMetadata,
   CatalogSearchTemplateParameter,
 } from '../../../types';
+import OpdsCredentialsModal from '../../OpdsCredentialsModal';
 import { Error as ErrorDisplay, Loading } from '../../shared';
 import { AdjustmentsVerticalIcon, SearchIcon } from '../../icons';
 import { CatalogFilters, CatalogNavigation, CatalogSearch, CatalogSidebar } from '../catalog';
@@ -64,7 +65,7 @@ const isUnsupportedPalaceLoansLink = (
   type?: string,
 ): boolean => {
   const normalizedTitle = (title || '').trim().toLowerCase();
-  if (normalizedTitle !== 'loans') return false;
+  if (normalizedTitle !== 'loans' && normalizedTitle !== 'my loans') return false;
 
   const normalizedUrl = (url || '').toLowerCase();
   const normalizedRel = (rel || '').toLowerCase();
@@ -76,6 +77,43 @@ const isUnsupportedPalaceLoansLink = (
     || normalizedType.includes('kind=acquisition')
     || normalizedType.includes('profile=opds-catalog');
 };
+
+const getHostFromUrl = (url: string | null | undefined): string | null => {
+  if (!url) return null;
+  try {
+    return new URL(url).host;
+  } catch {
+    return null;
+  }
+};
+
+const isPalaceLoansLink = (
+  sourceUrl: string | undefined,
+  title: string | undefined,
+  url: string | undefined,
+  rel?: string,
+  type?: string,
+): boolean => isPalaceHost(sourceUrl || '') && isUnsupportedPalaceLoansLink(title, url, rel, type);
+
+const getDisplayLinkTitle = (
+  sourceUrl: string | undefined,
+  title: string | undefined,
+  url: string | undefined,
+  rel?: string,
+  type?: string,
+): string => (
+  isPalaceLoansLink(sourceUrl, title, url, rel, type) ? 'My Loans' : (title || '')
+);
+
+type PendingLoansTarget =
+  | { kind: 'navigation'; link: CatalogNavigationLink }
+  | { kind: 'facet'; link: CatalogFacetLink };
+
+interface SessionCredentialState {
+  username: string;
+  password: string;
+  version: number;
+}
 
 const CatalogView: React.FC<CatalogViewProps> = ({
   activeOpdsSource,
@@ -99,6 +137,8 @@ const CatalogView: React.FC<CatalogViewProps> = ({
   const [searchActionError, setSearchActionError] = useState<string | null>(null);
   const [isSearchOpen, setIsSearchOpen] = useState(false);
   const [isFiltersOpen, setIsFiltersOpen] = useState(false);
+  const [sessionCredentialsByHost, setSessionCredentialsByHost] = useState<Record<string, SessionCredentialState>>({});
+  const [pendingLoansTarget, setPendingLoansTarget] = useState<PendingLoansTarget | null>(null);
 
   const currentUrl = catalogNavPath.length > 0
     ? catalogNavPath[catalogNavPath.length - 1].url
@@ -107,6 +147,14 @@ const CatalogView: React.FC<CatalogViewProps> = ({
   const opdsVersion = (activeOpdsSource && 'opdsVersion' in activeOpdsSource)
     ? (activeOpdsSource as any).opdsVersion || 'auto'
     : 'auto';
+  const currentHost = getHostFromUrl(currentUrl);
+  const currentSessionCredentials = currentHost ? sessionCredentialsByHost[currentHost] : undefined;
+  const currentAuthCredentials = currentSessionCredentials
+    ? { username: currentSessionCredentials.username, password: currentSessionCredentials.password }
+    : null;
+  const currentAuthKey = currentHost && currentSessionCredentials
+    ? `${currentHost}:${currentSessionCredentials.version}`
+    : '';
 
   useEffect(() => {
     setCatalogBooks([]);
@@ -126,6 +174,8 @@ const CatalogView: React.FC<CatalogViewProps> = ({
     activeOpdsSource?.url || '',
     opdsVersion,
     !!activeOpdsSource,
+    currentAuthCredentials,
+    currentAuthKey,
   );
 
   const originalCatalogBooks = catalogData?.books || [];
@@ -300,7 +350,7 @@ const CatalogView: React.FC<CatalogViewProps> = ({
     setSearchAdvancedValues((prev) => ({ ...prev, [name]: value }));
   };
 
-  const handleNavigationSelect = (link: CatalogNavigationLink) => {
+  const applyNavigationSelect = (link: CatalogNavigationLink) => {
     setCatalogNavPath((prev) => {
       const rel = (link.rel || '').toLowerCase();
       const rootPath = prev.length > 0
@@ -331,7 +381,7 @@ const CatalogView: React.FC<CatalogViewProps> = ({
     setPageHistory([]);
   };
 
-  const handleFacetSelect = (link: CatalogFacetLink) => {
+  const applyFacetSelect = (link: CatalogFacetLink) => {
     setCatalogNavPath((prev) => {
       if (prev.length === 0) {
         return [{ name: link.title, url: link.url }];
@@ -344,26 +394,90 @@ const CatalogView: React.FC<CatalogViewProps> = ({
     setPageHistory([]);
   };
 
+  const primeSessionCredentials = (host: string, username: string, password: string) => {
+    setSessionCredentialsByHost((prev) => {
+      const prior = prev[host];
+      return {
+        ...prev,
+        [host]: {
+          username,
+          password,
+          version: (prior?.version || 0) + 1,
+        },
+      };
+    });
+  };
+
+  const handleLoansTargetSelect = async (target: PendingLoansTarget) => {
+    const host = getHostFromUrl(target.link.url);
+    if (!host) {
+      if (target.kind === 'navigation') {
+        applyNavigationSelect(target.link);
+      } else {
+        applyFacetSelect(target.link);
+      }
+      return;
+    }
+
+    const storedCredential = await findCredentialForUrl(target.link.url);
+    if (storedCredential) {
+      primeSessionCredentials(host, storedCredential.username, storedCredential.password);
+      if (target.kind === 'navigation') {
+        applyNavigationSelect(target.link);
+      } else {
+        applyFacetSelect(target.link);
+      }
+      return;
+    }
+
+    setPendingLoansTarget(target);
+  };
+
+  const handleNavigationSelect = (link: CatalogNavigationLink) => {
+    if (isPalaceLoansLink(activeOpdsSource?.url, link.title, link.url, link.rel, link.type)) {
+      void handleLoansTargetSelect({ kind: 'navigation', link });
+      return;
+    }
+
+    applyNavigationSelect(link);
+  };
+
+  const handleFacetSelect = (link: CatalogFacetLink) => {
+    if (isPalaceLoansLink(activeOpdsSource?.url, link.title, link.url, link.rel, link.type)) {
+      void handleLoansTargetSelect({ kind: 'facet', link });
+      return;
+    }
+
+    applyFacetSelect(link);
+  };
+
   const normalizedFacetGroups = useMemo(() => (
     facetGroups.map((group) => ({
       ...group,
-      links: group.links
-        .filter((link) => !(isPalaceHost(activeOpdsSource?.url || '') && isUnsupportedPalaceLoansLink(link.title, link.url, link.rel, link.type)))
-        .map((link) => ({
-          ...link,
-          isActive: link.isActive ?? link.url === currentUrl,
-        })),
+      links: group.links.map((link) => ({
+        ...link,
+        title: getDisplayLinkTitle(activeOpdsSource?.url, link.title, link.url, link.rel, link.type),
+        isActive: link.isActive ?? link.url === currentUrl,
+      })),
     }))
   ), [activeOpdsSource?.url, currentUrl, facetGroups]);
 
   const displayNavigationLinks = useMemo(() => {
     if (!currentUrl) return navigationLinks;
-    const filtered = navigationLinks.filter((link) => {
+    const filtered = navigationLinks
+      .filter((link) => {
       if (link.url === currentUrl) return false;
-      if (isPalaceHost(activeOpdsSource?.url || '') && isUnsupportedPalaceLoansLink(link.title, link.url, link.rel, link.type)) return false;
       return true;
-    });
-    return filtered.length > 0 ? filtered : navigationLinks;
+      })
+      .map((link) => ({
+        ...link,
+        title: getDisplayLinkTitle(activeOpdsSource?.url, link.title, link.url, link.rel, link.type),
+      }));
+    if (filtered.length > 0) return filtered;
+    return navigationLinks.map((link) => ({
+      ...link,
+      title: getDisplayLinkTitle(activeOpdsSource?.url, link.title, link.url, link.rel, link.type),
+    }));
   }, [activeOpdsSource?.url, currentUrl, navigationLinks]);
   const searchTemplateParams = resolvedSearch?.activeTemplate?.params || [];
   const primarySearchParam = searchTemplateParams.find((param) => param.name === 'searchTerms')
@@ -404,16 +518,18 @@ const CatalogView: React.FC<CatalogViewProps> = ({
     }
   }, [activeFilterCount]);
 
+  const serviceError = catalogData?.error || null;
+
   if (isLoading) {
     return <Loading variant="spinner" message="Loading catalog..." />;
   }
 
-  if (error) {
+  if (error || serviceError) {
     return (
       <ErrorDisplay
         variant="page"
         title="Failed to Load Catalog"
-        message={error?.message || 'Could not load catalog content.'}
+        message={error?.message || serviceError || 'Could not load catalog content.'}
         onRetry={() => refetch()}
       />
     );
@@ -425,7 +541,8 @@ const CatalogView: React.FC<CatalogViewProps> = ({
   const isEmptyFeed = !hasOriginalBooks && !hasSidebarContent;
 
   return (
-    <div className="flex flex-col lg:flex-row gap-6">
+    <>
+      <div className="flex flex-col lg:flex-row gap-6">
       {hasSidebarContent && (
         <aside className="order-2 w-full lg:order-1 lg:w-56 lg:flex-shrink-0">
           <CatalogSidebar
@@ -545,7 +662,44 @@ const CatalogView: React.FC<CatalogViewProps> = ({
           </div>
         ) : null}
       </main>
-    </div>
+      </div>
+
+      <OpdsCredentialsModal
+        isOpen={!!pendingLoansTarget}
+        host={pendingLoansTarget ? getHostFromUrl(pendingLoansTarget.link.url) : null}
+        onClose={() => setPendingLoansTarget(null)}
+        onSubmit={(username, password, save) => {
+          if (!pendingLoansTarget) return;
+          const host = getHostFromUrl(pendingLoansTarget.link.url);
+          if (!host) {
+            setPendingLoansTarget(null);
+            return;
+          }
+
+          primeSessionCredentials(host, username, password);
+          if (save) {
+            saveOpdsCredential(host, username, password);
+          }
+
+          const target = pendingLoansTarget;
+          setPendingLoansTarget(null);
+          if (target.kind === 'navigation') {
+            applyNavigationSelect(target.link);
+          } else {
+            applyFacetSelect(target.link);
+          }
+        }}
+        usernameLabel="Library Card / Barcode"
+        passwordLabel="PIN"
+        usernamePlaceholder="Library card or barcode"
+        passwordPlaceholder="PIN"
+        descriptionOverride={pendingLoansTarget
+          ? `Enter your library card and PIN for ${getHostFromUrl(pendingLoansTarget.link.url)} to open your loans feed.`
+          : undefined}
+        saveLabel="Save credential for this Palace catalog"
+        probeUrl={pendingLoansTarget?.link.url || null}
+      />
+    </>
   );
 };
 

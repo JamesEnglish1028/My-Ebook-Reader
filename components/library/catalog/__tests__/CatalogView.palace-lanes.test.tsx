@@ -1,10 +1,20 @@
 import React from 'react';
 
-import { fireEvent, render, screen } from '@testing-library/react';
+import { fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { describe, expect, it, vi } from 'vitest';
 
 import { useCatalogContent, useResolvedCatalogSearch } from '../../../../hooks';
+import { findCredentialForUrl } from '../../../../services';
 import CatalogView from '../CatalogView';
+
+vi.mock('../../../../services', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('../../../../services')>();
+  return {
+    ...actual,
+    findCredentialForUrl: vi.fn(),
+    saveOpdsCredential: vi.fn(),
+  };
+});
 
 vi.mock('../../../../hooks', async (importOriginal) => {
   const actual = await importOriginal<typeof import('../../../../hooks')>();
@@ -77,7 +87,7 @@ describe('CatalogView Palace feeds', () => {
     expect(setCatalogNavPath).toHaveBeenCalledTimes(1);
   });
 
-  it('suppresses unsupported Palace Loans links from sidebar navigation and facets', () => {
+  it('renames Palace Loans to My Loans and prompts for credentials before opening it', async () => {
     const palaceCatalog = {
       id: 'palace-1',
       name: 'Palace Catalog',
@@ -128,6 +138,7 @@ describe('CatalogView Palace feeds', () => {
       error: null,
       refetch: vi.fn(),
     } as any);
+    vi.mocked(findCredentialForUrl).mockResolvedValue(undefined);
 
     vi.mocked(useResolvedCatalogSearch).mockReturnValue({
       data: null,
@@ -135,16 +146,22 @@ describe('CatalogView Palace feeds', () => {
       error: null,
     } as any);
 
+    const setCatalogNavPath = vi.fn();
+
     render(
       <CatalogView
         activeOpdsSource={palaceCatalog as any}
         catalogNavPath={[{ name: palaceCatalog.name, url: palaceCatalog.url }]}
-        setCatalogNavPath={vi.fn()}
+        setCatalogNavPath={setCatalogNavPath}
         onShowBookDetail={vi.fn()}
       />,
     );
 
-    expect(screen.queryByRole('button', { name: 'Loans' })).not.toBeInTheDocument();
+    fireEvent.click(screen.getAllByRole('button', { name: 'My Loans' })[0]);
+
+    await waitFor(() => expect(findCredentialForUrl).toHaveBeenCalledWith('https://demo.palaceproject.io/loans'));
+    expect(setCatalogNavPath).not.toHaveBeenCalled();
+    expect(screen.getAllByRole('button', { name: 'My Loans' })).toHaveLength(2);
     expect(screen.getAllByRole('button', { name: 'Fiction' })).toHaveLength(2);
   });
 });

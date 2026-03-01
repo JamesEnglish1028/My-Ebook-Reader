@@ -269,7 +269,7 @@ describe('OPDS1 parseOpds1Xml', () => {
     });
   });
 
-  it('suppresses unsupported Palace Loans bookshelf links', () => {
+  it('keeps Palace Loans bookshelf links available for authenticated access', () => {
     const xml = `<?xml version="1.0" encoding="UTF-8"?>
 <feed xmlns="http://www.w3.org/2005/Atom">
   <title>Palace Feed</title>
@@ -287,11 +287,13 @@ describe('OPDS1 parseOpds1Xml', () => {
 
     const result = parseOpds1Xml(xml, 'https://demo.palaceproject.io/catalog');
 
-    expect(result.navLinks).not.toContainEqual(
-      expect.objectContaining({
-        title: 'Loans',
-      }),
-    );
+    expect(result.navLinks).toContainEqual({
+      title: 'Loans',
+      url: 'https://demo.palaceproject.io/loans',
+      rel: 'acquisition',
+      type: 'application/atom+xml;profile=opds-catalog;kind=acquisition',
+      source: 'navigation',
+    });
     expect(result.navLinks).toContainEqual({
       title: 'Fiction',
       url: 'https://demo.palaceproject.io/groups/fiction',
