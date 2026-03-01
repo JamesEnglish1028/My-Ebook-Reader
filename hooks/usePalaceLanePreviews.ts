@@ -15,7 +15,6 @@ interface UsePalaceLanePreviewsOptions {
 const DEFAULT_PREVIEW_BOOKS = 10;
 const MAX_CONCURRENT_PREVIEW_FETCHES = 3;
 const PALACE_PREVIEW_ACCEPT_HEADER = 'application/atom+xml;profile=opds-catalog, application/opds+json;q=0.9, application/xml, text/xml, application/json;q=0.8, */*;q=0.5';
-const PREVIEW_CACHE_TTL_MS = 5 * 60 * 1000;
 
 const isPalaceHost = (url: string): boolean => {
   try {
@@ -42,11 +41,8 @@ const isCrossOriginWithoutProxy = (url: string): boolean => {
   }
 };
 
-const isStalePreview = (preview?: CatalogLanePreview): boolean => {
-  if (!preview?.hasFetched) return true;
-  if (!preview.fetchedAt) return true;
-  return (Date.now() - preview.fetchedAt) >= PREVIEW_CACHE_TTL_MS;
-};
+const hasStablePreviewSnapshot = (preview?: CatalogLanePreview): boolean =>
+  Boolean(preview && (preview.books.length > 0 || preview.hasChildNavigation));
 
 export function usePalaceLanePreviews({
   enabled,
@@ -101,7 +97,11 @@ export function usePalaceLanePreviews({
     const linksToFetch = normalizedLinks.filter((link) => {
       if (!requestedUrlSet.has(link.url)) return false;
       const existing = lanePreviewMapRef.current[link.url];
-      return !existing || (!existing.isLoading && isStalePreview(existing));
+      if (!existing) return true;
+      if (existing.isLoading) return false;
+      if (!existing.hasFetched) return true;
+      if (hasStablePreviewSnapshot(existing)) return false;
+      return true;
     });
 
     if (linksToFetch.length === 0) {
@@ -142,7 +142,6 @@ export function usePalaceLanePreviews({
             isLoading: false,
             error: 'Preview unavailable: Palace lane previews need a configured CORS proxy for this feed.',
             hasFetched: true,
-            fetchedAt: Date.now(),
           };
         }
 
@@ -164,7 +163,6 @@ export function usePalaceLanePreviews({
                 isLoading: false,
                 error: `Preview unavailable: proxy request failed (${response.status}).`,
                 hasFetched: true,
-                fetchedAt: Date.now(),
               };
             }
 
@@ -178,7 +176,6 @@ export function usePalaceLanePreviews({
                 isLoading: false,
                 error: parsed.error,
                 hasFetched: true,
-                fetchedAt: Date.now(),
               };
             }
 
@@ -188,7 +185,6 @@ export function usePalaceLanePreviews({
               isLoading: false,
               hasFetched: true,
               hasChildNavigation: parsed.data.navigationLinks.length > 0,
-              fetchedAt: Date.now(),
             };
           } catch (error) {
             return {
@@ -197,7 +193,6 @@ export function usePalaceLanePreviews({
               isLoading: false,
               error: error instanceof Error ? error.message : 'Preview unavailable.',
               hasFetched: true,
-              fetchedAt: Date.now(),
             };
           }
         }
@@ -211,7 +206,6 @@ export function usePalaceLanePreviews({
             isLoading: false,
             error: result.error,
             hasFetched: true,
-            fetchedAt: Date.now(),
           };
         }
 
@@ -221,7 +215,6 @@ export function usePalaceLanePreviews({
           isLoading: false,
           hasFetched: true,
           hasChildNavigation: result.data.navigationLinks.length > 0,
-          fetchedAt: Date.now(),
         };
       };
 
@@ -246,6 +239,21 @@ export function usePalaceLanePreviews({
       setLanePreviewMap((prev) => {
         const next = { ...prev };
         results.forEach((lane) => {
+          const previous = next[lane.link.url];
+          if (
+            previous
+            && previous.books.length > 0
+            && lane.books.length === 0
+          ) {
+            next[lane.link.url] = {
+              ...previous,
+              isLoading: false,
+              error: undefined,
+              hasFetched: true,
+            };
+            return;
+          }
+
           next[lane.link.url] = lane;
         });
         return next;

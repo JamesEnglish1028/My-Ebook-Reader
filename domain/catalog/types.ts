@@ -122,7 +122,6 @@ export interface CatalogLanePreview {
   error?: string;
   hasFetched?: boolean;
   hasChildNavigation?: boolean;
-  fetchedAt?: number;
 }
 
 /**
