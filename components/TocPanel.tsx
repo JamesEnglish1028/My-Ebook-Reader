@@ -91,7 +91,7 @@ const TocListItem: React.FC<{ item: TocItem; onNavigate: (href: string) => void;
     const hasSubitems = !!(item.subitems && item.subitems.length > 0);
 
     const isTopLevel = level === 0;
-    const typographyClasses = isTopLevel ? 'font-semibold text-slate-200' : 'font-normal text-slate-300';
+    const typographyClasses = isTopLevel ? 'font-semibold theme-text-primary' : 'font-normal theme-text-secondary';
     const hoverClasses = 'hover:bg-sky-500/10';
 
     return (
@@ -108,7 +108,7 @@ const TocListItem: React.FC<{ item: TocItem; onNavigate: (href: string) => void;
                     <button
                         onClick={() => setIsExpanded(!isExpanded)}
                         aria-label={isExpanded ? `Collapse ${item.label}` : `Expand ${item.label}`}
-                        className="p-1 ml-2 rounded hover:bg-slate-700"
+                        className="theme-hover-surface ml-2 rounded p-1"
                     >
                         <ChevronRightIcon className={`w-4 h-4 text-slate-500 transition-transform duration-200 flex-shrink-0 ${isExpanded ? 'rotate-90' : ''}`} />
                     </button>
@@ -165,26 +165,26 @@ const TocPanel: React.FC<NavigationPanelProps> = ({
         <>
             <div className="fixed inset-0 bg-black/60 z-30" onClick={onClose} aria-hidden="true" />
             <div
-                className={`fixed top-0 left-0 h-full w-80 bg-slate-800 shadow-2xl z-40 transform transition-transform duration-300 ease-in-out flex flex-col ${
+                className={`theme-surface-elevated theme-border theme-text-primary fixed top-0 left-0 z-40 flex h-full w-80 transform flex-col border-r shadow-2xl transition-transform duration-300 ease-in-out ${
                     isOpen ? 'translate-x-0' : '-translate-x-full'
                 }`}
                 role="dialog"
                 aria-modal="true"
                 aria-labelledby="nav-heading"
             >
-                <div className="p-4 border-b border-slate-700 flex justify-between items-center flex-shrink-0">
-                    <h3 id="nav-heading" className="text-xl font-semibold text-white">Navigation</h3>
-                    <button onClick={onClose} className="p-2 rounded-full hover:bg-slate-700" aria-label="Close navigation panel">
+                <div className="theme-divider flex shrink-0 items-center justify-between border-b p-4">
+                    <h3 id="nav-heading" className="theme-text-primary text-xl font-semibold">Navigation</h3>
+                    <button onClick={onClose} className="theme-hover-surface rounded-full p-2" aria-label="Close navigation panel">
                         <CloseIcon className="w-6 h-6" />
                     </button>
                 </div>
 
-                <div className="border-b border-slate-700 px-2 flex-shrink-0">
+                <div className="theme-divider shrink-0 border-b px-2">
                     <nav className="flex -mb-px">
                         <button
                             onClick={() => setActiveTab('toc')}
                             className={`py-3 px-4 text-sm font-medium border-b-2 transition-colors duration-200 ${
-                                activeTab === 'toc' ? 'border-sky-400 text-sky-300' : 'border-transparent text-slate-400 hover:text-white hover:border-slate-500'
+                                activeTab === 'toc' ? 'border-sky-400 text-sky-300' : 'theme-text-secondary border-transparent hover:text-sky-400 hover:border-slate-500'
                             }`}
                             aria-current={activeTab === 'toc' ? 'page' : undefined}
                         >
@@ -193,7 +193,7 @@ const TocPanel: React.FC<NavigationPanelProps> = ({
                         <button
                             onClick={() => setActiveTab('bookmarks')}
                             className={`py-3 px-4 text-sm font-medium border-b-2 transition-colors duration-200 ${
-                                activeTab === 'bookmarks' ? 'border-sky-400 text-sky-300' : 'border-transparent text-slate-400 hover:text-white hover:border-slate-500'
+                                activeTab === 'bookmarks' ? 'border-sky-400 text-sky-300' : 'theme-text-secondary border-transparent hover:text-sky-400 hover:border-slate-500'
                             }`}
                             aria-current={activeTab === 'bookmarks' ? 'page' : undefined}
                         >
@@ -202,7 +202,7 @@ const TocPanel: React.FC<NavigationPanelProps> = ({
                         <button
                             onClick={() => setActiveTab('citations')}
                             className={`py-3 px-4 text-sm font-medium border-b-2 transition-colors duration-200 ${
-                                activeTab === 'citations' ? 'border-sky-400 text-sky-300' : 'border-transparent text-slate-400 hover:text-white hover:border-slate-500'
+                                activeTab === 'citations' ? 'border-sky-400 text-sky-300' : 'theme-text-secondary border-transparent hover:text-sky-400 hover:border-slate-500'
                             }`}
                             aria-current={activeTab === 'citations' ? 'page' : undefined}
                         >
@@ -221,7 +221,7 @@ const TocPanel: React.FC<NavigationPanelProps> = ({
                                     ))}
                                 </ul>
                             ) : (
-                                <p className="p-4 text-slate-400 text-center">No table of contents available.</p>
+                                <p className="theme-text-secondary p-4 text-center">No table of contents available.</p>
                             )}
                         </div>
                     )}
@@ -229,20 +229,20 @@ const TocPanel: React.FC<NavigationPanelProps> = ({
                     {activeTab === 'bookmarks' && (
                         <div>
                             {bookmarks.length > 0 ? (
-                                <ul className="divide-y divide-slate-700">
+                                <ul className="theme-divider divide-y">
                                     {bookmarks.sort((a, b) => a.createdAt - b.createdAt).map(bookmark => (
                                         <li key={bookmark.id} className="p-4 flex items-center justify-between group">
                                             <button onClick={() => onBookmarkNavigate(bookmark.cfi)} className="flex-grow text-left pr-4">
                                                 {bookmark.chapter && (
                                                     <span className="block text-xs font-semibold text-sky-400 uppercase tracking-wider mb-1">{bookmark.chapter}</span>
                                                 )}
-                                                <span className="block text-sm font-semibold text-slate-200 group-hover:text-sky-300 transition-colors">{bookmark.label}</span>
+                                                <span className="theme-text-primary block text-sm font-semibold transition-colors group-hover:text-sky-300">{bookmark.label}</span>
                                                 {bookmark.description && (
-                                                    <blockquote className="mt-2 pl-3 border-l-2 border-slate-600">
-                                                        <p className="text-sm text-slate-300 italic">{bookmark.description}</p>
+                                                    <blockquote className="theme-border mt-2 border-l-2 pl-3">
+                                                        <p className="theme-text-secondary text-sm italic">{bookmark.description}</p>
                                                     </blockquote>
                                                 )}
-                                                <span className="block text-xs text-slate-400 mt-2">{new Date(bookmark.createdAt).toLocaleString()}</span>
+                                                <span className="theme-text-muted mt-2 block text-xs">{new Date(bookmark.createdAt).toLocaleString()}</span>
                                             </button>
                                             <button onClick={() => onDeleteBookmark(bookmark.id)} className="p-2 rounded-full hover:bg-red-500/20 text-slate-500 hover:text-red-400 transition-colors flex-shrink-0" aria-label={`Delete bookmark: ${bookmark.label}`}>
                                                 <TrashIcon className="w-5 h-5" />
@@ -251,7 +251,7 @@ const TocPanel: React.FC<NavigationPanelProps> = ({
                                     ))}
                                 </ul>
                             ) : (
-                                <p className="p-8 text-slate-400 text-center">You haven't added any bookmarks yet.</p>
+                                <p className="theme-text-secondary p-8 text-center">You haven't added any bookmarks yet.</p>
                             )}
                         </div>
                     )}
@@ -259,7 +259,7 @@ const TocPanel: React.FC<NavigationPanelProps> = ({
                     {activeTab === 'citations' && (
                         <div>
                             {bookData && citations.length > 0 && (
-                                <div className="p-4 border-b border-slate-700">
+                                <div className="theme-divider border-b p-4">
                                     <button onClick={handleExportCitations} className="w-full flex items-center justify-center gap-2 py-2 px-4 rounded-md bg-sky-500 hover:bg-sky-600 transition-colors font-semibold text-white text-sm">
                                         <ExportIcon className="w-5 h-5" />
                                         <span>Export Citations (.ris)</span>
@@ -268,7 +268,7 @@ const TocPanel: React.FC<NavigationPanelProps> = ({
                             )}
 
                             {citations.length > 0 && bookData ? (
-                                <ul className="divide-y divide-slate-700">
+                                <ul className="theme-divider divide-y">
                                     {citations.sort((a, b) => a.createdAt - b.createdAt).map(citation => {
                                         const citationParts = generateCitation(bookData, settings.citationFormat);
                                         return (
@@ -277,20 +277,20 @@ const TocPanel: React.FC<NavigationPanelProps> = ({
                                                     {citation.chapter && (
                                                         <span className="block text-xs font-semibold text-sky-400 uppercase tracking-wider mb-1">{citation.chapter}</span>
                                                     )}
-                                                    <p className="text-sm text-slate-200 group-hover:text-sky-300 transition-colors">
+                                                    <p className="theme-text-primary text-sm transition-colors group-hover:text-sky-300">
                                                         {citationParts.pre}
-                                                        <span className={`${citationParts.isItalic ? 'italic' : 'not-italic'} text-slate-300 group-hover:text-sky-400`}>{citationParts.title}</span>
+                                                        <span className={`${citationParts.isItalic ? 'italic' : 'not-italic'} theme-text-secondary group-hover:text-sky-400`}>{citationParts.title}</span>
                                                         {citationParts.post}
                                                     </p>
                                                     {citation.note && (
-                                                        <blockquote className="mt-2 pl-3 border-l-2 border-slate-600">
-                                                            <p className="text-sm text-slate-300 italic">"{citation.note}"</p>
+                                                        <blockquote className="theme-border mt-2 border-l-2 pl-3">
+                                                            <p className="theme-text-secondary text-sm italic">"{citation.note}"</p>
                                                         </blockquote>
                                                     )}
-                                                    <div className="flex justify-between items-center text-xs text-slate-400 mt-2">
+                                                    <div className="theme-text-muted mt-2 flex items-center justify-between text-xs">
                                                         <span>{new Date(citation.createdAt).toLocaleString()}</span>
                                                         {citation.pageNumber && (
-                                                            <span className="font-semibold bg-slate-700 px-1.5 py-0.5 rounded">p. {citation.pageNumber}</span>
+                                                            <span className="theme-surface rounded px-1.5 py-0.5 font-semibold">p. {citation.pageNumber}</span>
                                                         )}
                                                     </div>
                                                 </button>
@@ -302,7 +302,7 @@ const TocPanel: React.FC<NavigationPanelProps> = ({
                                     })}
                                 </ul>
                             ) : (
-                                <p className="p-8 text-slate-400 text-center">You haven't created any citations yet.</p>
+                                <p className="theme-text-secondary p-8 text-center">You haven't created any citations yet.</p>
                             )}
                         </div>
                     )}

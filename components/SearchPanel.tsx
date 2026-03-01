@@ -126,14 +126,14 @@ const SearchPanel: React.FC<SearchPanelProps> = ({
         aria-modal="true"
         aria-labelledby="search-heading"
       >
-        <div className="p-4 border-b border-slate-700 flex justify-between items-center flex-shrink-0 theme-divider">
-          <h3 id="search-heading" className="text-xl font-semibold text-white theme-text-primary">Search</h3>
-          <button onClick={onClose} className="p-2 rounded-full hover:bg-slate-700 theme-hover-surface" aria-label="Close search">
+        <div className="theme-divider flex shrink-0 items-center justify-between border-b p-4">
+          <h3 id="search-heading" className="theme-text-primary text-xl font-semibold">Search</h3>
+          <button onClick={onClose} className="theme-hover-surface rounded-full p-2" aria-label="Close search">
             <CloseIcon className="w-6 h-6" />
           </button>
         </div>
 
-        <div className="p-4 border-b border-slate-700 flex-shrink-0 theme-divider">
+        <div className="theme-divider shrink-0 border-b p-4">
             <div className="relative">
                 <span className="absolute inset-y-0 left-0 flex items-center pl-3 pointer-events-none">
                     <SearchIcon className="w-5 h-5 text-slate-400 theme-text-muted" />
@@ -143,7 +143,7 @@ const SearchPanel: React.FC<SearchPanelProps> = ({
                     placeholder="Search in book..."
                     value={searchQuery}
                     onChange={(e) => onQueryChange(e.target.value)}
-                    className="w-full bg-slate-700 text-white rounded-md pl-10 pr-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-sky-500 theme-input"
+                    className="theme-input w-full rounded-md py-2 pl-10 pr-3 text-sm focus:outline-none focus:ring-2 focus:ring-sky-500"
                     aria-label="Search input"
                     autoFocus
                 />
@@ -158,7 +158,7 @@ const SearchPanel: React.FC<SearchPanelProps> = ({
             ) : searchQuery && results.length > 0 ? (
                 <>
                     <p className="text-xs text-slate-400 px-4 pt-4 pb-2 theme-text-muted">{results.length} result{results.length !== 1 && 's'} found for "{searchQuery}"</p>
-                    <ul className="divide-y divide-slate-700 theme-divider">
+                    <ul className="theme-divider divide-y">
                         {results.map((result, index) => (
                             <li key={index} className="group">
                                 <button onClick={() => onNavigate(result.cfi)} className="w-full text-left p-4 hover:bg-sky-500/10 transition-colors theme-hover-surface">

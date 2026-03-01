@@ -56,28 +56,28 @@ const SettingsPanel: React.FC<SettingsPanelProps> = ({ isOpen, onClose, settings
       <div className="space-y-8">
         {/* Voice Selection */}
         <div>
-          <label className="block text-sm font-medium text-slate-300 mb-2">
+          <label className="theme-text-secondary mb-2 block text-sm font-medium">
             Voice
           </label>
 
-          <div className="p-3 bg-slate-900/50 rounded-md mb-4">
-            <p className="text-xs text-slate-400 text-center">Current Voice</p>
+          <div className="theme-surface rounded-md p-3 mb-4">
+            <p className="theme-text-muted text-center text-xs">Current Voice</p>
             <p className="font-semibold text-sky-300 truncate text-center" title={selectedVoice ? selectedVoice.name : 'System Default'}>
               {selectedVoice ? selectedVoice.name : 'System Default'}
             </p>
           </div>
 
-          <p className="text-xs text-slate-400 mb-2">Select a new voice from the list below:</p>
+          <p className="theme-text-muted mb-2 text-xs">Select a new voice from the list below:</p>
 
-          <div className="max-h-48 overflow-y-auto rounded-md border border-slate-600 bg-slate-700/50">
-            <ul className="divide-y divide-slate-600">
+          <div className="theme-surface theme-border max-h-48 overflow-y-auto rounded-md border">
+            <ul className="theme-divider divide-y">
               {voices.length > 0 ? (
                 voices.map((voice) => (
                   <li
                     key={voice.voiceURI}
                     className={`flex items-center justify-between p-2 text-sm transition-colors ${settings.readAloud.voiceURI === voice.voiceURI
                         ? 'bg-sky-500/20 text-sky-300'
-                        : 'hover:bg-slate-700'
+                        : 'theme-hover-surface'
                       }`}
                   >
                     <button
@@ -85,11 +85,11 @@ const SettingsPanel: React.FC<SettingsPanelProps> = ({ isOpen, onClose, settings
                       className="flex-grow text-left pr-2"
                     >
                       <span className="font-medium">{voice.name}</span>
-                      <span className="text-xs text-slate-400 block">{voice.lang}</span>
+                      <span className="theme-text-muted block text-xs">{voice.lang}</span>
                     </button>
                     <button
                       onClick={() => previewVoice(voice)}
-                      className="p-2 rounded-full hover:bg-slate-600 flex-shrink-0"
+                      className="theme-hover-surface shrink-0 rounded-full p-2"
                       aria-label={`Preview voice ${voice.name}`}
                     >
                       <PlayIcon className="w-4 h-4" />
@@ -97,7 +97,7 @@ const SettingsPanel: React.FC<SettingsPanelProps> = ({ isOpen, onClose, settings
                   </li>
                 ))
               ) : (
-                <li className="p-4 text-center text-slate-400">Loading voices...</li>
+                <li className="theme-text-muted p-4 text-center">Loading voices...</li>
               )}
             </ul>
           </div>
@@ -105,7 +105,7 @@ const SettingsPanel: React.FC<SettingsPanelProps> = ({ isOpen, onClose, settings
 
         {/* Speed */}
         <div>
-          <label htmlFor="read-speed" className="block text-sm font-medium text-slate-300 mb-2">
+          <label htmlFor="read-speed" className="theme-text-secondary mb-2 block text-sm font-medium">
             Speed
           </label>
           <input
@@ -118,12 +118,12 @@ const SettingsPanel: React.FC<SettingsPanelProps> = ({ isOpen, onClose, settings
             onChange={(e) => handleReadAloudChange({ rate: parseFloat(e.target.value) })}
             className="w-full h-2 bg-slate-600 rounded-lg appearance-none cursor-pointer"
           />
-          <div className="text-center text-slate-400 text-sm mt-1">{settings.readAloud.rate.toFixed(1)}x</div>
+          <div className="theme-text-muted mt-1 text-center text-sm">{settings.readAloud.rate.toFixed(1)}x</div>
         </div>
 
         {/* Pitch */}
         <div>
-          <label htmlFor="read-pitch" className="block text-sm font-medium text-slate-300 mb-2">
+          <label htmlFor="read-pitch" className="theme-text-secondary mb-2 block text-sm font-medium">
             Pitch
           </label>
           <input
@@ -136,7 +136,7 @@ const SettingsPanel: React.FC<SettingsPanelProps> = ({ isOpen, onClose, settings
             onChange={(e) => handleReadAloudChange({ pitch: parseFloat(e.target.value) })}
             className="w-full h-2 bg-slate-600 rounded-lg appearance-none cursor-pointer"
           />
-          <div className="text-center text-slate-400 text-sm mt-1">{settings.readAloud.pitch.toFixed(1)}</div>
+          <div className="theme-text-muted mt-1 text-center text-sm">{settings.readAloud.pitch.toFixed(1)}</div>
         </div>
 
       </div>
@@ -150,26 +150,26 @@ const SettingsPanel: React.FC<SettingsPanelProps> = ({ isOpen, onClose, settings
         onClick={onClose}
       />
       <div
-        className={`fixed top-0 right-0 h-full w-80 bg-slate-800 shadow-2xl z-40 transform transition-transform duration-300 ease-in-out flex flex-col ${isOpen ? 'translate-x-0' : 'translate-x-full'
+        className={`theme-surface-elevated theme-border theme-text-primary fixed top-0 right-0 z-40 flex h-full w-80 transform flex-col border-l shadow-2xl transition-transform duration-300 ease-in-out ${isOpen ? 'translate-x-0' : 'translate-x-full'
           }`}
         role="dialog"
         aria-modal="true"
         aria-labelledby="settings-panel-title"
       >
-        <div className="p-4 border-b border-slate-700 flex justify-between items-center flex-shrink-0">
-          <h3 id="settings-panel-title" className="text-xl font-semibold text-white">Settings</h3>
-          <button onClick={onClose} aria-label="Close settings" className="p-2 rounded-full hover:bg-slate-700">
+        <div className="theme-divider flex shrink-0 items-center justify-between border-b p-4">
+          <h3 id="settings-panel-title" className="theme-text-primary text-xl font-semibold">Settings</h3>
+          <button onClick={onClose} aria-label="Close settings" className="theme-hover-surface rounded-full p-2">
             <CloseIcon className="w-6 h-6" />
           </button>
         </div>
 
-        <div className="border-b border-slate-700 px-2 flex-shrink-0">
+        <div className="theme-divider shrink-0 border-b px-2">
           <nav className="flex -mb-px">
             <button
               onClick={() => setActiveTab('display')}
               className={`flex-1 flex items-center justify-center gap-2 py-3 px-4 text-sm font-medium border-b-2 transition-colors duration-200 ${activeTab === 'display'
                   ? 'border-sky-400 text-sky-300'
-                  : 'border-transparent text-slate-400 hover:text-white hover:border-slate-500'
+                  : 'theme-text-secondary border-transparent hover:text-sky-400 hover:border-slate-500'
                 }`}
             >
               <BookIcon className="w-5 h-5" />
@@ -179,7 +179,7 @@ const SettingsPanel: React.FC<SettingsPanelProps> = ({ isOpen, onClose, settings
               onClick={() => setActiveTab('readAloud')}
               className={`flex-1 flex items-center justify-center gap-2 py-3 px-4 text-sm font-medium border-b-2 transition-colors duration-200 ${activeTab === 'readAloud'
                   ? 'border-sky-400 text-sky-300'
-                  : 'border-transparent text-slate-400 hover:text-white hover:border-slate-500'
+                  : 'theme-text-secondary border-transparent hover:text-sky-400 hover:border-slate-500'
                 }`}
             >
               <SpeakerIcon className="w-5 h-5" />
@@ -188,12 +188,12 @@ const SettingsPanel: React.FC<SettingsPanelProps> = ({ isOpen, onClose, settings
           </nav>
         </div>
 
-        <div className="p-6 text-white overflow-y-auto flex-grow">
+        <div className="theme-text-primary grow overflow-y-auto p-6">
           {activeTab === 'display' && (
             <div className="space-y-8">
               {/* Font Size */}
               <div>
-                <label htmlFor="font-size" className="block text-sm font-medium text-slate-300 mb-2">
+                <label htmlFor="font-size" className="theme-text-secondary mb-2 block text-sm font-medium">
                   Font Size
                 </label>
                 <div className="flex items-center space-x-4">
@@ -210,12 +210,12 @@ const SettingsPanel: React.FC<SettingsPanelProps> = ({ isOpen, onClose, settings
                   />
                   <span className="text-3xl">A</span>
                 </div>
-                <div className="text-center text-slate-400 text-sm mt-1">{settings.fontSize}%</div>
+                <div className="theme-text-muted mt-1 text-center text-sm">{settings.fontSize}%</div>
               </div>
 
               {/* Theme */}
               <div>
-                <label className="block text-sm font-medium text-slate-300 mb-2">
+                <label className="theme-text-secondary mb-2 block text-sm font-medium">
                   Theme
                 </label>
                 <div className="grid grid-cols-2 gap-4">
@@ -238,7 +238,7 @@ const SettingsPanel: React.FC<SettingsPanelProps> = ({ isOpen, onClose, settings
 
               {/* Font Family */}
               <div>
-                <label className="block text-sm font-medium text-slate-300 mb-2">
+                <label className="theme-text-secondary mb-2 block text-sm font-medium">
                   Font Family
                 </label>
                 <div className="grid grid-cols-3 gap-2">
@@ -258,7 +258,7 @@ const SettingsPanel: React.FC<SettingsPanelProps> = ({ isOpen, onClose, settings
 
               {/* Reading Mode */}
               <div>
-                <label className="block text-sm font-medium text-slate-300 mb-2">
+                <label className="theme-text-secondary mb-2 block text-sm font-medium">
                   Reading Mode
                 </label>
                 <div className="grid grid-cols-2 gap-4">
@@ -267,21 +267,21 @@ const SettingsPanel: React.FC<SettingsPanelProps> = ({ isOpen, onClose, settings
                     className={`p-4 rounded-lg border-2 transition-colors text-center ${settings.flow === 'paginated' ? 'border-sky-500 bg-sky-500/20' : 'border-slate-600 hover:border-slate-500'}`}
                   >
                     <span className="block text-sm font-medium">Paginated</span>
-                    <span className="block text-xs text-slate-400 mt-1">Turn pages like a real book.</span>
+                    <span className="theme-text-muted mt-1 block text-xs">Turn pages like a real book.</span>
                   </button>
                   <button
                     onClick={() => onSettingsChange({ flow: 'scrolled' })}
                     className={`p-4 rounded-lg border-2 transition-colors text-center ${settings.flow === 'scrolled' ? 'border-sky-500 bg-sky-500/20' : 'border-slate-600 hover:border-slate-500'}`}
                   >
                     <span className="block text-sm font-medium">Scrolled</span>
-                    <span className="block text-xs text-slate-400 mt-1">Scroll like a webpage.</span>
+                    <span className="theme-text-muted mt-1 block text-xs">Scroll like a webpage.</span>
                   </button>
                 </div>
               </div>
 
               {/* Citation Format */}
               <div>
-                <label className="block text-sm font-medium text-slate-300 mb-2">
+                <label className="theme-text-secondary mb-2 block text-sm font-medium">
                   Citation Format
                 </label>
                 <div className="grid grid-cols-3 gap-2">
