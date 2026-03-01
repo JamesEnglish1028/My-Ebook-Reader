@@ -297,8 +297,24 @@ export const parseOpds1Xml = (xmlText: string, baseUrl: string): { books: Catalo
     const navLinkKeys = new Set<string>();
     const bookIndexes = new Map<string, number>();
     const palaceFeed = isPalaceHost(baseUrl);
+    const isUnsupportedPalaceBookshelfLink = (link: CatalogNavigationLink): boolean => {
+        if (!palaceFeed) return false;
+
+        const title = link.title.trim().toLowerCase();
+        const rel = (link.rel || '').toLowerCase();
+        const type = (link.type || '').toLowerCase();
+        if (title !== 'loans') {
+            return false;
+        }
+
+        return rel.includes('acquisition')
+            || rel.includes('loan')
+            || type.includes('kind=acquisition')
+            || type.includes('profile=opds-catalog');
+    };
 
     const addNavLink = (link: CatalogNavigationLink) => {
+        if (isUnsupportedPalaceBookshelfLink(link)) return;
         const key = `${link.rel}|${link.url}`;
         if (navLinkKeys.has(key)) return;
         navLinkKeys.add(key);

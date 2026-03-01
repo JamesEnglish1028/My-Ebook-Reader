@@ -268,4 +268,36 @@ describe('OPDS1 parseOpds1Xml', () => {
       source: 'navigation',
     });
   });
+
+  it('suppresses unsupported Palace Loans bookshelf links', () => {
+    const xml = `<?xml version="1.0" encoding="UTF-8"?>
+<feed xmlns="http://www.w3.org/2005/Atom">
+  <title>Palace Feed</title>
+  <link
+    href="https://demo.palaceproject.io/loans"
+    type="application/atom+xml;profile=opds-catalog;kind=acquisition"
+    title="Loans"
+  />
+  <link
+    href="https://demo.palaceproject.io/groups/fiction"
+    type="application/atom+xml;profile=opds-catalog;kind=navigation"
+    title="Fiction"
+  />
+</feed>`;
+
+    const result = parseOpds1Xml(xml, 'https://demo.palaceproject.io/catalog');
+
+    expect(result.navLinks).not.toContainEqual(
+      expect.objectContaining({
+        title: 'Loans',
+      }),
+    );
+    expect(result.navLinks).toContainEqual({
+      title: 'Fiction',
+      url: 'https://demo.palaceproject.io/groups/fiction',
+      rel: 'navigation',
+      type: 'application/atom+xml;profile=opds-catalog;kind=navigation',
+      source: 'navigation',
+    });
+  });
 });
