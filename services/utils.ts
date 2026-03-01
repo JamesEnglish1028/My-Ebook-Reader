@@ -201,6 +201,18 @@ export const maybeProxyForCors = async (url: string, skipProbe = false): Promise
     return '';
   }
 
+  const hostname = parsedUrl.hostname.toLowerCase();
+  const isPalaceHost = hostname === 'palace.io'
+    || hostname.endsWith('.palace.io')
+    || hostname.endsWith('palaceproject.io')
+    || hostname.endsWith('thepalaceproject.org')
+    || hostname.endsWith('.thepalaceproject.org');
+  if (isPalaceHost) {
+    const proxied = proxiedUrl(url);
+    console.log('[maybeProxyForCors] Palace host detected, skipping direct probe:', url.substring(0, 80));
+    return proxied;
+  }
+
   const browserOrigin = getBrowserOrigin();
   const requiresSecureProxy = parsedUrl.protocol === 'http:' && browserOrigin.startsWith('https://');
   if (requiresSecureProxy) {

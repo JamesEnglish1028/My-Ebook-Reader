@@ -67,4 +67,18 @@ describe('utils.ts - proxiedUrl and maybeProxyForCors', () => {
     globalThis.fetch = origFetch;
     vi.stubGlobal('window', originalWindow);
   });
+
+  it('skips the direct probe for Palace hosts and returns the proxied target immediately', async () => {
+    const url = 'https://minotaur.dev.palaceproject.io/minotaur-test-library/search/7115?entrypoint=All';
+    const expected = proxiedUrl(url);
+    const origFetch = globalThis.fetch;
+    const fetchMock = vi.fn();
+
+    globalThis.fetch = fetchMock as any;
+
+    await expect(maybeProxyForCors(url)).resolves.toBe(expected);
+
+    expect(fetchMock).not.toHaveBeenCalled();
+    globalThis.fetch = origFetch;
+  });
 });
