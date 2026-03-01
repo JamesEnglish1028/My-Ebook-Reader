@@ -12,7 +12,7 @@ interface UsePalaceLanePreviewsOptions {
   maxPreviewBooks?: number;
 }
 
-const DEFAULT_PREVIEW_BOOKS = 10;
+const DEFAULT_PREVIEW_BOOKS = 5;
 const MAX_CONCURRENT_PREVIEW_FETCHES = 1;
 const PALACE_PREVIEW_ACCEPT_HEADER = 'application/atom+xml;profile=opds-catalog, application/opds+json;q=0.9, application/xml, text/xml, application/json;q=0.8, */*;q=0.5';
 const lanePreviewSnapshotCache: Record<string, CatalogLanePreview> = {};
