@@ -59,6 +59,10 @@ const BookCard = React.forwardRef<HTMLDivElement, BookCardProps>(({
   };
 
   const coverImage = getCoverImage();
+  const proxiedCatalogCoverImage = isCatalogBook(book) && book.coverImage
+    ? proxiedUrl(book.coverImage)
+    : null;
+  const coverImageSrc = proxiedCatalogCoverImage || coverImage;
 
   const contributors = isCatalogBook(book) ? book.contributors ?? [] : [];
   const categories = isCatalogBook(book)
@@ -77,19 +81,20 @@ const BookCard = React.forwardRef<HTMLDivElement, BookCardProps>(({
     >
       {/* Book Cover */}
       <div className="theme-surface-elevated book-cover-container aspect-[2/3] overflow-hidden rounded-lg shadow-lg transform transition-transform duration-300 group-hover:scale-105">
-        {coverImage ? (
+        {coverImageSrc ? (
           <img
-            src={coverImage}
+            src={coverImageSrc}
             alt={book.title}
             className="w-full h-full object-cover"
             loading="lazy"
             onError={(e) => {
               const img = e.currentTarget as HTMLImageElement;
               img.onerror = null as any;
-              // Try proxied URL for catalog books
-              if (isCatalogBook(book) && book.coverImage) {
-                img.src = proxiedUrl(book.coverImage);
+              if (proxiedCatalogCoverImage && img.src !== proxiedCatalogCoverImage) {
+                img.src = proxiedCatalogCoverImage;
+                return;
               }
+              img.src = '/default-cover.png';
             }}
           />
         ) : (
