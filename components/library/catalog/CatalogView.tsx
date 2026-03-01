@@ -422,9 +422,8 @@ const CatalogView: React.FC<CatalogViewProps> = ({
     baseUrl: activeOpdsSource?.url || '',
     requestedUrls: requestedLaneUrls,
   });
-  const hasSidebarContent = !usePalaceSwimLanes
-    && (displayNavigationLinks.length > 0
-      || normalizedFacetGroups.some((group) => group.links.length > 0));
+  const hasSidebarContent = displayNavigationLinks.length > 0
+    || normalizedFacetGroups.some((group) => group.links.length > 0);
 
   useEffect(() => {
     if (!usePalaceSwimLanes || isLanePreviewsLoading) {

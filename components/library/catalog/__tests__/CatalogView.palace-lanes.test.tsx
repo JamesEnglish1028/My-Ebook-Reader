@@ -244,6 +244,8 @@ describe('CatalogView Palace swim lanes', () => {
     );
 
     expect(screen.getByRole('button', { name: /open fiction/i })).toBeInTheDocument();
+    expect(screen.getByText('Browse')).toBeInTheDocument();
+    expect(screen.getByText('Facets')).toBeInTheDocument();
     expect(screen.queryByLabelText('Grid Book by Author')).not.toBeInTheDocument();
   });
 });
