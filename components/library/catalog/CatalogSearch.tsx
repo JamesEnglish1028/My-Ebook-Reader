@@ -80,7 +80,7 @@ const CatalogSearch: React.FC<CatalogSearchProps> = ({
           <button
             type="submit"
             disabled={disabled || trimmedValue.length === 0}
-            className="rounded-lg bg-sky-600 px-3 py-2 text-sm font-medium text-white transition-colors hover:bg-sky-500 disabled:cursor-not-allowed disabled:bg-slate-700 disabled:text-slate-400"
+            className="theme-button-primary rounded-lg px-3 py-2 text-sm font-medium transition-colors disabled:cursor-not-allowed disabled:opacity-60"
           >
             Search
           </button>
