@@ -1,7 +1,7 @@
 import React from 'react';
 
 import { act, renderHook, waitFor } from '@testing-library/react';
-import { describe, expect, it, vi } from 'vitest';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { opdsParserService } from '../../domain/catalog';
 import { usePalaceLanePreviews } from '../usePalaceLanePreviews';
@@ -27,6 +27,10 @@ function deferred<T>() {
 }
 
 describe('usePalaceLanePreviews', () => {
+  beforeEach(() => {
+    vi.mocked(opdsParserService.fetchCatalog).mockReset();
+  });
+
   it('fetches Palace lane previews one at a time and starts the next lane after the previous one finishes', async () => {
     const links = [
       { title: 'Lane 1', url: 'https://catalog.example.org/lane-1', rel: 'collection' },
@@ -78,5 +82,54 @@ describe('usePalaceLanePreviews', () => {
         });
       });
     });
+  });
+
+  it('restores successful lane previews after unmounting and remounting', async () => {
+    const link = { title: 'Lane 1', url: 'https://catalog.example.org/lane-restore', rel: 'collection' };
+    const links = [link];
+    const requestedUrls = [link.url];
+    const fetchCatalogMock = vi.mocked(opdsParserService.fetchCatalog);
+
+    fetchCatalogMock.mockResolvedValue({
+      success: true,
+      data: {
+        books: [
+          {
+            title: 'Restored Book',
+            author: 'Author',
+            coverImage: 'https://covers.example.org/restored.jpg',
+            downloadUrl: 'https://catalog.example.org/books/restored.epub',
+            summary: null,
+          },
+        ],
+        navigationLinks: [],
+      },
+    } as any);
+
+    const first = renderHook(() => usePalaceLanePreviews({
+      enabled: true,
+      links: links as any,
+      baseUrl: 'https://catalog.example.org/catalog',
+      requestedUrls,
+    }));
+
+    await waitFor(() => {
+      expect(fetchCatalogMock).toHaveBeenCalledTimes(1);
+    });
+    await waitFor(() => {
+      expect(first.result.current.lanePreviews[0]?.books[0]?.title).toBe('Restored Book');
+    });
+
+    first.unmount();
+
+    const second = renderHook(() => usePalaceLanePreviews({
+      enabled: true,
+      links: links as any,
+      baseUrl: 'https://catalog.example.org/catalog',
+      requestedUrls: [],
+    }));
+
+    expect(second.result.current.lanePreviews[0]?.books[0]?.title).toBe('Restored Book');
+    expect(fetchCatalogMock).toHaveBeenCalledTimes(1);
   });
 });
