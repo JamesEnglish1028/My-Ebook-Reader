@@ -67,18 +67,18 @@ const OpdsCredentialsModal: React.FC<Props> = ({ isOpen, host, authDocument, onC
   const logo = authDocument?.logo || authDocument?.image || null;
   const links: any[] = Array.isArray(authDocument?.links) ? authDocument.links : [];
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900 bg-opacity-75 p-4">
-      <div ref={modalRef} className="bg-slate-800 p-6 rounded-lg max-w-md w-full text-white">
+    <div className="theme-shell fixed inset-0 z-50 flex items-center justify-center bg-opacity-75 p-4">
+      <div ref={modalRef} className="theme-surface-elevated theme-border theme-text-primary w-full max-w-md rounded-lg border p-6">
         <div className="flex items-start gap-4 mb-2">
           {logo && <img src={logo} alt="provider logo" className="w-12 h-12 object-contain" />}
           <div>
             <h3 className="text-lg font-semibold">{realmFromAuth ? `Login to ${realmFromAuth}` : 'Authentication required'}</h3>
-            <p className="text-sm text-slate-300">This catalog at <span className="font-mono">{host}</span> requires credentials to access the requested content.</p>
+            <p className="theme-text-secondary text-sm">This catalog at <span className="font-mono">{host}</span> requires credentials to access the requested content.</p>
           </div>
 
           {/* Polling status and auto-retry */}
           {isPolling && (
-            <div className="mb-3 text-sm text-slate-300">
+            <div className="theme-text-secondary mb-3 text-sm">
               Waiting for provider sign-in to complete... This may take a minute.
             </div>
           )}
@@ -101,14 +101,14 @@ const OpdsCredentialsModal: React.FC<Props> = ({ isOpen, host, authDocument, onC
             </div>
           )}
         </div>
-        {description && <p className="text-sm text-slate-300 mb-4">{description}</p>}
+        {description && <p className="theme-text-secondary mb-4 text-sm">{description}</p>}
 
         {links.length > 0 && (
-          <div className="mb-4 text-sm text-slate-300">
+          <div className="theme-text-secondary mb-4 text-sm">
             <div className="font-semibold mb-1">Authentication Links</div>
             <ul className="list-disc list-inside">
               {links.map((l, i) => (
-                <li key={i}><a className="text-sky-400" href={l.href} target="_blank" rel="noreferrer">{l.title || l.href}</a> {l.rel ? <span className="text-xs text-slate-400">({l.rel})</span> : null}</li>
+                <li key={i}><a className="text-sky-400" href={l.href} target="_blank" rel="noreferrer">{l.title || l.href}</a> {l.rel ? <span className="theme-text-muted text-xs">({l.rel})</span> : null}</li>
               ))}
             </ul>
           </div>
@@ -177,22 +177,22 @@ const OpdsCredentialsModal: React.FC<Props> = ({ isOpen, host, authDocument, onC
           </div>
         )}
 
-        <label htmlFor="opds-username" className="block text-sm text-slate-300 mb-1">Username</label>
-        <input id="opds-username" aria-label="username" placeholder={authDocument?.username_placeholder || 'Username'} value={username} onChange={(e) => setUsername(e.target.value)} className="w-full mb-3 p-2 rounded bg-slate-900 border border-slate-700 text-white" />
+        <label htmlFor="opds-username" className="theme-text-secondary mb-1 block text-sm">Username</label>
+        <input id="opds-username" aria-label="username" placeholder={authDocument?.username_placeholder || 'Username'} value={username} onChange={(e) => setUsername(e.target.value)} className="theme-input mb-3 w-full rounded border p-2" />
 
-        <label htmlFor="opds-password" className="block text-sm text-slate-300 mb-1">Password</label>
-        <input id="opds-password" aria-label="password" placeholder={authDocument?.password_placeholder || 'Password'} type="password" value={password} onChange={(e) => setPassword(e.target.value)} className="w-full mb-3 p-2 rounded bg-slate-900 border border-slate-700 text-white" />
+        <label htmlFor="opds-password" className="theme-text-secondary mb-1 block text-sm">Password</label>
+        <input id="opds-password" aria-label="password" placeholder={authDocument?.password_placeholder || 'Password'} type="password" value={password} onChange={(e) => setPassword(e.target.value)} className="theme-input mb-3 w-full rounded border p-2" />
 
-        {authDocument?.username_hint && <div className="text-xs text-slate-400 mb-2">Hint: {authDocument.username_hint}</div>}
-        {authDocument?.password_hint && <div className="text-xs text-slate-400 mb-2">Password: {authDocument.password_hint}</div>}
+        {authDocument?.username_hint && <div className="theme-text-muted mb-2 text-xs">Hint: {authDocument.username_hint}</div>}
+        {authDocument?.password_hint && <div className="theme-text-muted mb-2 text-xs">Password: {authDocument.password_hint}</div>}
 
         <div className="flex items-center gap-2 mb-4">
           <input id="saveCred" type="checkbox" checked={save} onChange={(e) => setSave(e.target.checked)} />
-          <label htmlFor="saveCred" className="text-sm text-slate-300">Save credential for this host</label>
+          <label htmlFor="saveCred" className="theme-text-secondary text-sm">Save credential for this host</label>
         </div>
 
         <div className="flex justify-end gap-2">
-          <button onClick={onClose} className="px-4 py-2 rounded bg-slate-700 hover:bg-slate-600">Cancel</button>
+          <button onClick={onClose} className="theme-button-neutral theme-hover-surface rounded px-4 py-2">Cancel</button>
           {/* If a retry handler is provided, show a Retry button so users can retry after using the provider login page */}
           {typeof onRetry === 'function' && (
             <button onClick={() => onRetry()} className="px-4 py-2 rounded bg-yellow-600 hover:bg-yellow-500">Retry</button>

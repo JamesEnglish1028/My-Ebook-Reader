@@ -19,34 +19,34 @@ const BookmarksPanel: React.FC<BookmarksPanelProps> = ({ bookmarks, onNavigate, 
 	if (!isOpen) return null;
 	return (
 		<aside
-			className="fixed top-0 right-0 h-full w-80 bg-slate-800 shadow-2xl z-40 transform transition-transform duration-300 ease-in-out flex flex-col"
+			className="theme-surface-elevated theme-border theme-text-primary fixed top-0 right-0 z-40 flex h-full w-80 transform flex-col border-l shadow-2xl transition-transform duration-300 ease-in-out"
 			role="dialog"
 			aria-modal="true"
 			aria-labelledby="bookmarks-heading"
 		>
-			<div className="p-4 border-b border-slate-700 flex justify-between items-center flex-shrink-0">
-				<h3 id="bookmarks-heading" className="text-xl font-semibold text-white">Bookmarks</h3>
-				<button onClick={onClose} aria-label="Close bookmarks panel" className="p-2 rounded-full hover:bg-slate-700">
+			<div className="theme-divider flex shrink-0 items-center justify-between border-b p-4">
+				<h3 id="bookmarks-heading" className="theme-text-primary text-xl font-semibold">Bookmarks</h3>
+				<button onClick={onClose} aria-label="Close bookmarks panel" className="theme-hover-surface rounded-full p-2">
 					<span aria-hidden>×</span>
 				</button>
 			</div>
-			<div className="flex-grow overflow-y-auto p-4">
+			<div className="grow overflow-y-auto p-4">
 				{bookmarks.length === 0 ? (
-					<div className="text-slate-400 text-center">No bookmarks yet.</div>
+					<div className="theme-text-secondary text-center">No bookmarks yet.</div>
 				) : (
 					<ul className="space-y-2">
 						{bookmarks.map(bm => (
-							<li key={bm.id} className="flex items-center justify-between bg-slate-700 rounded p-2">
+							<li key={bm.id} className="theme-surface flex items-center justify-between rounded p-2">
 								<button
-									className="text-left flex-1 text-white hover:underline"
+									className="theme-text-primary flex-1 text-left hover:underline"
 									onClick={() => onNavigate(bm.cfi)}
 									aria-label={`Go to bookmark: ${bm.label}`}
 								>
 									<div className="font-medium">{bm.label}</div>
-									<div className="text-xs text-slate-400">{new Date(bm.created).toLocaleString()}</div>
+									<div className="theme-text-muted text-xs">{new Date(bm.created).toLocaleString()}</div>
 								</button>
 								<button
-									className="ml-2 p-2 rounded hover:bg-red-500/20 text-slate-400 hover:text-red-400"
+									className="theme-text-muted ml-2 rounded p-2 hover:bg-red-500/20 hover:text-red-400"
 									onClick={() => onDelete(bm.id)}
 									aria-label={`Delete bookmark: ${bm.label}`}
 								>

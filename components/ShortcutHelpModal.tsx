@@ -46,7 +46,7 @@ const ShortcutHelpModal: React.FC<Props> = ({ isOpen, onClose, onZoomIn, onZoomO
 
   const renderShortcut = (shortcut: ShortcutAction) => (
     <li key={`${shortcut.key}-${shortcut.description}`} className="flex items-start gap-2">
-      <kbd className="px-2 py-1 bg-slate-700 rounded text-xs font-mono min-w-[3rem] text-center theme-surface-elevated">
+      <kbd className="theme-surface-elevated theme-text-primary min-w-[3rem] rounded px-2 py-1 text-center text-xs font-mono">
         {formatShortcut(shortcut)}
       </kbd>
       <span className="flex-1">{shortcut.description}</span>
@@ -61,7 +61,7 @@ const ShortcutHelpModal: React.FC<Props> = ({ isOpen, onClose, onZoomIn, onZoomO
         role="dialog"
         aria-modal="true"
         aria-labelledby="shortcut-help-title"
-        className="relative bg-slate-800 text-white rounded-lg shadow-lg max-w-2xl w-full mx-4 p-6 max-h-[90vh] overflow-y-auto border theme-surface-elevated theme-border theme-text-primary"
+        className="theme-surface-elevated theme-border theme-text-primary relative mx-4 max-h-[90vh] w-full max-w-2xl overflow-y-auto rounded-lg border p-6 shadow-lg"
         onClick={(e) => e.stopPropagation()}
       >
         <div className="flex items-center justify-between mb-4">
@@ -104,28 +104,28 @@ const ShortcutHelpModal: React.FC<Props> = ({ isOpen, onClose, onZoomIn, onZoomO
               <Tooltip label="Zoom out (-)">
                 <button
                   onClick={onZoomOut}
-                  className="p-3 rounded-full bg-slate-700 hover:bg-slate-600 focus:outline-none focus:ring-2 focus:ring-sky-500 theme-button-neutral theme-hover-surface"
+                  className="theme-button-neutral theme-hover-surface rounded-full p-3 focus:outline-none focus:ring-2 focus:ring-sky-500"
                   aria-label="Zoom out"
                 >
-                  <MinusIcon className="w-5 h-5 text-slate-50" />
+                  <MinusIcon className="theme-text-primary h-5 w-5" />
                 </button>
               </Tooltip>
               <Tooltip label="Zoom in (+)">
                 <button
                   onClick={onZoomIn}
-                  className="p-3 rounded-full bg-slate-700 hover:bg-slate-600 focus:outline-none focus:ring-2 focus:ring-sky-500 theme-button-neutral theme-hover-surface"
+                  className="theme-button-neutral theme-hover-surface rounded-full p-3 focus:outline-none focus:ring-2 focus:ring-sky-500"
                   aria-label="Zoom in"
                 >
-                  <PlusIcon className="w-5 h-5 text-slate-50" />
+                  <PlusIcon className="theme-text-primary h-5 w-5" />
                 </button>
               </Tooltip>
               <Tooltip label="Toggle fit (F)">
                 <button
                   onClick={onToggleFit}
-                  className="p-3 rounded-full bg-slate-700 hover:bg-slate-600 focus:outline-none focus:ring-2 focus:ring-sky-500 theme-button-neutral theme-hover-surface"
+                  className="theme-button-neutral theme-hover-surface rounded-full p-3 focus:outline-none focus:ring-2 focus:ring-sky-500"
                   aria-label="Toggle fit mode"
                 >
-                  <AdjustmentsVerticalIcon className="w-5 h-5 text-slate-50" />
+                  <AdjustmentsVerticalIcon className="theme-text-primary h-5 w-5" />
                 </button>
               </Tooltip>
             </div>
@@ -134,7 +134,7 @@ const ShortcutHelpModal: React.FC<Props> = ({ isOpen, onClose, onZoomIn, onZoomO
 
         <div className="mt-6 pt-4 border-t border-slate-700 text-xs text-slate-400 theme-divider theme-text-secondary">
           <p>💡 Tip: Keyboard shortcuts are disabled when typing in text fields.</p>
-          <p className="mt-1">Press <kbd className="px-1 py-0.5 bg-slate-700 rounded text-xs theme-surface-elevated">?</kbd> anytime to view this help.</p>
+          <p className="mt-1">Press <kbd className="theme-surface-elevated theme-text-primary rounded px-1 py-0.5 text-xs">?</kbd> anytime to view this help.</p>
         </div>
       </div>
     </div>

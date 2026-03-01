@@ -1144,13 +1144,13 @@ const ReaderView: React.FC<ReaderViewProps> = ({ bookId, onClose, animationData 
           {/* Fallback TOC banner */}
           {usedTocFallback && (
             <div className="absolute left-1/2 transform -translate-x-1/2 top-full mt-2 z-40">
-              <div className="bg-amber-600 text-black px-4 py-2 rounded shadow-md flex items-center gap-4">
+              <div className="flex items-center gap-4 rounded border border-amber-400/50 bg-amber-500/20 px-4 py-2 text-amber-100 shadow-md backdrop-blur-sm">
                 <span className="text-sm">This book's navigation was incomplete; a fallback contents list was used.</span>
                 <button onClick={() => {
                   const firstHref = bookRef.current?.spine?.items && bookRef.current.spine.items.length > 0 ? bookRef.current.spine.items[0].href : undefined;
                   if (firstHref) void safeDisplay(firstHref);
                   setUsedTocFallback(false);
-                }} className="bg-black/10 hover:bg-black/20 px-3 py-1 rounded text-sm font-semibold">Open first content</button>
+                }} className="rounded bg-amber-100/10 px-3 py-1 text-sm font-semibold hover:bg-amber-100/20">Open first content</button>
                 <button onClick={() => setUsedTocFallback(false)} className="px-2 py-1 text-sm underline">Dismiss</button>
               </div>
             </div>

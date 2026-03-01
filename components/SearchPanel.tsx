@@ -119,9 +119,9 @@ const SearchPanel: React.FC<SearchPanelProps> = ({
         aria-hidden="true"
        />
       <div
-        className={`fixed top-0 left-0 h-full w-80 bg-slate-800 shadow-2xl z-40 transform transition-transform duration-300 ease-in-out flex flex-col ${
+        className={`theme-surface-elevated theme-border theme-text-primary fixed top-0 left-0 z-40 flex h-full w-80 transform flex-col border-r shadow-2xl transition-transform duration-300 ease-in-out ${
           isOpen ? 'translate-x-0' : '-translate-x-full'
-        } theme-surface-elevated theme-border border-r theme-text-primary`}
+        }`}
         role="dialog"
         aria-modal="true"
         aria-labelledby="search-heading"
