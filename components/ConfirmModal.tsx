@@ -33,7 +33,7 @@ const ConfirmModal: React.FC<ConfirmModalProps> = ({ isOpen, title = 'Confirm', 
         onClick={(e) => e.stopPropagation()}
       >
         <div className="flex justify-between items-center mb-4">
-          <h2 className={`text-xl font-bold ${variant === 'danger' ? 'text-red-300' : 'text-sky-300'}`}>{title}</h2>
+          <h2 className={`text-xl font-bold ${variant === 'danger' ? 'text-red-300' : 'theme-accent-text'}`}>{title}</h2>
           <button onClick={onClose} className="theme-hover-surface p-2 rounded-full transition-colors" aria-label="Close">
             <CloseIcon className="w-6 h-6" />
           </button>
@@ -50,7 +50,7 @@ const ConfirmModal: React.FC<ConfirmModalProps> = ({ isOpen, title = 'Confirm', 
           </button>
           <button
             onClick={onConfirm}
-            className={`py-2 px-6 rounded-md transition-colors font-bold ${variant === 'danger' ? 'bg-red-600 hover:bg-red-700' : 'bg-sky-500 hover:bg-sky-600'}`}
+            className={`py-2 px-6 rounded-md transition-colors font-bold ${variant === 'danger' ? 'bg-red-600 hover:bg-red-700' : 'theme-button-primary'}`}
             tabIndex={0}
           >
             {confirmLabel}

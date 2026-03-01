@@ -40,7 +40,7 @@ const ThemeModal: React.FC<ThemeModalProps> = ({
         onClick={(e) => e.stopPropagation()}
       >
         <div className="mb-4 flex items-center justify-between">
-          <h2 className="text-xl font-bold text-sky-300">UI Theme</h2>
+          <h2 className="theme-accent-text text-xl font-bold">UI Theme</h2>
           <button onClick={onClose} className="theme-hover-surface rounded-full p-2 transition-colors" aria-label="Close">
             <CloseIcon className="w-6 h-6" />
           </button>
@@ -64,12 +64,12 @@ const ThemeModal: React.FC<ThemeModalProps> = ({
                 }}
                 className={`flex w-full items-center justify-between rounded-md border px-4 py-3 text-left transition-colors ${
                   isSelected
-                    ? 'border-sky-500 bg-sky-500/15 text-sky-200'
+                    ? 'theme-accent-surface theme-accent-text'
                     : 'theme-border theme-hover-surface'
                 }`}
               >
                 <span className="font-medium">{label}</span>
-                <span className={`text-xs ${isSelected ? 'text-sky-300' : 'theme-text-muted'}`}>
+                <span className={`text-xs ${isSelected ? 'theme-accent-text-emphasis' : 'theme-text-muted'}`}>
                   {isSelected ? 'Current' : 'Select'}
                 </span>
               </button>

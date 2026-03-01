@@ -32,6 +32,10 @@
   --nav-link-active-bg: rgba(14, 165, 233, 0.22);
   --nav-link-active-border: rgba(56, 189, 248, 0.42);
   --nav-link-active-fg: #e0f2fe;
+  --accent-soft-bg: rgba(14, 165, 233, 0.14);
+  --accent-soft-border: rgba(56, 189, 248, 0.36);
+  --accent-text: #bae6fd;
+  --accent-text-emphasis: #e0f2fe;
   --button-primary-bg: #0284c7;
   --button-primary-hover-bg: #0369a1;
   --button-primary-fg: #f8fafc;
@@ -73,9 +77,13 @@
   --nav-link-active-bg: rgba(14, 165, 233, 0.2);
   --nav-link-active-border: rgba(2, 132, 199, 0.38);
   --nav-link-active-fg: #082f49;
-  --button-primary-bg: #0ea5e9;
-  --button-primary-hover-bg: #0284c7;
-  --button-primary-fg: #082f49;
+  --accent-soft-bg: rgba(37, 99, 235, 0.1);
+  --accent-soft-border: rgba(37, 99, 235, 0.24);
+  --accent-text: #1e3a8a;
+  --accent-text-emphasis: #1d4ed8;
+  --button-primary-bg: #2563eb;
+  --button-primary-hover-bg: #1d4ed8;
+  --button-primary-fg: #eff6ff;
   --button-primary-disabled-bg: rgba(226, 232, 240, 0.95);
   --button-primary-disabled-fg: #64748b;
   --slider-track: rgba(148, 163, 184, 0.9);
@@ -125,6 +133,19 @@ body {
 
 .theme-text-muted {
   color: var(--text-muted) !important;
+}
+
+.theme-accent-text {
+  color: var(--accent-text) !important;
+}
+
+.theme-accent-text-emphasis {
+  color: var(--accent-text-emphasis) !important;
+}
+
+.theme-accent-surface {
+  background-color: var(--accent-soft-bg) !important;
+  border-color: var(--accent-soft-border) !important;
 }
 
 .theme-input {
