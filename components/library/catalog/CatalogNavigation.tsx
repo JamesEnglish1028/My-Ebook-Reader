@@ -82,7 +82,7 @@ const CatalogNavigation: React.FC<CatalogNavigationProps> = ({
       )}
 
       {(paginationSummary || showPagination) && (
-        <div className="space-y-3">
+        <div className="theme-surface theme-border space-y-3 rounded-xl border p-3">
           {paginationSummary && (
             <p className="theme-text-secondary text-sm" aria-live="polite">
               {paginationSummary}
