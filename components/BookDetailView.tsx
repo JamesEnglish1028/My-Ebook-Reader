@@ -269,12 +269,9 @@ const BookDetailView: React.FC<BookDetailViewProps> = ({ book, onBack, source, c
           {bookAny.contributors && bookAny.contributors.length > 0 && (
             <div className="mb-2 text-slate-400">Contributors: {bookAny.contributors.join(', ')}</div>
           )}
-          {publisherText && <div className="mb-2 text-slate-400">Publisher: {publisherText}</div>}
-          {bookAny.publicationDate && <div className="mb-2 text-slate-400">Published: {bookAny.publicationDate}</div>}
           {bookAny.isbn && (
             <div className="mb-2 text-slate-400">Publisher ID: {bookAny.isbn}</div>
           )}
-          {bookAny.language && <div className="mb-2 text-slate-400">Language: {bookAny.language}</div>}
           {(book.format || bookAny.mediaType || bookAny.acquisitionMediaType || bookAny.publicationTypeLabel) && (
             <div className="mb-2 flex flex-col gap-1">
               <div className="mb-2 flex flex-col gap-1">
@@ -313,6 +310,15 @@ const BookDetailView: React.FC<BookDetailViewProps> = ({ book, onBack, source, c
             {bookAny.accessibilitySummary && <li><span className="font-semibold text-slate-200">Accessibility:</span> <span className="text-slate-400">{bookAny.accessibilitySummary}</span></li>}
             {bookAny.accessibilityFeatures && bookAny.accessibilityFeatures.length > 0 && (
               <li><span className="font-semibold text-slate-200">Features:</span> <span className="text-slate-400">{bookAny.accessibilityFeatures.join(', ')}</span></li>
+            )}
+            {publisherText && (
+              <li><span className="font-semibold text-slate-200">Publisher:</span> <span className="text-slate-400">{publisherText}</span></li>
+            )}
+            {bookAny.publicationDate && (
+              <li><span className="font-semibold text-slate-200">Published:</span> <span className="text-slate-400">{bookAny.publicationDate}</span></li>
+            )}
+            {bookAny.language && (
+              <li><span className="font-semibold text-slate-200">Language:</span> <span className="text-slate-400">{bookAny.language}</span></li>
             )}
             {bookAny.categories && bookAny.categories.length > 0 && (
               <li>
