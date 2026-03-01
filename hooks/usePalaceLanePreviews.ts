@@ -14,6 +14,7 @@ interface UsePalaceLanePreviewsOptions {
 
 const DEFAULT_PREVIEW_BOOKS = 10;
 const MAX_CONCURRENT_PREVIEW_FETCHES = 3;
+const OPDS1_ACCEPT_HEADER = 'application/atom+xml;profile=opds-catalog, application/xml, text/xml, */*';
 
 const isPalaceHost = (url: string): boolean => {
   try {
@@ -126,7 +127,10 @@ export function usePalaceLanePreviews({
       let nextIndex = 0;
 
       const fetchSingleLane = async (link: CatalogNavigationLink): Promise<CatalogLanePreview> => {
-        if (isPalaceHost(link.url) && isCrossOriginWithoutProxy(link.url)) {
+        const palaceLane = isPalaceHost(link.url);
+        const proxyUrl = palaceLane ? proxiedUrl(link.url) : link.url;
+
+        if (palaceLane && isCrossOriginWithoutProxy(link.url)) {
           return {
             link,
             books: [],
@@ -134,6 +138,58 @@ export function usePalaceLanePreviews({
             error: 'Preview unavailable: Palace lane previews need a configured CORS proxy for this feed.',
             hasFetched: true,
           };
+        }
+
+        if (palaceLane && proxyUrl !== link.url) {
+          try {
+            const response = await fetch(proxyUrl, {
+              method: 'GET',
+              mode: 'cors',
+              credentials: 'omit',
+              headers: {
+                Accept: OPDS1_ACCEPT_HEADER,
+              },
+            });
+
+            if (!response.ok) {
+              return {
+                link,
+                books: [],
+                isLoading: false,
+                error: `Preview unavailable: proxy request failed (${response.status}).`,
+                hasFetched: true,
+              };
+            }
+
+            const responseText = await response.text();
+            const parsed = await opdsParserService.parseOPDS1(responseText, link.url);
+
+            if (!parsed.success) {
+              return {
+                link,
+                books: [],
+                isLoading: false,
+                error: parsed.error,
+                hasFetched: true,
+              };
+            }
+
+            return {
+              link,
+              books: parsed.data.books.slice(0, maxPreviewBooks),
+              isLoading: false,
+              hasFetched: true,
+              hasChildNavigation: parsed.data.navigationLinks.length > 0,
+            };
+          } catch (error) {
+            return {
+              link,
+              books: [],
+              isLoading: false,
+              error: error instanceof Error ? error.message : 'Preview unavailable.',
+              hasFetched: true,
+            };
+          }
         }
 
         const result = await opdsParserService.fetchCatalog(link.url, baseUrl, '1');

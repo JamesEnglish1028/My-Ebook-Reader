@@ -5,6 +5,7 @@ import { afterEach, describe, expect, it, vi } from 'vitest';
 
 import { opdsParserService } from '../../../../domain/catalog';
 import { parseOpds1Xml } from '../../../../services/opds';
+import { proxiedUrl } from '../../../../services';
 import { useCatalogContent, useResolvedCatalogSearch } from '../../../../hooks';
 import CatalogView from '../CatalogView';
 import {
@@ -39,6 +40,22 @@ describe('CatalogView Palace swim lanes integration', () => {
       'https://demo.palaceproject.io/groups/kids': palaceKidsLaneXml,
     };
     const rootFeed = parseOpds1Xml(palaceRootFeedXml, palaceCatalog.url);
+
+    vi.spyOn(globalThis, 'fetch').mockImplementation(async (input) => {
+      const requestUrl = typeof input === 'string' ? input : input.url;
+      const matchedEntry = Object.entries(fixtureFeeds).find(([targetUrl]) => requestUrl === proxiedUrl(targetUrl));
+
+      if (!matchedEntry) {
+        throw new Error(`Unexpected fetch: ${requestUrl}`);
+      }
+
+      return new Response(matchedEntry[1], {
+        status: 200,
+        headers: {
+          'Content-Type': 'application/atom+xml;profile=opds-catalog',
+        },
+      });
+    });
 
     vi.spyOn(opdsParserService, 'fetchCatalog').mockImplementation(async (url: string) => {
       const xml = fixtureFeeds[url];
