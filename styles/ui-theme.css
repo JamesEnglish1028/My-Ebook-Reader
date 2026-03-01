@@ -35,6 +35,8 @@
   --button-primary-bg: #0284c7;
   --button-primary-hover-bg: #0369a1;
   --button-primary-fg: #f8fafc;
+  --button-primary-disabled-bg: rgba(51, 65, 85, 0.9);
+  --button-primary-disabled-fg: #94a3b8;
   --slider-track: rgba(100, 116, 139, 0.75);
 }
 
@@ -74,6 +76,8 @@
   --button-primary-bg: #0ea5e9;
   --button-primary-hover-bg: #0284c7;
   --button-primary-fg: #082f49;
+  --button-primary-disabled-bg: rgba(226, 232, 240, 0.95);
+  --button-primary-disabled-fg: #64748b;
   --slider-track: rgba(148, 163, 184, 0.9);
 }
 
@@ -147,6 +151,11 @@ body {
 
 .theme-button-primary:hover {
   background-color: var(--button-primary-hover-bg) !important;
+}
+
+.theme-button-primary:disabled {
+  background-color: var(--button-primary-disabled-bg) !important;
+  color: var(--button-primary-disabled-fg) !important;
 }
 
 .theme-ring-offset {

@@ -303,7 +303,7 @@ const BookDetailView: React.FC<BookDetailViewProps> = ({ book, onBack, source, c
           {showImportSuccess && (
             <div className="fixed inset-0 flex items-center justify-center z-50">
               <div className="theme-surface-elevated theme-border theme-text-primary flex flex-col items-center rounded-lg border p-8 shadow-2xl">
-                <h2 className="text-2xl font-bold text-sky-400 mb-4">Import Successful!</h2>
+                <h2 className="theme-text-primary mb-4 text-2xl font-bold">Import Successful!</h2>
                 <p className="theme-text-secondary mb-6">The book has been imported to your library.</p>
                 <button className="px-4 py-2 rounded bg-sky-700 text-white font-bold hover:bg-sky-600" onClick={() => setShowImportSuccess(false)}>
                   Close
@@ -352,7 +352,7 @@ const BookDetailView: React.FC<BookDetailViewProps> = ({ book, onBack, source, c
         </div>
         {/* Book Details Section (accessibility, provider) INSIDE container */}
         <div className="theme-surface-elevated theme-border space-y-6 rounded-lg border p-6 md:mb-4 md:mr-6 md:mt-4 md:p-8">
-          <h3 className="text-xl font-bold text-sky-300 mb-4">Book Details</h3>
+          <h3 className="theme-text-primary mb-4 text-xl font-bold">Book Details</h3>
           <ul className="space-y-2 text-base">
             <li>
               <span className="theme-text-primary font-semibold">Catalog Provider:</span> <span className="theme-text-secondary">{bookAny.providerName || (source === 'catalog' ? catalogName : 'Imported locally')}</span>
