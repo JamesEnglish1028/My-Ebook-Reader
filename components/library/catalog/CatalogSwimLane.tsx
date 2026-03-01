@@ -134,7 +134,7 @@ const CatalogSwimLane: React.FC<CatalogSwimLaneProps> = ({
 
       {error ? (
         <div className="theme-surface-muted theme-border theme-text-muted rounded-xl border px-4 py-6 text-sm">
-          Could not load preview titles for this lane.
+          {error}
         </div>
       ) : isLoading ? (
         <div className="flex gap-4 overflow-x-auto pb-2" aria-label={`${laneTitle} loading`}>

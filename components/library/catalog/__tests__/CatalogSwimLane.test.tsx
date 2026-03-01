@@ -75,4 +75,20 @@ describe('CatalogSwimLane', () => {
     expect(screen.getByText('Featured')).toBeInTheDocument();
     expect(screen.getByText(/17 items/i)).toBeInTheDocument();
   });
+
+  it('renders the lane-specific preview error message', () => {
+    render(
+      <CatalogSwimLane
+        laneTitle="Featured"
+        laneLink={laneLink}
+        books={[]}
+        error="Preview unavailable: Palace lane previews need a configured CORS proxy for this feed."
+        hasFetched={true}
+        onOpenLane={vi.fn()}
+        onBookClick={vi.fn()}
+      />,
+    );
+
+    expect(screen.getByText(/configured CORS proxy/i)).toBeInTheDocument();
+  });
 });

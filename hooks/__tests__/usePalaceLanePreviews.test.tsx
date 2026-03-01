@@ -29,10 +29,10 @@ function deferred<T>() {
 describe('usePalaceLanePreviews', () => {
   it('limits concurrent preview fetches and starts queued lanes as earlier ones finish', async () => {
     const links = [
-      { title: 'Lane 1', url: 'https://demo.palaceproject.io/lane-1', rel: 'collection' },
-      { title: 'Lane 2', url: 'https://demo.palaceproject.io/lane-2', rel: 'collection' },
-      { title: 'Lane 3', url: 'https://demo.palaceproject.io/lane-3', rel: 'collection' },
-      { title: 'Lane 4', url: 'https://demo.palaceproject.io/lane-4', rel: 'collection' },
+      { title: 'Lane 1', url: 'https://catalog.example.org/lane-1', rel: 'collection' },
+      { title: 'Lane 2', url: 'https://catalog.example.org/lane-2', rel: 'collection' },
+      { title: 'Lane 3', url: 'https://catalog.example.org/lane-3', rel: 'collection' },
+      { title: 'Lane 4', url: 'https://catalog.example.org/lane-4', rel: 'collection' },
     ];
 
     const responses = links.map(() => deferred<any>());
@@ -46,12 +46,12 @@ describe('usePalaceLanePreviews', () => {
     renderHook(() => usePalaceLanePreviews({
       enabled: true,
       links: links as any,
-      baseUrl: 'https://demo.palaceproject.io/catalog',
+      baseUrl: 'https://catalog.example.org/catalog',
       requestedUrls: links.map((link) => link.url),
     }));
 
     await waitFor(() => expect(fetchCatalogMock).toHaveBeenCalledTimes(3));
-    expect(fetchCatalogMock).not.toHaveBeenCalledWith('https://demo.palaceproject.io/lane-4', expect.anything(), expect.anything());
+    expect(fetchCatalogMock).not.toHaveBeenCalledWith('https://catalog.example.org/lane-4', expect.anything(), expect.anything());
 
     await act(async () => {
       responses[0].resolve({
@@ -64,7 +64,7 @@ describe('usePalaceLanePreviews', () => {
     });
 
     await waitFor(() => expect(fetchCatalogMock).toHaveBeenCalledTimes(4));
-    expect(fetchCatalogMock).toHaveBeenCalledWith('https://demo.palaceproject.io/lane-4', 'https://demo.palaceproject.io/catalog', '1');
+    expect(fetchCatalogMock).toHaveBeenCalledWith('https://catalog.example.org/lane-4', 'https://catalog.example.org/catalog', '1');
 
     await act(async () => {
       responses.slice(1).forEach((response) => {

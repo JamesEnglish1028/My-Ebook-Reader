@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 
 import { opdsParserService } from '../domain/catalog';
+import { proxiedUrl } from '../services';
 import type { CatalogLanePreview, CatalogNavigationLink } from '../types';
 
 interface UsePalaceLanePreviewsOptions {
@@ -13,6 +14,31 @@ interface UsePalaceLanePreviewsOptions {
 
 const DEFAULT_PREVIEW_BOOKS = 10;
 const MAX_CONCURRENT_PREVIEW_FETCHES = 3;
+
+const isPalaceHost = (url: string): boolean => {
+  try {
+    const hostname = new URL(url).hostname.toLowerCase();
+    return hostname.endsWith('palace.io')
+      || hostname.endsWith('palaceproject.io')
+      || hostname.endsWith('thepalaceproject.org')
+      || hostname === 'palace.io'
+      || hostname.endsWith('.palace.io')
+      || hostname.endsWith('.thepalaceproject.org');
+  } catch {
+    return false;
+  }
+};
+
+const isCrossOriginWithoutProxy = (url: string): boolean => {
+  if (typeof window === 'undefined') return false;
+
+  try {
+    const target = new URL(url);
+    return target.origin !== window.location.origin && proxiedUrl(url) === url;
+  } catch {
+    return false;
+  }
+};
 
 export function usePalaceLanePreviews({
   enabled,
@@ -100,6 +126,16 @@ export function usePalaceLanePreviews({
       let nextIndex = 0;
 
       const fetchSingleLane = async (link: CatalogNavigationLink): Promise<CatalogLanePreview> => {
+        if (isPalaceHost(link.url) && isCrossOriginWithoutProxy(link.url)) {
+          return {
+            link,
+            books: [],
+            isLoading: false,
+            error: 'Preview unavailable: Palace lane previews need a configured CORS proxy for this feed.',
+            hasFetched: true,
+          };
+        }
+
         const result = await opdsParserService.fetchCatalog(link.url, baseUrl, '1');
 
         if (!result.success) {
