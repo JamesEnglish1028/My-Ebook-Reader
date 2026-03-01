@@ -69,26 +69,26 @@ const Error: React.FC<ErrorProps> = ({
     switch (severity) {
       case 'error':
         return {
-          bg: 'bg-red-900/20',
-          border: 'border-red-500/50',
-          text: 'text-red-400',
-          icon: 'text-red-500',
+          bg: 'theme-danger',
+          border: '',
+          text: 'theme-text-danger',
+          icon: 'theme-text-danger',
           button: 'bg-red-600 hover:bg-red-700',
         };
       case 'warning':
         return {
-          bg: 'bg-yellow-900/20',
-          border: 'border-yellow-500/50',
-          text: 'text-yellow-400',
-          icon: 'text-yellow-500',
+          bg: 'theme-warning',
+          border: '',
+          text: 'theme-text-warning',
+          icon: 'theme-text-warning',
           button: 'bg-yellow-600 hover:bg-yellow-700',
         };
       case 'info':
         return {
-          bg: 'bg-blue-900/20',
-          border: 'border-blue-500/50',
-          text: 'text-blue-400',
-          icon: 'text-blue-500',
+          bg: 'theme-info',
+          border: '',
+          text: 'theme-text-info',
+          icon: 'theme-text-info',
           button: 'bg-blue-600 hover:bg-blue-700',
         };
     }
@@ -123,13 +123,13 @@ const Error: React.FC<ErrorProps> = ({
   // Inline variant - compact message
   if (variant === 'inline') {
     return (
-      <div className={`flex items-center gap-2 p-2 rounded ${colors.bg} ${colors.border} border ${className}`}>
+      <div className={`flex items-center gap-2 rounded border p-2 ${colors.bg} ${className}`}>
         {getSeverityIcon()}
         <span className={`text-sm ${colors.text}`}>{message}</span>
         {onDismiss && (
           <button
             onClick={onDismiss}
-            className="ml-auto text-slate-400 hover:text-white theme-text-muted"
+            className="theme-text-muted ml-auto hover:text-sky-400"
             aria-label="Dismiss"
           >
             <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -153,7 +153,7 @@ const Error: React.FC<ErrorProps> = ({
                 {title}
               </h3>
             )}
-            <p className="text-slate-300 text-sm theme-text-secondary">{message}</p>
+            <p className="theme-text-secondary text-sm">{message}</p>
 
             {/* Actions */}
             {(onRetry || onDismiss) && (
@@ -169,7 +169,7 @@ const Error: React.FC<ErrorProps> = ({
                 {onDismiss && (
                   <button
                     onClick={onDismiss}
-                    className="px-4 py-2 rounded-lg bg-slate-700 hover:bg-slate-600 text-white font-medium transition-colors theme-button-neutral theme-hover-surface"
+                    className="theme-button-neutral theme-hover-surface rounded-lg px-4 py-2 font-medium transition-colors"
                   >
                     Dismiss
                   </button>
@@ -182,7 +182,7 @@ const Error: React.FC<ErrorProps> = ({
           {onDismiss && (
             <button
               onClick={onDismiss}
-              className="flex-shrink-0 text-slate-400 hover:text-white theme-text-muted"
+              className="theme-text-muted shrink-0 hover:text-sky-400"
               aria-label="Close"
             >
               <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -205,7 +205,7 @@ const Error: React.FC<ErrorProps> = ({
           {title || 'Something Went Wrong'}
         </h2>
 
-        <p className="text-slate-300 mb-6 theme-text-secondary">
+        <p className="theme-text-secondary mb-6">
           {message}
         </p>
 
@@ -223,7 +223,7 @@ const Error: React.FC<ErrorProps> = ({
             {onDismiss && (
               <button
                 onClick={onDismiss}
-                className="px-6 py-3 rounded-lg bg-slate-700 hover:bg-slate-600 text-white font-bold transition-colors theme-button-neutral theme-hover-surface"
+                className="theme-button-neutral theme-hover-surface rounded-lg px-6 py-3 font-bold transition-colors"
               >
                 Dismiss
               </button>

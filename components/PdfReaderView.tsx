@@ -564,7 +564,7 @@ const PdfReaderView: React.FC<PdfReaderViewProps> = ({ bookId: propBookId, onClo
                 max={numPages || 1}
                 value={currentPage}
                 onChange={(e) => setCurrentPage(Number(e.target.value))}
-                className="w-full h-2 bg-slate-600 rounded-lg appearance-none cursor-pointer"
+                className="theme-slider h-2 w-full cursor-pointer appearance-none rounded-lg"
                 aria-label="PDF progress"
                 disabled={!numPages}
               />

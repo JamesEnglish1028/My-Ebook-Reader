@@ -28,7 +28,7 @@ const SearchResultExcerpt: React.FC<{ excerpt: string; query: string }> = ({ exc
         // Fallback for safety, query should always be in the excerpt. Highlight within original.
         const parts = excerpt.split(new RegExp(`(${query})`, 'gi'));
         return (
-            <span className="text-sm text-slate-300 group-hover:text-slate-100 transition-colors theme-text-secondary">
+            <span className="theme-text-secondary text-sm transition-colors group-hover:text-sky-300">
                 {parts.map((part, i) =>
                     part.toLowerCase() === queryLower ? (
                         <strong key={i} className="text-sky-300 bg-sky-800/50 font-normal rounded">
@@ -82,7 +82,7 @@ const SearchResultExcerpt: React.FC<{ excerpt: string; query: string }> = ({ exc
     const parts = snippet.split(new RegExp(`(${query})`, 'gi'));
     
     return (
-        <span className="text-sm text-slate-300 group-hover:text-slate-100 transition-colors theme-text-secondary">
+        <span className="theme-text-secondary text-sm transition-colors group-hover:text-sky-300">
             {leadingEllipsis && '...'}
             {parts.map((part, i) =>
                 part.toLowerCase() === queryLower ? (
@@ -136,7 +136,7 @@ const SearchPanel: React.FC<SearchPanelProps> = ({
         <div className="theme-divider shrink-0 border-b p-4">
             <div className="relative">
                 <span className="absolute inset-y-0 left-0 flex items-center pl-3 pointer-events-none">
-                    <SearchIcon className="w-5 h-5 text-slate-400 theme-text-muted" />
+                    <SearchIcon className="theme-text-muted h-5 w-5" />
                 </span>
                 <input
                     type="search"
@@ -157,7 +157,7 @@ const SearchPanel: React.FC<SearchPanelProps> = ({
                 </div>
             ) : searchQuery && results.length > 0 ? (
                 <>
-                    <p className="text-xs text-slate-400 px-4 pt-4 pb-2 theme-text-muted">{results.length} result{results.length !== 1 && 's'} found for "{searchQuery}"</p>
+                    <p className="theme-text-muted px-4 pb-2 pt-4 text-xs">{results.length} result{results.length !== 1 && 's'} found for "{searchQuery}"</p>
                     <ul className="theme-divider divide-y">
                         {results.map((result, index) => (
                             <li key={index} className="group">
@@ -169,9 +169,9 @@ const SearchPanel: React.FC<SearchPanelProps> = ({
                     </ul>
                 </>
             ) : searchQuery && results.length === 0 ? (
-                <p className="p-8 text-slate-400 text-center theme-text-secondary">No results found for "{searchQuery}".</p>
+                <p className="theme-text-secondary p-8 text-center">No results found for "{searchQuery}".</p>
             ) : (
-                <p className="p-8 text-slate-400 text-center theme-text-secondary">Enter a term above to search the book.</p>
+                <p className="theme-text-secondary p-8 text-center">Enter a term above to search the book.</p>
             )}
         </div>
       </div>

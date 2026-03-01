@@ -1228,7 +1228,7 @@ const ReaderView: React.FC<ReaderViewProps> = ({ bookId, onClose, animationData 
               max="100"
               value={locationInfo.progress || 0}
               onChange={handleSliderChange}
-              className="w-full h-2 bg-slate-600 rounded-lg appearance-none cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
+              className="theme-slider h-2 w-full cursor-pointer appearance-none rounded-lg disabled:opacity-50 disabled:cursor-not-allowed"
               aria-label="Book progress"
               disabled={!locationsReadyRef.current || locationInfo.totalPages === 0}
             />

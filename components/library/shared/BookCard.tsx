@@ -73,10 +73,10 @@ const BookCard = React.forwardRef<HTMLDivElement, BookCardProps>(({
       onKeyDown={handleKeyDown}
       tabIndex={0}
       aria-label={`${book.title} by ${book.author}`}
-      className={`cursor-pointer group relative focus:outline-none ${isFocused ? 'ring-2 ring-sky-500 ring-offset-2 ring-offset-slate-900 theme-ring-offset' : ''} ${className}`}
+      className={`cursor-pointer group relative focus:outline-none ${isFocused ? 'ring-2 ring-sky-500 ring-offset-2 theme-ring-offset' : ''} ${className}`}
     >
       {/* Book Cover */}
-      <div className="aspect-[2/3] bg-slate-800 rounded-lg overflow-hidden shadow-lg transform group-hover:scale-105 transition-transform duration-300 book-cover-container theme-surface-elevated">
+      <div className="theme-surface-elevated book-cover-container aspect-[2/3] overflow-hidden rounded-lg shadow-lg transform transition-transform duration-300 group-hover:scale-105">
         {coverImage ? (
           <img
             src={coverImage}
@@ -93,7 +93,7 @@ const BookCard = React.forwardRef<HTMLDivElement, BookCardProps>(({
             }}
           />
         ) : (
-          <div className="w-full h-full flex items-center justify-center p-4 text-center text-slate-400 theme-text-muted">
+          <div className="theme-text-muted flex h-full w-full items-center justify-center p-4 text-center">
             <span className="font-semibold">{book.title}</span>
           </div>
         )}
@@ -101,19 +101,19 @@ const BookCard = React.forwardRef<HTMLDivElement, BookCardProps>(({
 
       {/* Book Info */}
       <div className="mt-2 space-y-1">
-        <h3 className="text-sm font-semibold text-white truncate group-hover:text-sky-400 theme-text-primary">
+        <h3 className="theme-text-primary truncate text-sm font-semibold group-hover:text-sky-400">
           {book.title}
         </h3>
-        <p className="text-xs text-slate-400 truncate theme-text-secondary">
+        <p className="theme-text-secondary truncate text-xs">
           {book.author}
         </p>
         {contributors.length > 0 && (
-          <p className="text-[11px] text-slate-400 truncate theme-text-secondary" title={contributors.join(', ')}>
+          <p className="theme-text-secondary truncate text-[11px]" title={contributors.join(', ')}>
             Contributors: {contributors.slice(0, 2).join(', ')}
           </p>
         )}
         {categories.length > 0 && (
-          <p className="text-[11px] text-slate-500 truncate theme-text-muted" title={categories.join(', ')}>
+          <p className="theme-text-muted truncate text-[11px]" title={categories.join(', ')}>
             Categories: {categories.slice(0, 2).join(', ')}
           </p>
         )}

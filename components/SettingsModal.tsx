@@ -78,12 +78,12 @@ const SettingsModal: React.FC<SettingsModalProps> = ({
 
   const signInDisabled = !isInitialized || authStatus === 'initializing' || authStatus === 'not_configured';
   const syncTone = syncStatus.state === 'error'
-    ? 'text-red-300 border-red-500/30 bg-red-500/10'
+    ? 'theme-danger'
     : syncStatus.state === 'success'
-      ? 'text-emerald-300 border-emerald-500/30 bg-emerald-500/10'
+      ? 'theme-success'
       : syncStatus.state === 'syncing'
-        ? 'text-sky-300 border-sky-500/30 bg-sky-500/10'
-        : 'text-slate-300 border-slate-600 bg-slate-800/70';
+        ? 'theme-info'
+        : 'theme-surface-elevated theme-border theme-text-secondary';
   const syncSummary = syncStatus.state === 'idle' ? `Last synced: ${lastSyncString}` : syncStatus.message;
 
   return (
@@ -118,17 +118,17 @@ const SettingsModal: React.FC<SettingsModalProps> = ({
                   {syncSummary}
                 </div>
                 {authError && (
-                  <p className="text-xs text-amber-300" role="status">{authError}</p>
+                  <p className="theme-text-warning text-xs" role="status">{authError}</p>
                 )}
               </div>
             ) : (
               <div>
                 <p className="theme-text-secondary mb-3 text-sm">Sign in with your Google account to back up and sync your library across devices using Google Drive.</p>
                 {authStatus === 'not_configured' && (
-                  <p className="text-xs text-amber-300 mb-3" role="status">Google sync is not configured for this deployment. Set `VITE_GOOGLE_CLIENT_ID` and redeploy.</p>
+                  <p className="theme-text-warning mb-3 text-xs" role="status">Google sync is not configured for this deployment. Set `VITE_GOOGLE_CLIENT_ID` and redeploy.</p>
                 )}
                 {authStatus === 'error' && authError && (
-                  <p className="text-xs text-amber-300 mb-3" role="status">{authError}</p>
+                  <p className="theme-text-warning mb-3 text-xs" role="status">{authError}</p>
                 )}
                 <button
                   onClick={signIn}
@@ -182,8 +182,8 @@ const SettingsModal: React.FC<SettingsModalProps> = ({
               {syncStatus.state !== 'idle' ? (
                 <div className="theme-surface-elevated rounded-md p-4 text-center">
                   {isSyncing && <Spinner text={syncStatus.message} />}
-                  {syncStatus.state === 'success' && <p className="text-green-400">{syncStatus.message}</p>}
-                  {syncStatus.state === 'error' && <p className="text-red-400">{syncStatus.message}</p>}
+                  {syncStatus.state === 'success' && <p className="theme-text-success">{syncStatus.message}</p>}
+                  {syncStatus.state === 'error' && <p className="theme-text-danger">{syncStatus.message}</p>}
                 </div>
               ) : (
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">

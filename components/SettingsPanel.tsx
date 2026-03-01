@@ -116,7 +116,7 @@ const SettingsPanel: React.FC<SettingsPanelProps> = ({ isOpen, onClose, settings
             step="0.1"
             value={settings.readAloud.rate}
             onChange={(e) => handleReadAloudChange({ rate: parseFloat(e.target.value) })}
-            className="w-full h-2 bg-slate-600 rounded-lg appearance-none cursor-pointer"
+            className="theme-slider h-2 w-full cursor-pointer appearance-none rounded-lg"
           />
           <div className="theme-text-muted mt-1 text-center text-sm">{settings.readAloud.rate.toFixed(1)}x</div>
         </div>
@@ -134,7 +134,7 @@ const SettingsPanel: React.FC<SettingsPanelProps> = ({ isOpen, onClose, settings
             step="0.1"
             value={settings.readAloud.pitch}
             onChange={(e) => handleReadAloudChange({ pitch: parseFloat(e.target.value) })}
-            className="w-full h-2 bg-slate-600 rounded-lg appearance-none cursor-pointer"
+            className="theme-slider h-2 w-full cursor-pointer appearance-none rounded-lg"
           />
           <div className="theme-text-muted mt-1 text-center text-sm">{settings.readAloud.pitch.toFixed(1)}</div>
         </div>
@@ -206,7 +206,7 @@ const SettingsPanel: React.FC<SettingsPanelProps> = ({ isOpen, onClose, settings
                     step="1"
                     value={settings.fontSize}
                     onChange={(e) => onSettingsChange({ fontSize: parseInt(e.target.value, 10) })}
-                    className="w-full h-2 bg-slate-600 rounded-lg appearance-none cursor-pointer"
+                    className="theme-slider h-2 w-full cursor-pointer appearance-none rounded-lg"
                   />
                   <span className="text-3xl">A</span>
                 </div>

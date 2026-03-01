@@ -117,24 +117,24 @@ const CatalogSidebar: React.FC<CatalogSidebarProps> = ({
 
   return (
     <>
-      <div className="rounded-xl border border-slate-700/60 bg-slate-900/40 p-3 lg:sticky lg:top-4 theme-surface theme-border">
+      <div className="theme-surface theme-border rounded-xl border p-3 lg:sticky lg:top-4">
         <div className="mb-3 flex items-center justify-between">
-          <h3 className="text-xs font-semibold uppercase tracking-[0.18em] text-slate-400 theme-text-secondary">Browse</h3>
-          <span className="text-[11px] text-slate-500 theme-text-muted">
+          <h3 className="theme-text-secondary text-xs font-semibold uppercase tracking-[0.18em]">Browse</h3>
+          <span className="theme-text-muted text-[11px]">
             {navigationLinks.length + facetGroups.reduce((sum, group) => sum + group.links.length, 0)} options
           </span>
         </div>
 
         <div className="space-y-2.5">
           {hasNavigation && (
-            <div className="overflow-hidden rounded-lg border border-slate-700/70 theme-border">
+            <div className="theme-border overflow-hidden rounded-lg border">
               <button
                 onClick={() => setNavigationOpen(!navigationOpen)}
-                className="flex w-full items-center justify-between bg-slate-800/70 px-3 py-2 text-left transition-colors hover:bg-slate-800 theme-surface-muted theme-hover-surface"
+                className="theme-surface-muted theme-hover-surface flex w-full items-center justify-between px-3 py-2 text-left transition-colors"
               >
-                <span className="text-xs font-medium uppercase tracking-[0.14em] text-slate-300 theme-text-secondary">Navigation</span>
+                <span className="theme-text-secondary text-xs font-medium uppercase tracking-[0.14em]">Navigation</span>
                 <svg
-                  className={`w-4 h-4 text-slate-400 transition-transform ${navigationOpen ? 'rotate-180' : ''}`}
+                  className={`theme-text-muted h-4 w-4 transition-transform ${navigationOpen ? 'rotate-180' : ''}`}
                   fill="none"
                   stroke="currentColor"
                   viewBox="0 0 24 24"
@@ -143,14 +143,14 @@ const CatalogSidebar: React.FC<CatalogSidebarProps> = ({
                 </svg>
               </button>
               {navigationOpen && (
-                <div className="space-y-2 bg-slate-900/30 p-2 theme-surface">
+                <div className="theme-surface space-y-2 p-2">
                   {showNavigationSearch && (
                     <input
                       type="search"
                       value={navigationQuery}
                       onChange={(event) => setNavigationQuery(event.target.value)}
                       placeholder={`Filter ${navigationLinks.length} links`}
-                      className="w-full rounded-md border border-slate-700 bg-slate-900 px-2.5 py-2 text-sm text-slate-200 placeholder:text-slate-500 focus:border-sky-500/50 focus:outline-none theme-input"
+                      className="theme-input w-full rounded-md border px-2.5 py-2 text-sm focus:border-sky-500/50 focus:outline-none"
                       aria-label="Filter navigation links"
                     />
                   )}
@@ -164,7 +164,7 @@ const CatalogSidebar: React.FC<CatalogSidebarProps> = ({
                           {hiddenNavigationCount > 0 && (
                             <button
                               onClick={() => setShowExpandedNavigation(true)}
-                              className="rounded-md border border-slate-700 bg-slate-800 px-2.5 py-1.5 text-xs font-medium text-slate-300 transition-colors hover:bg-slate-700 theme-button-neutral theme-hover-surface"
+                              className="theme-button-neutral theme-hover-surface rounded-md border px-2.5 py-1.5 text-xs font-medium transition-colors"
                             >
                               Show {Math.min(hiddenNavigationCount, EXPANDED_LIMIT - INLINE_LIMIT)} more
                             </button>
@@ -172,7 +172,7 @@ const CatalogSidebar: React.FC<CatalogSidebarProps> = ({
                           {showExpandedNavigation && filteredNavigationLinks.length > INLINE_LIMIT && (
                             <button
                               onClick={() => setShowExpandedNavigation(false)}
-                              className="rounded-md border border-slate-700 bg-slate-800 px-2.5 py-1.5 text-xs font-medium text-slate-300 transition-colors hover:bg-slate-700 theme-button-neutral theme-hover-surface"
+                              className="theme-button-neutral theme-hover-surface rounded-md border px-2.5 py-1.5 text-xs font-medium transition-colors"
                             >
                               Show less
                             </button>
@@ -190,7 +190,7 @@ const CatalogSidebar: React.FC<CatalogSidebarProps> = ({
                       )}
                     </>
                   ) : (
-                    <p className="rounded-md bg-slate-900 px-2.5 py-3 text-sm text-slate-400 theme-surface-elevated theme-text-muted">
+                    <p className="theme-surface-elevated theme-text-muted rounded-md px-2.5 py-3 text-sm">
                       No navigation links match that filter.
                     </p>
                   )}
@@ -200,14 +200,14 @@ const CatalogSidebar: React.FC<CatalogSidebarProps> = ({
           )}
 
           {hasFacets && (
-            <div className="overflow-hidden rounded-lg border border-slate-700/70 theme-border">
+            <div className="theme-border overflow-hidden rounded-lg border">
               <button
                 onClick={() => setFacetsOpen(!facetsOpen)}
-                className="flex w-full items-center justify-between bg-slate-800/70 px-3 py-2 text-left transition-colors hover:bg-slate-800 theme-surface-muted theme-hover-surface"
+                className="theme-surface-muted theme-hover-surface flex w-full items-center justify-between px-3 py-2 text-left transition-colors"
               >
-                <span className="text-xs font-medium uppercase tracking-[0.14em] text-slate-300 theme-text-secondary">Facets</span>
+                <span className="theme-text-secondary text-xs font-medium uppercase tracking-[0.14em]">Facets</span>
                 <svg
-                  className={`w-4 h-4 text-slate-400 transition-transform ${facetsOpen ? 'rotate-180' : ''}`}
+                  className={`theme-text-muted h-4 w-4 transition-transform ${facetsOpen ? 'rotate-180' : ''}`}
                   fill="none"
                   stroke="currentColor"
                   viewBox="0 0 24 24"
@@ -216,10 +216,10 @@ const CatalogSidebar: React.FC<CatalogSidebarProps> = ({
                 </svg>
               </button>
               {facetsOpen && (
-                <div className="space-y-3 bg-slate-900/30 p-2 theme-surface">
+                <div className="theme-surface space-y-3 p-2">
                   {facetGroups.filter((group) => group.links.length > 0).map((group, groupIndex) => (
                     <div key={`${group.title}-${groupIndex}`}>
-                      <p className="px-1.5 pb-1 text-[11px] font-medium uppercase tracking-[0.14em] text-slate-500 theme-text-muted">{group.title}</p>
+                      <p className="theme-text-muted px-1.5 pb-1 text-[11px] font-medium uppercase tracking-[0.14em]">{group.title}</p>
                       <nav className="space-y-1.5">
                         {group.links.map((link, index) => (
                           <button
@@ -228,12 +228,12 @@ const CatalogSidebar: React.FC<CatalogSidebarProps> = ({
                             className={`flex w-full items-center justify-between gap-3 rounded-md border px-2.5 py-2 text-left text-sm transition-colors ${
                               link.isActive
                                 ? 'border-emerald-500/40 bg-emerald-500/12 text-emerald-100'
-                                : 'border-transparent bg-slate-800/40 text-slate-300 hover:bg-slate-800/70'
+                                : 'theme-button-neutral border-transparent'
                             }`}
                           >
                             <span className="truncate">{link.title}</span>
                             {typeof link.count === 'number' && (
-                              <span className="rounded-full bg-slate-800 px-2 py-0.5 text-[11px] text-slate-400 theme-surface-elevated theme-text-muted">{link.count}</span>
+                              <span className="theme-surface-elevated theme-text-muted rounded-full px-2 py-0.5 text-[11px]">{link.count}</span>
                             )}
                           </button>
                         ))}
@@ -256,30 +256,30 @@ const CatalogSidebar: React.FC<CatalogSidebarProps> = ({
         >
           <div
             ref={navigationModalRef}
-            className="flex max-h-[85vh] w-full max-w-2xl flex-col overflow-hidden rounded-xl border border-slate-700 bg-slate-900 text-white shadow-xl theme-surface-elevated theme-border theme-text-primary"
+            className="theme-surface-elevated theme-border theme-text-primary flex max-h-[85vh] w-full max-w-2xl flex-col overflow-hidden rounded-xl border shadow-xl"
             onClick={(event) => event.stopPropagation()}
           >
-            <div className="flex items-center justify-between border-b border-slate-700 px-4 py-3">
+            <div className="theme-divider flex items-center justify-between border-b px-4 py-3">
               <div>
-                <h4 className="text-sm font-semibold text-white">All Navigation Links</h4>
-                <p className="text-xs text-slate-400">{navigationLinks.length} total links</p>
+                <h4 className="theme-text-primary text-sm font-semibold">All Navigation Links</h4>
+                <p className="theme-text-muted text-xs">{navigationLinks.length} total links</p>
               </div>
               <button
                 onClick={() => setIsNavigationModalOpen(false)}
-                className="rounded-full p-2 text-slate-400 transition-colors hover:bg-slate-800 hover:text-white"
+                className="theme-text-muted theme-hover-surface rounded-full p-2 transition-colors hover:text-sky-300"
                 aria-label="Close navigation browser"
               >
                 <CloseIcon className="h-5 w-5" />
               </button>
             </div>
-            <div className="border-b border-slate-700 px-4 py-3">
+            <div className="theme-divider border-b px-4 py-3">
               <input
                 ref={modalSearchRef}
                 type="search"
                 value={modalQuery}
                 onChange={(event) => setModalQuery(event.target.value)}
                 placeholder={`Search ${navigationLinks.length} links`}
-                className="w-full rounded-md border border-slate-700 bg-slate-950 px-3 py-2 text-sm text-slate-100 placeholder:text-slate-500 focus:border-sky-500/50 focus:outline-none"
+                className="theme-input w-full rounded-md border px-3 py-2 text-sm focus:border-sky-500/50 focus:outline-none"
                 aria-label="Search all navigation links"
               />
             </div>
@@ -289,7 +289,7 @@ const CatalogSidebar: React.FC<CatalogSidebarProps> = ({
                   {modalNavigationLinks.map((link, index) => renderNavigationButton(link, index, handleModalNavigationSelect))}
                 </nav>
               ) : (
-                <p className="rounded-md bg-slate-950 px-3 py-4 text-sm text-slate-400">
+                <p className="theme-surface theme-text-muted rounded-md px-3 py-4 text-sm">
                   No navigation links match that search.
                 </p>
               )}

@@ -39,8 +39,8 @@ const DuplicateBookModal: React.FC<DuplicateBookModalProps> = ({ isOpen, onClose
           </button>
         </div>
 
-        <p className="text-slate-300 mb-6 text-sm theme-text-secondary">
-          The book "<strong className="font-semibold text-slate-100 theme-text-primary">{bookTitle}</strong>" is already in your library. What would you like to do?
+        <p className="theme-text-secondary mb-6 text-sm">
+          The book "<strong className="theme-text-primary font-semibold">{bookTitle}</strong>" is already in your library. What would you like to do?
         </p>
 
         <div className="flex flex-col gap-3">

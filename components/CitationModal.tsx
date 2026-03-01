@@ -55,12 +55,12 @@ const CitationModal: React.FC<CitationModalProps> = ({ isOpen, onClose, onSave }
           </button>
         </div>
 
-        <p className="text-slate-300 mb-4 text-sm theme-text-secondary">
+        <p className="theme-text-secondary mb-4 text-sm">
           A citation for the current location will be created. You can add an optional note below.
         </p>
 
         <div>
-          <label htmlFor="citation-note" className="block text-sm font-medium text-slate-400 mb-2 theme-text-secondary">
+          <label htmlFor="citation-note" className="theme-text-secondary mb-2 block text-sm font-medium">
             Note (optional)
           </label>
           <textarea
@@ -76,7 +76,7 @@ const CitationModal: React.FC<CitationModalProps> = ({ isOpen, onClose, onSave }
             className="theme-input w-full rounded-md p-2 text-sm focus:outline-none focus:ring-2 focus:ring-sky-500"
             placeholder="Add a brief note..."
           />
-          <p className={`mt-1 text-right text-xs ${remainingChars < 10 ? 'text-red-400' : 'theme-text-muted'}`}>
+          <p className={`mt-1 text-right text-xs ${remainingChars < 10 ? 'theme-text-danger' : 'theme-text-muted'}`}>
             {remainingChars} characters remaining
           </p>
         </div>

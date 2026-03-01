@@ -324,11 +324,11 @@ const LibraryView: React.FC<LibraryViewProps> = ({
   const lastSyncLabel = lastSyncDate ? new Date(lastSyncDate).toLocaleString() : 'Never';
   const syncSummary = syncStatus.state === 'idle' ? `Last synced ${lastSyncLabel}` : syncStatus.message;
   const syncSummaryTone = syncStatus.state === 'error'
-    ? 'text-red-300'
+    ? 'theme-text-danger'
     : syncStatus.state === 'success'
-      ? 'text-emerald-300'
+      ? 'theme-text-success'
       : syncStatus.state === 'syncing'
-        ? 'text-sky-300'
+        ? 'theme-text-info'
         : 'theme-text-muted';
 
   return (
@@ -396,14 +396,14 @@ const LibraryView: React.FC<LibraryViewProps> = ({
           <div ref={settingsMenuRef} className="relative">
             <button
               onClick={() => setIsSettingsMenuOpen(prev => !prev)}
-              className="cursor-pointer bg-slate-900/80 hover:bg-slate-800 text-slate-200 p-2 rounded-md inline-flex items-center transition-colors duration-200 h-[36px] w-[36px] justify-center border border-slate-700/80 theme-surface theme-border theme-text-secondary"
+              className="theme-surface theme-border theme-text-secondary h-[36px] w-[36px] cursor-pointer rounded-md p-2 inline-flex items-center justify-center transition-colors duration-200"
               aria-label="Open main menu"
             >
               <ListIcon className="w-4 h-4" />
             </button>
             {isSettingsMenuOpen && (
-              <div className="absolute top-full right-0 mt-2 w-64 bg-slate-900/95 border border-slate-700/80 rounded-md shadow-xl z-20 overflow-hidden backdrop-blur-sm theme-surface-elevated theme-border">
-                <div className="px-3 py-2.5 border-b border-slate-700/60 bg-slate-800/50 theme-surface-muted theme-divider">
+              <div className="theme-surface-elevated theme-border absolute top-full right-0 z-20 mt-2 w-64 overflow-hidden rounded-md shadow-xl backdrop-blur-sm">
+                <div className="theme-surface-muted theme-divider px-3 py-2.5 border-b">
                   {isLoggedIn && user ? (
                     <div className="flex items-center gap-2.5">
                       <img
@@ -441,7 +441,7 @@ const LibraryView: React.FC<LibraryViewProps> = ({
                         setIsManageCatalogsOpen(true);
                         setIsSettingsMenuOpen(false);
                       }}
-                        className="w-full text-left px-2.5 py-2 text-[13px] rounded-sm hover:bg-slate-800/80 text-slate-200 block theme-text-secondary theme-hover-surface"
+                        className="theme-text-secondary theme-hover-surface block w-full rounded-sm px-2.5 py-2 text-left text-[13px]"
                     >
                       Manage Sources
                     </button>
@@ -457,7 +457,7 @@ const LibraryView: React.FC<LibraryViewProps> = ({
                           className={`rounded-sm px-2 py-1.5 text-[12px] font-medium capitalize transition-colors ${
                             uiTheme === themeOption
                               ? 'bg-sky-600 text-white'
-                              : 'bg-slate-800/80 text-slate-300 hover:bg-slate-700/80 theme-button-neutral theme-hover-surface'
+                              : 'theme-button-neutral theme-hover-surface'
                           }`}
                         >
                           {themeOption}
@@ -472,7 +472,7 @@ const LibraryView: React.FC<LibraryViewProps> = ({
                         onOpenLocalStorageModal();
                         setIsSettingsMenuOpen(false);
                       }}
-                      className="w-full text-left px-2.5 py-2 text-[13px] rounded-sm hover:bg-slate-800/80 text-slate-200 block theme-text-secondary theme-hover-surface"
+                      className="theme-text-secondary theme-hover-surface block w-full rounded-sm px-2.5 py-2 text-left text-[13px]"
                     >
                       Local Storage
                     </button>
@@ -483,7 +483,7 @@ const LibraryView: React.FC<LibraryViewProps> = ({
                         onOpenCloudSyncModal();
                         setIsSettingsMenuOpen(false);
                       }}
-                      className="w-full text-left px-2.5 py-2 text-[13px] rounded-sm hover:bg-slate-800/80 text-slate-200 block theme-text-secondary theme-hover-surface"
+                      className="theme-text-secondary theme-hover-surface block w-full rounded-sm px-2.5 py-2 text-left text-[13px]"
                     >
                       Cloud Sync
                     </button>
@@ -495,7 +495,7 @@ const LibraryView: React.FC<LibraryViewProps> = ({
                         onShowAbout();
                         setIsSettingsMenuOpen(false);
                       }}
-                      className="w-full text-left px-2.5 py-2 text-[13px] rounded-sm hover:bg-slate-800/80 text-slate-200 block theme-text-secondary theme-hover-surface"
+                      className="theme-text-secondary theme-hover-surface block w-full rounded-sm px-2.5 py-2 text-left text-[13px]"
                     >
                       About
                     </button>

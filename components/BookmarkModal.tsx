@@ -54,12 +54,12 @@ const BookmarkModal: React.FC<BookmarkModalProps> = ({ isOpen, onClose, onSave }
           </button>
         </div>
 
-        <p className="text-slate-300 mb-4 text-sm theme-text-secondary">
+        <p className="theme-text-secondary mb-4 text-sm">
           A bookmark for the current location will be created. You can add an optional note below.
         </p>
 
         <div>
-          <label htmlFor="bookmark-note" className="block text-sm font-medium text-slate-400 mb-2 theme-text-secondary">
+          <label htmlFor="bookmark-note" className="theme-text-secondary mb-2 block text-sm font-medium">
             Note (optional)
           </label>
           <textarea
@@ -75,7 +75,7 @@ const BookmarkModal: React.FC<BookmarkModalProps> = ({ isOpen, onClose, onSave }
             className="theme-input w-full rounded-md p-2 text-sm focus:outline-none focus:ring-2 focus:ring-sky-500"
             placeholder="Add a brief note..."
           />
-          <p className={`mt-1 text-right text-xs ${remainingChars < 20 ? 'text-red-400' : 'theme-text-muted'}`}>
+          <p className={`mt-1 text-right text-xs ${remainingChars < 20 ? 'theme-text-danger' : 'theme-text-muted'}`}>
             {remainingChars} characters remaining
           </p>
         </div>

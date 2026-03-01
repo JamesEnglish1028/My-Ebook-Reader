@@ -283,7 +283,7 @@ const BookDetailView: React.FC<BookDetailViewProps> = ({ book, onBack, source, c
               onError={handleImgError}
             />
           ) : (
-            <div className="w-full max-w-xs flex items-center justify-center p-4 text-center text-slate-400 bg-slate-800 rounded-lg aspect-[2/3] shadow-2xl theme-surface-elevated theme-text-muted">
+            <div className="theme-surface-elevated theme-text-muted aspect-[2/3] flex w-full max-w-xs items-center justify-center rounded-lg p-4 text-center shadow-2xl">
               <span className="font-semibold">{book.title}</span>
             </div>
           )}
@@ -302,9 +302,9 @@ const BookDetailView: React.FC<BookDetailViewProps> = ({ book, onBack, source, c
           )}
           {showImportSuccess && (
             <div className="fixed inset-0 flex items-center justify-center z-50">
-              <div className="bg-slate-900 bg-opacity-90 p-8 rounded-lg shadow-2xl flex flex-col items-center border theme-surface-elevated theme-border theme-text-primary">
+              <div className="theme-surface-elevated theme-border theme-text-primary flex flex-col items-center rounded-lg border p-8 shadow-2xl">
                 <h2 className="text-2xl font-bold text-sky-400 mb-4">Import Successful!</h2>
-                <p className="text-slate-200 mb-6 theme-text-secondary">The book has been imported to your library.</p>
+                <p className="theme-text-secondary mb-6">The book has been imported to your library.</p>
                 <button className="px-4 py-2 rounded bg-sky-700 text-white font-bold hover:bg-sky-600" onClick={() => setShowImportSuccess(false)}>
                   Close
                 </button>
@@ -320,13 +320,13 @@ const BookDetailView: React.FC<BookDetailViewProps> = ({ book, onBack, source, c
       <div className="md:w-2/3 mt-8 md:mt-0">
         {/* Book Title, Author, Publisher, etc. Section OUTSIDE container */}
         <div className="mb-6 mt-10 flex flex-col justify-start">
-          <h2 className="text-4xl md:text-5xl font-extrabold text-slate-100 mb-6 leading-tight mt-0 theme-text-primary">{book.title}</h2>
-          {book.author && <div className="mb-2 text-lg text-slate-400 theme-text-secondary">By {book.author}</div>}
+          <h2 className="theme-text-primary mb-6 mt-0 text-4xl font-extrabold leading-tight md:text-5xl">{book.title}</h2>
+          {book.author && <div className="theme-text-secondary mb-2 text-lg">By {book.author}</div>}
           {bookAny.contributors && bookAny.contributors.length > 0 && (
-            <div className="mb-2 text-slate-400 theme-text-secondary">Contributors: {bookAny.contributors.join(', ')}</div>
+            <div className="theme-text-secondary mb-2">Contributors: {bookAny.contributors.join(', ')}</div>
           )}
           {bookAny.isbn && (
-            <div className="mb-2 text-slate-400 theme-text-secondary">Publisher ID: {bookAny.isbn}</div>
+            <div className="theme-text-secondary mb-2">Publisher ID: {bookAny.isbn}</div>
           )}
           {(book.format || bookAny.mediaType || bookAny.acquisitionMediaType || bookAny.publicationTypeLabel) && (
             <div className="mb-2 flex flex-col gap-1">
@@ -336,7 +336,7 @@ const BookDetailView: React.FC<BookDetailViewProps> = ({ book, onBack, source, c
                 </div>
                 {/* Warn if mediaType is missing or is text/html */}
                 {!hasSupportedBookFormat && (!normalizedMediaType || normalizedMediaType === 'text/html') && (
-                  <div className="text-xs text-yellow-400 font-semibold">
+                  <div className="theme-text-warning text-xs font-semibold">
                     Warning: This item may not be a valid book file (mediaType is {normalizedMediaType ? 'text/html' : 'missing'}).
                   </div>
                 )}
@@ -345,19 +345,19 @@ const BookDetailView: React.FC<BookDetailViewProps> = ({ book, onBack, source, c
           )}
           {descriptionText && (
             <div
-              className="mt-4 text-slate-300 text-base leading-7 theme-text-secondary [&_ol]:my-4 [&_ol]:list-decimal [&_ol]:pl-6 [&_p]:mb-4 [&_ul]:my-4 [&_ul]:list-disc [&_ul]:pl-6"
+              className="theme-text-secondary mt-4 text-base leading-7 [&_ol]:my-4 [&_ol]:list-decimal [&_ol]:pl-6 [&_p]:mb-4 [&_ul]:my-4 [&_ul]:list-disc [&_ul]:pl-6"
               dangerouslySetInnerHTML={{ __html: descriptionHtml }}
             />
           )}
         </div>
         {/* Book Details Section (accessibility, provider) INSIDE container */}
-        <div className="space-y-6 p-6 bg-slate-800 rounded-lg border border-slate-700 md:mt-4 md:mr-6 md:mb-4 md:p-8 theme-surface-elevated theme-border">
+        <div className="theme-surface-elevated theme-border space-y-6 rounded-lg border p-6 md:mb-4 md:mr-6 md:mt-4 md:p-8">
           <h3 className="text-xl font-bold text-sky-300 mb-4">Book Details</h3>
           <ul className="space-y-2 text-base">
             <li>
-              <span className="font-semibold text-slate-200 theme-text-primary">Catalog Provider:</span> <span className="text-slate-400 theme-text-secondary">{bookAny.providerName || (source === 'catalog' ? catalogName : 'Imported locally')}</span>
+              <span className="theme-text-primary font-semibold">Catalog Provider:</span> <span className="theme-text-secondary">{bookAny.providerName || (source === 'catalog' ? catalogName : 'Imported locally')}</span>
               {bookAny.providerId ? (
-                <div className="text-xs text-slate-500 mt-1 theme-text-muted">
+                <div className="theme-text-muted mt-1 text-xs">
                   Provider ID: {
                     /^https?:\/\//.test(bookAny.providerId)
                       ? <a href={bookAny.providerId} target="_blank" rel="noopener noreferrer" className="text-sky-400 underline hover:text-sky-600">{bookAny.providerId}</a>
@@ -365,35 +365,35 @@ const BookDetailView: React.FC<BookDetailViewProps> = ({ book, onBack, source, c
                   }
                 </div>
               ) : (
-                <div className="text-xs text-slate-500 mt-1 theme-text-muted">Imported locally</div>
+                <div className="theme-text-muted mt-1 text-xs">Imported locally</div>
               )}
             </li>
             {bookAny.distributor && (
-              <li><span className="font-semibold text-slate-200 theme-text-primary">Distributor:</span> <span className="text-slate-400 theme-text-secondary">{bookAny.distributor}</span></li>
+              <li><span className="theme-text-primary font-semibold">Distributor:</span> <span className="theme-text-secondary">{bookAny.distributor}</span></li>
             )}
-            {bookAny.accessibilitySummary && <li><span className="font-semibold text-slate-200 theme-text-primary">Accessibility:</span> <span className="text-slate-400 theme-text-secondary">{bookAny.accessibilitySummary}</span></li>}
+            {bookAny.accessibilitySummary && <li><span className="theme-text-primary font-semibold">Accessibility:</span> <span className="theme-text-secondary">{bookAny.accessibilitySummary}</span></li>}
             {bookAny.accessibilityFeatures && bookAny.accessibilityFeatures.length > 0 && (
-              <li><span className="font-semibold text-slate-200 theme-text-primary">Features:</span> <span className="text-slate-400 theme-text-secondary">{bookAny.accessibilityFeatures.join(', ')}</span></li>
+              <li><span className="theme-text-primary font-semibold">Features:</span> <span className="theme-text-secondary">{bookAny.accessibilityFeatures.join(', ')}</span></li>
             )}
             {publisherText && (
-              <li><span className="font-semibold text-slate-200 theme-text-primary">Publisher:</span> <span className="text-slate-400 theme-text-secondary">{publisherText}</span></li>
+              <li><span className="theme-text-primary font-semibold">Publisher:</span> <span className="theme-text-secondary">{publisherText}</span></li>
             )}
             {publicationDateText && (
-              <li><span className="font-semibold text-slate-200 theme-text-primary">Published:</span> <span className="text-slate-400 theme-text-secondary">{publicationDateText}</span></li>
+              <li><span className="theme-text-primary font-semibold">Published:</span> <span className="theme-text-secondary">{publicationDateText}</span></li>
             )}
             {bookAny.language && (
-              <li><span className="font-semibold text-slate-200 theme-text-primary">Language:</span> <span className="text-slate-400 theme-text-secondary">{bookAny.language}</span></li>
+              <li><span className="theme-text-primary font-semibold">Language:</span> <span className="theme-text-secondary">{bookAny.language}</span></li>
             )}
             {bookAny.categories && bookAny.categories.length > 0 && (
               <li>
-                <span className="font-semibold text-slate-200 theme-text-primary">Categories:</span>{' '}
-                <span className="text-slate-400 theme-text-secondary">{bookAny.categories.map((cat: any) => cat.label || cat.term).join(', ')}</span>
+                <span className="theme-text-primary font-semibold">Categories:</span>{' '}
+                <span className="theme-text-secondary">{bookAny.categories.map((cat: any) => cat.label || cat.term).join(', ')}</span>
               </li>
             )}
             {(!bookAny.categories || bookAny.categories.length === 0) && book.subjects && book.subjects.length > 0 && (
               <li>
-                <span className="font-semibold text-slate-200 theme-text-primary">Subjects:</span>{' '}
-                <span className="text-slate-400 theme-text-secondary">
+                <span className="theme-text-primary font-semibold">Subjects:</span>{' '}
+                <span className="theme-text-secondary">
                   {book.subjects.map(s => typeof s === 'string' ? s : s.name).join(', ')}
                 </span>
               </li>
@@ -409,7 +409,7 @@ export default BookDetailView;
 // BookDetailHeader: handles the header/back button section
 const BookDetailHeader: React.FC<{ onBack: () => void, source: 'library' | 'catalog' }> = ({ onBack, source }) => (
   <header className="mb-8">
-    <button onClick={onBack} className="inline-flex items-center gap-2 text-slate-300 hover:text-sky-400 transition-colors theme-text-secondary">
+    <button onClick={onBack} className="theme-text-secondary inline-flex items-center gap-2 transition-colors hover:text-sky-400">
       <LeftArrowIcon className="w-5 h-5" />
       <span>Return to {source === 'library' ? 'My Library' : 'Catalog'}</span>
     </button>

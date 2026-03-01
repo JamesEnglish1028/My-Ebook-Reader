@@ -59,14 +59,14 @@ const CatalogNavigation: React.FC<CatalogNavigationProps> = ({
       {showBreadcrumbs && (
         <nav
           aria-label="breadcrumb"
-          className="mb-4 flex flex-wrap items-center gap-y-1 rounded-lg border border-slate-700/60 bg-slate-900/30 px-3 py-2 text-sm text-slate-400 theme-surface theme-border theme-text-secondary"
+          className="theme-surface theme-border theme-text-secondary mb-4 flex flex-wrap items-center gap-y-1 rounded-lg border px-3 py-2 text-sm"
         >
           {navPath.map((item, index) => (
             <React.Fragment key={index}>
               <button
                 onClick={() => onBreadcrumbClick(index)}
                 className={`truncate transition-colors hover:text-sky-300 ${index === navPath.length - 1
-                  ? 'font-medium text-white theme-text-primary'
+                  ? 'theme-text-primary font-medium'
                   : ''
                 }`}
                 aria-current={index === navPath.length - 1 ? 'page' : undefined}
@@ -84,7 +84,7 @@ const CatalogNavigation: React.FC<CatalogNavigationProps> = ({
       {(paginationSummary || showPagination) && (
         <div className="mt-6 space-y-3">
           {paginationSummary && (
-            <p className="text-sm text-slate-400 theme-text-secondary" aria-live="polite">
+            <p className="theme-text-secondary text-sm" aria-live="polite">
               {paginationSummary}
             </p>
           )}
@@ -95,7 +95,7 @@ const CatalogNavigation: React.FC<CatalogNavigationProps> = ({
                 <button
                   onClick={() => pagination.first && onPaginationClick(pagination.first)}
                   disabled={!pagination.first}
-                  className="inline-flex items-center gap-2 rounded-md border border-slate-700 bg-slate-800 px-3 py-2 text-sm font-medium text-slate-200 transition-colors duration-200 hover:bg-slate-700 disabled:cursor-not-allowed disabled:opacity-50 theme-button-neutral theme-hover-surface"
+                  className="theme-button-neutral theme-hover-surface inline-flex items-center gap-2 rounded-md border px-3 py-2 text-sm font-medium transition-colors duration-200 disabled:cursor-not-allowed disabled:opacity-50"
                   aria-label="First page"
                 >
                   <span>First</span>
@@ -103,7 +103,7 @@ const CatalogNavigation: React.FC<CatalogNavigationProps> = ({
                 <button
                   onClick={() => pagination.prev && onPaginationClick(pagination.prev)}
                   disabled={!pagination.prev}
-                  className="inline-flex items-center gap-2 rounded-md border border-slate-700 bg-slate-800 px-3 py-2 text-sm font-medium text-slate-200 transition-colors duration-200 hover:bg-slate-700 disabled:cursor-not-allowed disabled:opacity-50 theme-button-neutral theme-hover-surface"
+                  className="theme-button-neutral theme-hover-surface inline-flex items-center gap-2 rounded-md border px-3 py-2 text-sm font-medium transition-colors duration-200 disabled:cursor-not-allowed disabled:opacity-50"
                   aria-label="Previous page"
                 >
                   <LeftArrowIcon className="h-4 w-4" />
@@ -114,7 +114,7 @@ const CatalogNavigation: React.FC<CatalogNavigationProps> = ({
                 <button
                   onClick={() => pagination.next && onPaginationClick(pagination.next)}
                   disabled={!pagination.next}
-                  className="inline-flex items-center gap-2 rounded-md border border-slate-700 bg-slate-800 px-3 py-2 text-sm font-medium text-slate-200 transition-colors duration-200 hover:bg-slate-700 disabled:cursor-not-allowed disabled:opacity-50 theme-button-neutral theme-hover-surface"
+                  className="theme-button-neutral theme-hover-surface inline-flex items-center gap-2 rounded-md border px-3 py-2 text-sm font-medium transition-colors duration-200 disabled:cursor-not-allowed disabled:opacity-50"
                   aria-label="Next page"
                 >
                   <span>Next</span>
@@ -123,7 +123,7 @@ const CatalogNavigation: React.FC<CatalogNavigationProps> = ({
                 <button
                   onClick={() => pagination.last && onPaginationClick(pagination.last)}
                   disabled={!pagination.last}
-                  className="inline-flex items-center gap-2 rounded-md border border-slate-700 bg-slate-800 px-3 py-2 text-sm font-medium text-slate-200 transition-colors duration-200 hover:bg-slate-700 disabled:cursor-not-allowed disabled:opacity-50 theme-button-neutral theme-hover-surface"
+                  className="theme-button-neutral theme-hover-surface inline-flex items-center gap-2 rounded-md border px-3 py-2 text-sm font-medium transition-colors duration-200 disabled:cursor-not-allowed disabled:opacity-50"
                   aria-label="Last page"
                 >
                   <span>Last</span>
