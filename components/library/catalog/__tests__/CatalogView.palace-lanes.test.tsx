@@ -100,7 +100,7 @@ describe('CatalogView Palace feeds', () => {
         books: [],
         navigationLinks: [
           {
-            title: 'Loans',
+            title: 'https://demo.palaceproject.io/loans',
             url: 'https://demo.palaceproject.io/loans',
             rel: 'acquisition',
             type: 'application/atom+xml;profile=opds-catalog;kind=acquisition',
@@ -118,7 +118,7 @@ describe('CatalogView Palace feeds', () => {
             title: 'Collections',
             links: [
               {
-                title: 'Loans',
+                title: 'https://demo.palaceproject.io/loans',
                 url: 'https://demo.palaceproject.io/loans',
                 rel: 'facet',
                 type: 'application/atom+xml;profile=opds-catalog;kind=acquisition',

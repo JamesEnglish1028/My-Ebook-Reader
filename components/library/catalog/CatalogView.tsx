@@ -65,13 +65,15 @@ const isUnsupportedPalaceLoansLink = (
   type?: string,
 ): boolean => {
   const normalizedTitle = (title || '').trim().toLowerCase();
-  if (normalizedTitle !== 'loans' && normalizedTitle !== 'my loans') return false;
-
   const normalizedUrl = (url || '').toLowerCase();
   const normalizedRel = (rel || '').toLowerCase();
   const normalizedType = (type || '').toLowerCase();
+  const isLoansByTitle = normalizedTitle === 'loans' || normalizedTitle === 'my loans';
+  const isLoansByUrl = normalizedUrl.includes('/loans');
 
-  return normalizedUrl.includes('/loans')
+  if (!isLoansByTitle && !isLoansByUrl) return false;
+
+  return isLoansByUrl
     || normalizedRel.includes('loan')
     || normalizedRel.includes('acquisition')
     || normalizedType.includes('kind=acquisition')
