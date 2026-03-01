@@ -7,9 +7,11 @@ import { useAuth } from '../../contexts/AuthContext';
 import { bookKeys, useCatalogs, useUiTheme } from '../../hooks';
 import { db, logger } from '../../services';
 import type { BookMetadata, BookRecord, Catalog, CatalogBook, CatalogRegistry, CoverAnimationData } from '../../types';
+import { useConfirm } from '../ConfirmContext';
 import DuplicateBookModal from '../DuplicateBookModal';
 import { ChevronDownIcon, ListIcon } from '../icons';
 import ManageCatalogsModal from '../ManageCatalogsModal';
+import ThemeModal from '../ThemeModal';
 
 import { CatalogView } from './catalog';
 import { ImportButton, LocalLibraryView } from './local';
@@ -71,6 +73,7 @@ const LibraryView: React.FC<LibraryViewProps> = ({
   // Use libraryRefreshFlag to trigger refreshes in child components if needed
   // React Query client for cache invalidation
   const queryClient = useQueryClient();
+  const confirm = useConfirm();
   const { user, isLoggedIn, signIn, signOut, authStatus, isInitialized } = useAuth();
   const { uiTheme, setUiTheme } = useUiTheme();
 
@@ -90,6 +93,7 @@ const LibraryView: React.FC<LibraryViewProps> = ({
   const [isCatalogDropdownOpen, setIsCatalogDropdownOpen] = useState(false);
   const [isManageCatalogsOpen, setIsManageCatalogsOpen] = useState(false);
   const [isSettingsMenuOpen, setIsSettingsMenuOpen] = useState(false);
+  const [isThemeModalOpen, setIsThemeModalOpen] = useState(false);
   // Duplicate book modal
   const [duplicateBook, setDuplicateBook] = useState<BookRecord | null>(null);
   const [existingBook, setExistingBook] = useState<BookRecord | null>(null);
@@ -336,6 +340,7 @@ const LibraryView: React.FC<LibraryViewProps> = ({
         ? 'theme-text-info'
         : 'theme-text-muted';
   const canSignIn = isInitialized && authStatus !== 'initializing' && authStatus !== 'not_configured';
+  const currentThemeLabel = uiTheme.charAt(0).toUpperCase() + uiTheme.slice(1);
 
   return (
     <div className="container mx-auto p-4 md:p-8 theme-text-primary">
@@ -412,7 +417,15 @@ const LibraryView: React.FC<LibraryViewProps> = ({
                 <div className="theme-surface-muted theme-divider px-3 py-2.5 border-b">
                   {isLoggedIn && user ? (
                     <button
-                      onClick={() => {
+                      onClick={async () => {
+                        const shouldSignOut = await confirm({
+                          title: 'Sign Out',
+                          message: 'Are you sure you want to sign out of Google Cloud Sync?',
+                          confirmLabel: 'Sign Out',
+                          cancelLabel: 'Stay Signed In',
+                          variant: 'danger',
+                        });
+                        if (!shouldSignOut) return;
                         signOut();
                         setIsSettingsMenuOpen(false);
                       }}
@@ -474,23 +487,16 @@ const LibraryView: React.FC<LibraryViewProps> = ({
                     </button>
                   </li>
                   <li className="theme-divider my-1 border-t" />
-                  <li className="px-2.5 py-2">
-                    <p className="theme-text-muted mb-2 text-[11px] font-semibold uppercase tracking-[0.14em]">Theme</p>
-                    <div className="grid grid-cols-3 gap-1.5">
-                      {(['system', 'light', 'dark'] as const).map((themeOption) => (
-                        <button
-                          key={themeOption}
-                          onClick={() => setUiTheme(themeOption)}
-                          className={`rounded-sm px-2 py-1.5 text-[12px] font-medium capitalize transition-colors ${
-                            uiTheme === themeOption
-                              ? 'bg-sky-600 text-white'
-                              : 'theme-button-neutral theme-hover-surface'
-                          }`}
-                        >
-                          {themeOption}
-                        </button>
-                      ))}
-                    </div>
+                  <li>
+                    <button
+                      onClick={() => {
+                        setIsThemeModalOpen(true);
+                        setIsSettingsMenuOpen(false);
+                      }}
+                      className="theme-text-secondary theme-hover-surface block w-full rounded-sm px-2.5 py-2 text-left text-[13px]"
+                    >
+                      {`UI Theme: ${currentThemeLabel}`}
+                    </button>
                   </li>
                   <li className="theme-divider my-1 border-t" />
                   <li>
@@ -566,6 +572,13 @@ const LibraryView: React.FC<LibraryViewProps> = ({
         onAddRegistry={handleAddRegistry}
         onDeleteRegistry={handleDeleteRegistry}
         onUpdateRegistry={handleUpdateRegistry}
+      />
+
+      <ThemeModal
+        isOpen={isThemeModalOpen}
+        currentTheme={uiTheme}
+        onClose={() => setIsThemeModalOpen(false)}
+        onSelectTheme={setUiTheme}
       />
 
       <DuplicateBookModal

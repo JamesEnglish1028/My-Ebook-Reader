@@ -19,9 +19,15 @@ const authState = {
   authStatus: 'ready' as const,
   authError: null as string | null,
 };
+const confirmSpy = vi.fn();
+const themeModalSpy = vi.fn();
 
 vi.mock('../../../contexts/AuthContext', () => ({
   useAuth: () => authState,
+}));
+
+vi.mock('../../ConfirmContext', () => ({
+  useConfirm: () => confirmSpy,
 }));
 
 vi.mock('../../../hooks', () => ({
@@ -56,6 +62,13 @@ vi.mock('../../DuplicateBookModal', () => ({
   default: () => null,
 }));
 
+vi.mock('../../ThemeModal', () => ({
+  default: (props: unknown) => {
+    themeModalSpy(props);
+    return null;
+  },
+}));
+
 vi.mock('../local', () => ({
   ImportButton: (props: unknown) => {
     importButtonSpy(props);
@@ -75,6 +88,7 @@ describe('LibraryView local import menu', () => {
     authState.isInitialized = true;
     authState.authStatus = 'ready';
     authState.authError = null;
+    confirmSpy.mockResolvedValue(true);
   });
 
   it('backs up to Drive after a successful local import', async () => {
@@ -210,7 +224,42 @@ describe('LibraryView local import menu', () => {
     expect(authState.signIn).toHaveBeenCalledTimes(1);
   });
 
-  it('lets a signed-in user click their profile row to sign out', () => {
+  it('shows the current UI theme in the menu and opens the theme modal', () => {
+    const queryClient = new QueryClient();
+
+    render(
+      <QueryClientProvider client={queryClient}>
+        <LibraryView
+          libraryRefreshFlag={0}
+          syncStatus={{ state: 'idle', message: '' }}
+          onAutoBackupToDrive={vi.fn().mockResolvedValue(undefined)}
+          onOpenBook={vi.fn()}
+          onShowBookDetail={vi.fn()}
+          processAndSaveBook={vi.fn().mockResolvedValue({ success: true })}
+          importStatus={{ isLoading: false, message: '', error: null }}
+          setImportStatus={vi.fn()}
+          activeOpdsSource={null}
+          setActiveOpdsSource={vi.fn()}
+          catalogNavPath={[]}
+          setCatalogNavPath={vi.fn()}
+          onOpenCloudSyncModal={vi.fn()}
+          onOpenLocalStorageModal={vi.fn()}
+          onShowAbout={vi.fn()}
+        />
+      </QueryClientProvider>,
+    );
+
+    fireEvent.click(screen.getByRole('button', { name: /Open main menu/i }));
+    fireEvent.click(screen.getByRole('button', { name: /^UI Theme: System$/i }));
+
+    expect(themeModalSpy).toHaveBeenCalled();
+    expect(themeModalSpy.mock.calls.at(-1)?.[0]).toMatchObject({
+      isOpen: true,
+      currentTheme: 'system',
+    });
+  });
+
+  it('asks for confirmation before signing out from the profile row', async () => {
     const queryClient = new QueryClient();
     authState.user = {
       name: 'Test User',
@@ -244,6 +293,14 @@ describe('LibraryView local import menu', () => {
     fireEvent.click(screen.getByRole('button', { name: /Open main menu/i }));
     fireEvent.click(screen.getByRole('button', { name: /Signed in as Test User\. Click to sign out/i }));
 
+    await waitFor(() => expect(confirmSpy).toHaveBeenCalledTimes(1));
+    expect(confirmSpy).toHaveBeenCalledWith({
+      title: 'Sign Out',
+      message: 'Are you sure you want to sign out of Google Cloud Sync?',
+      confirmLabel: 'Sign Out',
+      cancelLabel: 'Stay Signed In',
+      variant: 'danger',
+    });
     expect(authState.signOut).toHaveBeenCalledTimes(1);
   });
 });
