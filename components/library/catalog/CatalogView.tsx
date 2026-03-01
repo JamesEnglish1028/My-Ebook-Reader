@@ -58,6 +58,26 @@ const isPalaceHost = (url: string): boolean => {
   }
 };
 
+const isUnsupportedPalaceLoansLink = (
+  title: string | undefined,
+  url: string | undefined,
+  rel?: string,
+  type?: string,
+): boolean => {
+  const normalizedTitle = (title || '').trim().toLowerCase();
+  if (normalizedTitle !== 'loans') return false;
+
+  const normalizedUrl = (url || '').toLowerCase();
+  const normalizedRel = (rel || '').toLowerCase();
+  const normalizedType = (type || '').toLowerCase();
+
+  return normalizedUrl.includes('/loans')
+    || normalizedRel.includes('loan')
+    || normalizedRel.includes('acquisition')
+    || normalizedType.includes('kind=acquisition')
+    || normalizedType.includes('profile=opds-catalog');
+};
+
 const CatalogView: React.FC<CatalogViewProps> = ({
   activeOpdsSource,
   catalogNavPath,
@@ -329,12 +349,14 @@ const CatalogView: React.FC<CatalogViewProps> = ({
   const normalizedFacetGroups = useMemo(() => (
     facetGroups.map((group) => ({
       ...group,
-      links: group.links.map((link) => ({
-        ...link,
-        isActive: link.isActive ?? link.url === currentUrl,
-      })),
+      links: group.links
+        .filter((link) => !(isPalaceHost(activeOpdsSource?.url || '') && isUnsupportedPalaceLoansLink(link.title, link.url, link.rel, link.type)))
+        .map((link) => ({
+          ...link,
+          isActive: link.isActive ?? link.url === currentUrl,
+        })),
     }))
-  ), [currentUrl, facetGroups]);
+  ), [activeOpdsSource?.url, currentUrl, facetGroups]);
 
   const displayNavigationLinks = useMemo(() => {
     if (!currentUrl) return navigationLinks;
@@ -356,6 +378,7 @@ const CatalogView: React.FC<CatalogViewProps> = ({
       const filteredNavigation = displayNavigationLinks.filter((link) => {
         const rel = (link.rel || '').toLowerCase();
         if (!link.url || !link.title) return false;
+        if (isPalaceHost(activeOpdsSource?.url || '') && isUnsupportedPalaceLoansLink(link.title, link.url, link.rel, link.type)) return false;
         return !(rel.includes('start') || rel === 'up' || rel.endsWith('/up'));
       });
       if (filteredNavigation.length > 0) {
@@ -370,7 +393,7 @@ const CatalogView: React.FC<CatalogViewProps> = ({
         return true;
       });
     })()
-  ), [displayNavigationLinks, palaceFacetLaneLinks]);
+  ), [activeOpdsSource?.url, displayNavigationLinks, palaceFacetLaneLinks]);
   const searchTemplateParams = resolvedSearch?.activeTemplate?.params || [];
   const primarySearchParam = searchTemplateParams.find((param) => param.name === 'searchTerms')
     || searchTemplateParams.find((param) => param.name === 'query')

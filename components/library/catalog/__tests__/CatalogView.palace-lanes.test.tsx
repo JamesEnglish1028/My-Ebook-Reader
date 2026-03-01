@@ -248,4 +248,81 @@ describe('CatalogView Palace swim lanes', () => {
     expect(screen.getByText('Facets')).toBeInTheDocument();
     expect(screen.queryByLabelText('Grid Book by Author')).not.toBeInTheDocument();
   });
+
+  it('suppresses unsupported Palace Loans links from facet fallback lanes and sidebar facets', () => {
+    const palaceCatalog = {
+      id: 'palace-1',
+      name: 'Palace Catalog',
+      url: 'https://demo.palaceproject.io/catalog',
+      opdsVersion: '1',
+    };
+
+    vi.mocked(useCatalogContent).mockReturnValue({
+      data: {
+        books: [],
+        navigationLinks: [],
+        facetGroups: [
+          {
+            title: 'Collections',
+            links: [
+              {
+                title: 'Loans',
+                url: 'https://demo.palaceproject.io/loans',
+                rel: 'facet',
+                type: 'application/atom+xml;profile=opds-catalog;kind=acquisition',
+              },
+              {
+                title: 'Fiction',
+                url: 'https://demo.palaceproject.io/groups/fiction',
+                rel: 'facet',
+              },
+            ],
+          },
+        ],
+        pagination: {},
+        search: null,
+      },
+      isLoading: false,
+      error: null,
+      refetch: vi.fn(),
+    } as any);
+
+    vi.mocked(useResolvedCatalogSearch).mockReturnValue({
+      data: null,
+      isLoading: false,
+      error: null,
+    } as any);
+
+    vi.mocked(usePalaceLanePreviews).mockReturnValue({
+      lanePreviews: [
+        {
+          link: {
+            title: 'Fiction',
+            url: 'https://demo.palaceproject.io/groups/fiction',
+            rel: 'facet',
+            source: 'compat',
+          },
+          books: [],
+          isLoading: false,
+          hasFetched: true,
+          hasChildNavigation: true,
+        },
+      ],
+      isLoading: false,
+      hasAnyBooks: false,
+    });
+
+    render(
+      <CatalogView
+        activeOpdsSource={palaceCatalog as any}
+        catalogNavPath={[{ name: palaceCatalog.name, url: palaceCatalog.url }]}
+        setCatalogNavPath={vi.fn()}
+        onShowBookDetail={vi.fn()}
+      />,
+    );
+
+    expect(screen.queryByRole('button', { name: /open loans/i })).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Loans' })).not.toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /open fiction/i })).toBeInTheDocument();
+  });
 });
