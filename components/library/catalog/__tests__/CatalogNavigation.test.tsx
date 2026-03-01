@@ -27,4 +27,21 @@ describe('CatalogNavigation', () => {
     expect(onPaginationClick).toHaveBeenNthCalledWith(1, 'https://example.org/catalog?page=1');
     expect(onPaginationClick).toHaveBeenNthCalledWith(2, 'https://example.org/catalog?page=10');
   });
+
+  it('renders a result range summary when pagination counts are available', () => {
+    render(
+      <CatalogNavigation
+        navPath={[{ name: 'Catalog', url: 'https://example.org/catalog' }]}
+        pagination={{
+          totalResults: 42,
+          itemsPerPage: 10,
+          startIndex: 11,
+        }}
+        onBreadcrumbClick={vi.fn()}
+        onPaginationClick={vi.fn()}
+      />,
+    );
+
+    expect(screen.getByText('Showing 11-20 of 42')).toBeInTheDocument();
+  });
 });

@@ -31,6 +31,28 @@ const CatalogNavigation: React.FC<CatalogNavigationProps> = ({
 }) => {
   const showBreadcrumbs = navPath.length > 0;
   const showPagination = pagination && (pagination.first || pagination.prev || pagination.next || pagination.last) && !isLoading;
+  const paginationSummary = React.useMemo(() => {
+    if (!pagination || isLoading) return null;
+
+    const totalResults = Number.isFinite(pagination.totalResults) ? Number(pagination.totalResults) : undefined;
+    const itemsPerPage = Number.isFinite(pagination.itemsPerPage) ? Number(pagination.itemsPerPage) : undefined;
+    const startIndex = Number.isFinite(pagination.startIndex) ? Math.max(1, Number(pagination.startIndex)) : undefined;
+
+    if (totalResults !== undefined && startIndex !== undefined && itemsPerPage !== undefined) {
+      const rangeEnd = Math.min(startIndex + itemsPerPage - 1, totalResults);
+      return `Showing ${startIndex}-${rangeEnd} of ${totalResults}`;
+    }
+
+    if (startIndex !== undefined && itemsPerPage !== undefined) {
+      return `Showing ${startIndex}-${startIndex + itemsPerPage - 1}`;
+    }
+
+    if (totalResults !== undefined) {
+      return `${totalResults} results`;
+    }
+
+    return null;
+  }, [isLoading, pagination]);
 
   return (
     <>
@@ -59,46 +81,56 @@ const CatalogNavigation: React.FC<CatalogNavigationProps> = ({
         </nav>
       )}
 
-      {showPagination && (
-        <div className="mt-6 flex items-center justify-between">
-          <div className="flex items-center gap-2">
-            <button
-              onClick={() => pagination.first && onPaginationClick(pagination.first)}
-              disabled={!pagination.first}
-              className="inline-flex items-center gap-2 rounded-md border border-slate-700 bg-slate-800 px-3 py-2 text-sm font-medium text-slate-200 transition-colors duration-200 hover:bg-slate-700 disabled:cursor-not-allowed disabled:opacity-50"
-              aria-label="First page"
-            >
-              <span>First</span>
-            </button>
-            <button
-              onClick={() => pagination.prev && onPaginationClick(pagination.prev)}
-              disabled={!pagination.prev}
-              className="inline-flex items-center gap-2 rounded-md border border-slate-700 bg-slate-800 px-3 py-2 text-sm font-medium text-slate-200 transition-colors duration-200 hover:bg-slate-700 disabled:cursor-not-allowed disabled:opacity-50"
-              aria-label="Previous page"
-            >
-              <LeftArrowIcon className="h-4 w-4" />
-              <span>Previous</span>
-            </button>
-          </div>
-          <div className="flex items-center gap-2">
-            <button
-              onClick={() => pagination.next && onPaginationClick(pagination.next)}
-              disabled={!pagination.next}
-              className="inline-flex items-center gap-2 rounded-md border border-slate-700 bg-slate-800 px-3 py-2 text-sm font-medium text-slate-200 transition-colors duration-200 hover:bg-slate-700 disabled:cursor-not-allowed disabled:opacity-50"
-              aria-label="Next page"
-            >
-              <span>Next</span>
-              <RightArrowIcon className="h-4 w-4" />
-            </button>
-            <button
-              onClick={() => pagination.last && onPaginationClick(pagination.last)}
-              disabled={!pagination.last}
-              className="inline-flex items-center gap-2 rounded-md border border-slate-700 bg-slate-800 px-3 py-2 text-sm font-medium text-slate-200 transition-colors duration-200 hover:bg-slate-700 disabled:cursor-not-allowed disabled:opacity-50"
-              aria-label="Last page"
-            >
-              <span>Last</span>
-            </button>
-          </div>
+      {(paginationSummary || showPagination) && (
+        <div className="mt-6 space-y-3">
+          {paginationSummary && (
+            <p className="text-sm text-slate-400" aria-live="polite">
+              {paginationSummary}
+            </p>
+          )}
+
+          {showPagination && (
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <button
+                  onClick={() => pagination.first && onPaginationClick(pagination.first)}
+                  disabled={!pagination.first}
+                  className="inline-flex items-center gap-2 rounded-md border border-slate-700 bg-slate-800 px-3 py-2 text-sm font-medium text-slate-200 transition-colors duration-200 hover:bg-slate-700 disabled:cursor-not-allowed disabled:opacity-50"
+                  aria-label="First page"
+                >
+                  <span>First</span>
+                </button>
+                <button
+                  onClick={() => pagination.prev && onPaginationClick(pagination.prev)}
+                  disabled={!pagination.prev}
+                  className="inline-flex items-center gap-2 rounded-md border border-slate-700 bg-slate-800 px-3 py-2 text-sm font-medium text-slate-200 transition-colors duration-200 hover:bg-slate-700 disabled:cursor-not-allowed disabled:opacity-50"
+                  aria-label="Previous page"
+                >
+                  <LeftArrowIcon className="h-4 w-4" />
+                  <span>Previous</span>
+                </button>
+              </div>
+              <div className="flex items-center gap-2">
+                <button
+                  onClick={() => pagination.next && onPaginationClick(pagination.next)}
+                  disabled={!pagination.next}
+                  className="inline-flex items-center gap-2 rounded-md border border-slate-700 bg-slate-800 px-3 py-2 text-sm font-medium text-slate-200 transition-colors duration-200 hover:bg-slate-700 disabled:cursor-not-allowed disabled:opacity-50"
+                  aria-label="Next page"
+                >
+                  <span>Next</span>
+                  <RightArrowIcon className="h-4 w-4" />
+                </button>
+                <button
+                  onClick={() => pagination.last && onPaginationClick(pagination.last)}
+                  disabled={!pagination.last}
+                  className="inline-flex items-center gap-2 rounded-md border border-slate-700 bg-slate-800 px-3 py-2 text-sm font-medium text-slate-200 transition-colors duration-200 hover:bg-slate-700 disabled:cursor-not-allowed disabled:opacity-50"
+                  aria-label="Last page"
+                >
+                  <span>Last</span>
+                </button>
+              </div>
+            </div>
+          )}
         </div>
       )}
     </>
