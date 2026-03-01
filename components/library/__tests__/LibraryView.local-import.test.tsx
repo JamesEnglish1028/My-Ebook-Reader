@@ -209,4 +209,41 @@ describe('LibraryView local import menu', () => {
 
     expect(authState.signIn).toHaveBeenCalledTimes(1);
   });
+
+  it('lets a signed-in user click their profile row to sign out', () => {
+    const queryClient = new QueryClient();
+    authState.user = {
+      name: 'Test User',
+      email: 'test@example.com',
+      picture: 'https://example.com/avatar.png',
+    };
+    authState.isLoggedIn = true;
+
+    render(
+      <QueryClientProvider client={queryClient}>
+        <LibraryView
+          libraryRefreshFlag={0}
+          syncStatus={{ state: 'idle', message: '' }}
+          onAutoBackupToDrive={vi.fn().mockResolvedValue(undefined)}
+          onOpenBook={vi.fn()}
+          onShowBookDetail={vi.fn()}
+          processAndSaveBook={vi.fn().mockResolvedValue({ success: true })}
+          importStatus={{ isLoading: false, message: '', error: null }}
+          setImportStatus={vi.fn()}
+          activeOpdsSource={null}
+          setActiveOpdsSource={vi.fn()}
+          catalogNavPath={[]}
+          setCatalogNavPath={vi.fn()}
+          onOpenCloudSyncModal={vi.fn()}
+          onOpenLocalStorageModal={vi.fn()}
+          onShowAbout={vi.fn()}
+        />
+      </QueryClientProvider>,
+    );
+
+    fireEvent.click(screen.getByRole('button', { name: /Open main menu/i }));
+    fireEvent.click(screen.getByRole('button', { name: /Signed in as Test User\. Click to sign out/i }));
+
+    expect(authState.signOut).toHaveBeenCalledTimes(1);
+  });
 });

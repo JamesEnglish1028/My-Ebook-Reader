@@ -71,7 +71,7 @@ const LibraryView: React.FC<LibraryViewProps> = ({
   // Use libraryRefreshFlag to trigger refreshes in child components if needed
   // React Query client for cache invalidation
   const queryClient = useQueryClient();
-  const { user, isLoggedIn, signIn, authStatus, isInitialized } = useAuth();
+  const { user, isLoggedIn, signIn, signOut, authStatus, isInitialized } = useAuth();
   const { uiTheme, setUiTheme } = useUiTheme();
 
   // Catalog management
@@ -411,7 +411,14 @@ const LibraryView: React.FC<LibraryViewProps> = ({
               <div className="theme-surface-elevated theme-border absolute top-full right-0 z-20 mt-2 w-64 overflow-hidden rounded-md shadow-xl backdrop-blur-sm">
                 <div className="theme-surface-muted theme-divider px-3 py-2.5 border-b">
                   {isLoggedIn && user ? (
-                    <div className="flex items-center gap-2.5">
+                    <button
+                      onClick={() => {
+                        signOut();
+                        setIsSettingsMenuOpen(false);
+                      }}
+                      className="theme-hover-surface flex w-full items-center gap-2.5 rounded-sm px-1 py-1 text-left transition-colors"
+                      aria-label={`Signed in as ${user.name}. Click to sign out`}
+                    >
                       <img
                         src={user.picture}
                         alt={`${user.name} profile`}
@@ -422,7 +429,7 @@ const LibraryView: React.FC<LibraryViewProps> = ({
                         <p className="theme-text-primary truncate text-[13px] font-medium leading-tight">{user.name}</p>
                         <p className="theme-text-muted truncate text-[11px] leading-tight">{user.email}</p>
                       </div>
-                    </div>
+                    </button>
                   ) : (
                     <p className="theme-text-secondary text-[12px] font-medium">Browsing locally</p>
                   )}
