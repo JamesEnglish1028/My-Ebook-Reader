@@ -18,7 +18,9 @@ const bodyParser = require('body-parser');
 const { URL } = require('url');
 
 const app = express();
-app.use(helmet());
+app.use(helmet({
+  crossOriginResourcePolicy: { policy: 'cross-origin' },
+}));
 app.use(bodyParser.raw({ type: '*/*', limit: '200mb' }));
 
 // Basic rate limit
@@ -74,6 +76,7 @@ app.options('/proxy', (req, res) => {
   const allowOrigin = req.headers.origin || process.env.ALLOW_ORIGIN || '*';
   res.setHeader('Access-Control-Allow-Origin', allowOrigin);
   res.setHeader('Access-Control-Allow-Methods', 'GET,POST,HEAD,OPTIONS');
+  res.setHeader('Cross-Origin-Resource-Policy', 'cross-origin');
   // Allow headers requested by the browser's preflight, falling back to a
   // sensible default that includes Accept and common auth headers.
   const requested = req.headers['access-control-request-headers'];
@@ -100,6 +103,7 @@ app.all('/_proxy_headers_echo', (req, res) => {
   const allowOrigin = req.headers.origin || process.env.ALLOW_ORIGIN || '*';
   res.setHeader('Access-Control-Allow-Origin', allowOrigin);
   res.setHeader('Access-Control-Allow-Credentials', 'true');
+  res.setHeader('Cross-Origin-Resource-Policy', 'cross-origin');
   res.setHeader('Access-Control-Expose-Headers', 'Content-Type,X-MeBooks-Proxy-Error-Source,X-MeBooks-Upstream-Status');
 
   // Return the headers the proxy received for inspection
@@ -115,6 +119,7 @@ app.all('/proxy', async (req, res) => {
   const allowOrigin = req.headers.origin || process.env.ALLOW_ORIGIN || '*';
   res.setHeader('Access-Control-Allow-Origin', allowOrigin);
   res.setHeader('Access-Control-Allow-Credentials', 'true');
+  res.setHeader('Cross-Origin-Resource-Policy', 'cross-origin');
   res.setHeader('Access-Control-Expose-Headers', 'Content-Type,Content-Length,ETag,X-MeBooks-Proxy-Error-Source,X-MeBooks-Upstream-Status');
     // Explicitly tell browsers not to attempt a content-encoding decode of
     // the proxied stream. Some intermediaries may alter encoding headers
@@ -255,6 +260,7 @@ app.all('/proxy', async (req, res) => {
     // Ensure CORS headers remain present after copying upstream headers
     res.setHeader('Access-Control-Allow-Origin', allowOrigin);
     res.setHeader('Access-Control-Allow-Credentials', 'true');
+    res.setHeader('Cross-Origin-Resource-Policy', 'cross-origin');
 
     // If upstream returned an error status, attempt to read the body and log it
     if (upstream.status >= 400) {
