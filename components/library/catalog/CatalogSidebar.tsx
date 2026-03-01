@@ -105,8 +105,8 @@ const CatalogSidebar: React.FC<CatalogSidebarProps> = ({
         onClick={() => onClick(link)}
         className={`w-full rounded-md border px-2.5 py-2 text-left text-sm transition-colors ${
           isActive
-            ? 'border-sky-400/40 bg-sky-500/20 text-sky-100'
-            : 'border-transparent bg-sky-500/10 text-sky-200 hover:border-sky-500/30 hover:bg-sky-500/20'
+            ? 'theme-nav-link-active'
+            : 'theme-nav-link'
         }`}
         aria-current={isActive ? 'page' : undefined}
       >
