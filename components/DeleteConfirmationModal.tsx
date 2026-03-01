@@ -28,7 +28,7 @@ const DeleteConfirmationModal: React.FC<DeleteConfirmationModalProps> = ({ isOpe
     >
       <div
         ref={modalRef}
-        className="bg-slate-800 rounded-lg shadow-xl w-full max-w-md p-6 text-white"
+        className="theme-surface-elevated theme-border theme-text-primary w-full max-w-md rounded-lg border p-6 shadow-xl"
         onClick={(e) => e.stopPropagation()}
       >
         <div className="flex justify-between items-center mb-4">
@@ -36,19 +36,19 @@ const DeleteConfirmationModal: React.FC<DeleteConfirmationModalProps> = ({ isOpe
             <TrashIcon className="w-6 h-6" />
             Confirm Deletion
           </h2>
-          <button onClick={onClose} className="p-2 rounded-full hover:bg-slate-700 transition-colors" aria-label="Close">
+          <button onClick={onClose} className="theme-hover-surface rounded-full p-2 transition-colors" aria-label="Close">
             <CloseIcon className="w-6 h-6" />
           </button>
         </div>
 
-        <p className="text-slate-300 mb-6 text-sm">
-          Are you sure you want to permanently delete "<strong className="font-semibold text-slate-100">{bookTitle}</strong>"? This action cannot be undone.
+        <p className="text-slate-300 mb-6 text-sm theme-text-secondary">
+          Are you sure you want to permanently delete "<strong className="font-semibold text-slate-100 theme-text-primary">{bookTitle}</strong>"? This action cannot be undone.
         </p>
 
         <div className="flex justify-end gap-4">
           <button
             onClick={onClose}
-            className="py-2 px-4 rounded-md bg-slate-600 hover:bg-slate-500 transition-colors font-semibold"
+            className="theme-button-neutral theme-hover-surface rounded-md px-4 py-2 font-semibold transition-colors"
           >
             Cancel
           </button>

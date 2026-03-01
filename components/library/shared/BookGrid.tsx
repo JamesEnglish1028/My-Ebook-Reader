@@ -133,7 +133,7 @@ const BookGrid: React.FC<BookGridProps> = ({
 
   if (isLoading) {
     return (
-      <div className="flex justify-center mt-20">
+      <div className="flex justify-center mt-20 theme-text-secondary">
         <Spinner />
       </div>
     );
@@ -142,7 +142,7 @@ const BookGrid: React.FC<BookGridProps> = ({
   return (
     <div
       ref={gridRef}
-      className={`grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-6 ${className}`}
+      className={`grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-6 theme-text-primary ${className}`}
       onFocus={handleGridFocus}
       onBlur={handleGridBlur}
       aria-label="Book collection"

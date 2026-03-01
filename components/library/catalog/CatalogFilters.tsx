@@ -116,10 +116,10 @@ const CatalogFilters: React.FC<CatalogFiltersProps> = ({
     + Number(distributorMode !== 'all');
 
   return (
-    <div className="mb-5 rounded-xl border border-slate-700/60 bg-slate-900/35 p-3">
+    <div className="mb-5 rounded-xl border border-slate-700/60 bg-slate-900/35 p-3 theme-surface theme-border">
       <div className="mb-3 flex items-center justify-between">
-        <h3 className="text-xs font-semibold uppercase tracking-[0.18em] text-slate-400">Filters</h3>
-        <span className="text-[11px] text-slate-500">
+        <h3 className="text-xs font-semibold uppercase tracking-[0.18em] text-slate-400 theme-text-secondary">Filters</h3>
+        <span className="text-[11px] text-slate-500 theme-text-muted">
           {activeFilterCount > 0 ? `${activeFilterCount} active` : 'Local only'}
         </span>
       </div>
@@ -127,7 +127,7 @@ const CatalogFilters: React.FC<CatalogFiltersProps> = ({
         <div className="flex flex-wrap items-start gap-3">
           {showAudienceFilter && (
             <div className="flex flex-wrap items-center gap-2">
-              <span className="text-xs font-medium uppercase tracking-[0.12em] text-slate-500">Audience</span>
+              <span className="text-xs font-medium uppercase tracking-[0.12em] text-slate-500 theme-text-muted">Audience</span>
               <div className="flex flex-wrap gap-1.5">
                 {audienceOptions
                   .filter((option) => option.available)
@@ -137,7 +137,7 @@ const CatalogFilters: React.FC<CatalogFiltersProps> = ({
                       onClick={() => onAudienceChange(option.key)}
                       className={`rounded-full px-2.5 py-1 text-xs font-medium transition-colors ${audienceMode === option.key
                         ? 'bg-sky-500/20 text-sky-100 ring-1 ring-sky-500/40'
-                        : 'bg-slate-800 text-slate-300 hover:bg-slate-700'
+                        : 'bg-slate-800 text-slate-300 hover:bg-slate-700 theme-pill theme-hover-surface'
                       }`}
                     >
                       {option.label.replace('All Ages', 'All')}
@@ -149,7 +149,7 @@ const CatalogFilters: React.FC<CatalogFiltersProps> = ({
 
           {showFictionFilter && (
             <div className="flex flex-wrap items-center gap-2">
-              <span className="text-xs font-medium uppercase tracking-[0.12em] text-slate-500">Type</span>
+              <span className="text-xs font-medium uppercase tracking-[0.12em] text-slate-500 theme-text-muted">Type</span>
               <div className="flex flex-wrap gap-1.5">
                 {fictionOptions
                   .filter((option) => option.available)
@@ -159,7 +159,7 @@ const CatalogFilters: React.FC<CatalogFiltersProps> = ({
                       onClick={() => onFictionChange(option.key)}
                       className={`rounded-full px-2.5 py-1 text-xs font-medium transition-colors ${fictionMode === option.key
                         ? 'bg-amber-500/20 text-amber-100 ring-1 ring-amber-500/40'
-                        : 'bg-slate-800 text-slate-300 hover:bg-slate-700'
+                        : 'bg-slate-800 text-slate-300 hover:bg-slate-700 theme-pill theme-hover-surface'
                       }`}
                     >
                       {option.label.replace('All Types', 'All')}
@@ -171,7 +171,7 @@ const CatalogFilters: React.FC<CatalogFiltersProps> = ({
 
           {showMediaFilter && (
             <div className="flex flex-wrap items-center gap-2">
-              <span className="text-xs font-medium uppercase tracking-[0.12em] text-slate-500">Format</span>
+              <span className="text-xs font-medium uppercase tracking-[0.12em] text-slate-500 theme-text-muted">Format</span>
               <div className="flex flex-wrap gap-1.5">
                 {mediaOptions
                   .filter((option) => option.available)
@@ -181,7 +181,7 @@ const CatalogFilters: React.FC<CatalogFiltersProps> = ({
                       onClick={() => onMediaChange(option.key)}
                       className={`rounded-full px-2.5 py-1 text-xs font-medium transition-colors ${mediaMode === option.key
                         ? 'bg-cyan-500/20 text-cyan-100 ring-1 ring-cyan-500/40'
-                        : 'bg-slate-800 text-slate-300 hover:bg-slate-700'
+                        : 'bg-slate-800 text-slate-300 hover:bg-slate-700 theme-pill theme-hover-surface'
                       }`}
                     >
                       {option.label.replace('All Media', 'All')}
@@ -193,7 +193,7 @@ const CatalogFilters: React.FC<CatalogFiltersProps> = ({
 
           {showPublicationFilter && (
             <div className="flex flex-wrap items-center gap-2">
-              <span className="text-xs font-medium uppercase tracking-[0.12em] text-slate-500">Publication</span>
+              <span className="text-xs font-medium uppercase tracking-[0.12em] text-slate-500 theme-text-muted">Publication</span>
               <div className="flex flex-wrap gap-1.5">
                 {[{ key: 'all' as PublicationMode, label: 'All' }, ...availablePublicationTypes]
                   .map((option) => (
@@ -202,7 +202,7 @@ const CatalogFilters: React.FC<CatalogFiltersProps> = ({
                       onClick={() => onPublicationChange(option.key)}
                       className={`rounded-full px-2.5 py-1 text-xs font-medium transition-colors ${publicationMode === option.key
                         ? 'bg-emerald-500/20 text-emerald-100 ring-1 ring-emerald-500/40'
-                        : 'bg-slate-800 text-slate-300 hover:bg-slate-700'
+                        : 'bg-slate-800 text-slate-300 hover:bg-slate-700 theme-pill theme-hover-surface'
                       }`}
                     >
                       {option.label}
@@ -214,7 +214,7 @@ const CatalogFilters: React.FC<CatalogFiltersProps> = ({
 
           {showAvailabilityFilter && (
             <div className="flex flex-wrap items-center gap-2">
-              <span className="text-xs font-medium uppercase tracking-[0.12em] text-slate-500">Availability</span>
+              <span className="text-xs font-medium uppercase tracking-[0.12em] text-slate-500 theme-text-muted">Availability</span>
               <div className="flex flex-wrap gap-1.5">
                 {[{ key: 'all' as AvailabilityMode, label: 'All' }, ...availableAvailabilityModes]
                   .map((option) => (
@@ -223,7 +223,7 @@ const CatalogFilters: React.FC<CatalogFiltersProps> = ({
                       onClick={() => onAvailabilityChange(option.key)}
                       className={`rounded-full px-2.5 py-1 text-xs font-medium transition-colors ${availabilityMode === option.key
                         ? 'bg-lime-500/20 text-lime-100 ring-1 ring-lime-500/40'
-                        : 'bg-slate-800 text-slate-300 hover:bg-slate-700'
+                        : 'bg-slate-800 text-slate-300 hover:bg-slate-700 theme-pill theme-hover-surface'
                       }`}
                     >
                       {option.label}
@@ -235,7 +235,7 @@ const CatalogFilters: React.FC<CatalogFiltersProps> = ({
 
           {showDistributorFilter && (
             <div className="flex flex-wrap items-center gap-2">
-              <span className="text-xs font-medium uppercase tracking-[0.12em] text-slate-500">Distributor</span>
+              <span className="text-xs font-medium uppercase tracking-[0.12em] text-slate-500 theme-text-muted">Distributor</span>
               <div className="flex flex-wrap gap-1.5">
                 {['all', ...availableDistributors]
                   .map((option) => (
@@ -244,7 +244,7 @@ const CatalogFilters: React.FC<CatalogFiltersProps> = ({
                       onClick={() => onDistributorChange(option as DistributorMode)}
                       className={`rounded-full px-2.5 py-1 text-xs font-medium transition-colors ${distributorMode === option
                         ? 'bg-fuchsia-500/20 text-fuchsia-100 ring-1 ring-fuchsia-500/40'
-                        : 'bg-slate-800 text-slate-300 hover:bg-slate-700'
+                        : 'bg-slate-800 text-slate-300 hover:bg-slate-700 theme-pill theme-hover-surface'
                       }`}
                     >
                       {option === 'all' ? 'All' : option}

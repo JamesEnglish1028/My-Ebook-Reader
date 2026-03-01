@@ -49,6 +49,14 @@ export const READER_KEYS = {
 } as const;
 
 /**
+ * App-wide UI preference keys
+ */
+export const UI_KEYS = {
+    /** Global UI theme preference (system, light, dark) */
+    THEME: 'ebook-reader-ui-theme',
+} as const;
+
+/**
  * OPDS and authentication keys
  */
 export const OPDS_KEYS = {
@@ -99,5 +107,6 @@ export const getStorageKey = {
 export const ALL_STORAGE_KEYS = {
     ...LIBRARY_KEYS,
     ...READER_KEYS,
+    ...UI_KEYS,
     ...OPDS_KEYS,
 } as const;

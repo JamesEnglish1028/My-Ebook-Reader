@@ -14,8 +14,8 @@ export const CollectionNavigation: React.FC<CollectionNavigationProps> = ({
   if (collections.length === 0) return null;
 
   return (
-    <div className="mb-6 p-4 bg-slate-800/30 rounded-lg">
-      <h3 className="text-lg font-semibold text-white mb-3">Collections</h3>
+    <div className="theme-surface theme-border theme-text-primary mb-6 rounded-lg border p-4">
+      <h3 className="mb-3 text-lg font-semibold">Collections</h3>
       <div className="flex flex-wrap gap-2">
         {collections.map((collection, index) => (
           <button

@@ -79,23 +79,27 @@ const NetworkDebugModal: React.FC<{ isOpen: boolean; onClose: () => void }> = ({
 
   return (
     <div className="fixed inset-0 z-50 flex items-start justify-center p-6">
-      <div ref={modalRef} className="w-full max-w-2xl bg-white rounded shadow-lg overflow-auto" style={{ maxHeight: '80vh' }}>
-        <div className="p-4 border-b flex items-center justify-between">
+      <div
+        ref={modalRef}
+        className="theme-surface-elevated theme-border theme-text-primary w-full max-w-2xl overflow-auto rounded border shadow-lg"
+        style={{ maxHeight: '80vh' }}
+      >
+        <div className="theme-divider flex items-center justify-between border-b p-4">
           <strong>Network Debug</strong>
           <div>
-            <button className="mr-2 px-3 py-1 bg-gray-200 rounded" onClick={() => { setUrl(''); setResult(null); }}>Clear</button>
+            <button className="theme-button-neutral theme-hover-surface mr-2 rounded px-3 py-1" onClick={() => { setUrl(''); setResult(null); }}>Clear</button>
             <button className="px-3 py-1 bg-red-500 text-white rounded" onClick={onClose}>Close</button>
           </div>
         </div>
         <div className="p-4">
           <div className="mb-2">
             <label className="block text-sm font-medium">Target URL</label>
-            <input className="w-full p-2 border rounded" value={url} onChange={e => setUrl(e.target.value)} placeholder="https://example.org/opds/borrow/123" />
+            <input className="theme-input w-full rounded border p-2" value={url} onChange={e => setUrl(e.target.value)} placeholder="https://example.org/opds/borrow/123" />
           </div>
           <div className="mb-2">
             <label className="block text-sm font-medium">Authorization header (optional)</label>
-            <input className="w-full p-2 border rounded" value={authHeader} onChange={e => setAuthHeader(e.target.value)} placeholder="Basic base64(...)" />
-            <div className="text-xs text-gray-600">You can paste an Authorization header value to simulate client-sent auth. Note: browsers may preflight requests when custom headers are present.</div>
+            <input className="theme-input w-full rounded border p-2" value={authHeader} onChange={e => setAuthHeader(e.target.value)} placeholder="Basic base64(...)" />
+            <div className="theme-text-secondary text-xs">You can paste an Authorization header value to simulate client-sent auth. Note: browsers may preflight requests when custom headers are present.</div>
           </div>
           <div className="mb-4 flex items-center gap-3">
             <label className="flex items-center gap-2"><input type="checkbox" checked={includeCreds} onChange={e => setIncludeCreds(e.target.checked)} /> Include credentials (cookies)</label>
@@ -119,12 +123,12 @@ const NetworkDebugModal: React.FC<{ isOpen: boolean; onClose: () => void }> = ({
                 <div><strong>Access-Control-Allow-Headers:</strong> {String(result.accessControlAllowHeaders)}</div>
                 <div><strong>Access-Control-Expose-Headers:</strong> {String(result.accessControlExposeHeaders)}</div>
                 <div className="mt-2"><strong>Request headers sent (client-side):</strong>
-                  <pre className="p-2 bg-gray-100 rounded text-xs overflow-auto">{JSON.stringify(result.requestHeaders, null, 2)}</pre>
+                  <pre className="theme-surface rounded p-2 text-xs overflow-auto">{JSON.stringify(result.requestHeaders, null, 2)}</pre>
                 </div>
                 <div className="mt-2"><strong>document.cookie (current origin):</strong>
-                  <pre className="p-2 bg-gray-100 rounded text-xs overflow-auto">{result.documentCookie || '<none>'}</pre>
+                  <pre className="theme-surface rounded p-2 text-xs overflow-auto">{result.documentCookie || '<none>'}</pre>
                 </div>
-                <div className="mt-2 text-xs text-gray-600">Limitations: The browser will not expose cross-origin cookies or Set-Cookie headers to JavaScript. A missing Access-Control-Allow-Origin or Access-Control-Allow-Credentials header will still prevent the browser from exposing the response body to the app.</div>
+                <div className="theme-text-secondary mt-2 text-xs">Limitations: The browser will not expose cross-origin cookies or Set-Cookie headers to JavaScript. A missing Access-Control-Allow-Origin or Access-Control-Allow-Credentials header will still prevent the browser from exposing the response body to the app.</div>
               </div>
             )}
           </div>

@@ -18,7 +18,7 @@ import { useAuthAcquisitionCoordinator } from './components/app/useAuthAcquisiti
 import { useImportCoordinator } from './components/app/useImportCoordinator';
 import { useSyncCoordinator } from './components/app/useSyncCoordinator';
 import { useAuth } from './contexts/AuthContext';
-import { useCatalogs, useGlobalShortcuts } from './hooks';
+import { useCatalogs, useGlobalShortcuts, useUiTheme } from './hooks';
 import { db, logger } from './services';
 import type {
   BookMetadata,
@@ -47,6 +47,7 @@ const queryClient = new QueryClient({
 
 const AppInner: React.FC = () => {
   const { addCatalog } = useCatalogs();
+  const { uiTheme, resolvedTheme } = useUiTheme();
   const toast = useToast();
   const confirm = useConfirm();
   const { tokenClient } = useAuth();
@@ -296,7 +297,11 @@ const AppInner: React.FC = () => {
   }, []);
 
   return (
-    <div className="min-h-screen bg-slate-900 font-sans">
+    <div
+      className={`min-h-screen font-sans theme-shell ${resolvedTheme === 'light' ? 'bg-slate-50 text-slate-950' : 'bg-slate-900 text-white'}`}
+      data-ui-theme={uiTheme}
+      data-ui-theme-resolved={resolvedTheme}
+    >
       <a
         href="#main-content"
         className="sr-only focus:not-sr-only focus:absolute focus:top-4 focus:left-4 focus:z-50 focus:px-4 focus:py-2 focus:bg-sky-500 focus:text-white focus:rounded-md focus:font-semibold focus:shadow-lg"

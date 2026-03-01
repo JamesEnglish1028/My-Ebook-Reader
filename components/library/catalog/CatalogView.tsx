@@ -428,9 +428,9 @@ const CatalogView: React.FC<CatalogViewProps> = ({
             isLoading={isLoading}
           />
         ) : hasOriginalBooks ? (
-          <div className="text-center py-12">
-            <p className="text-slate-400 text-lg mb-2">No books match your current filters</p>
-            <p className="text-slate-500 text-sm">Try adjusting the local filters to see more books</p>
+          <div className="theme-text-primary py-12 text-center">
+            <p className="theme-text-secondary mb-2 text-lg">No books match your current filters</p>
+            <p className="theme-text-muted text-sm">Try adjusting the local filters to see more books</p>
           </div>
         ) : null}
       </main>

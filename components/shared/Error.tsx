@@ -129,7 +129,7 @@ const Error: React.FC<ErrorProps> = ({
         {onDismiss && (
           <button
             onClick={onDismiss}
-            className="ml-auto text-slate-400 hover:text-white"
+            className="ml-auto text-slate-400 hover:text-white theme-text-muted"
             aria-label="Dismiss"
           >
             <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -153,7 +153,7 @@ const Error: React.FC<ErrorProps> = ({
                 {title}
               </h3>
             )}
-            <p className="text-slate-300 text-sm">{message}</p>
+            <p className="text-slate-300 text-sm theme-text-secondary">{message}</p>
 
             {/* Actions */}
             {(onRetry || onDismiss) && (
@@ -169,7 +169,7 @@ const Error: React.FC<ErrorProps> = ({
                 {onDismiss && (
                   <button
                     onClick={onDismiss}
-                    className="px-4 py-2 rounded-lg bg-slate-700 hover:bg-slate-600 text-white font-medium transition-colors"
+                    className="px-4 py-2 rounded-lg bg-slate-700 hover:bg-slate-600 text-white font-medium transition-colors theme-button-neutral theme-hover-surface"
                   >
                     Dismiss
                   </button>
@@ -182,7 +182,7 @@ const Error: React.FC<ErrorProps> = ({
           {onDismiss && (
             <button
               onClick={onDismiss}
-              className="flex-shrink-0 text-slate-400 hover:text-white"
+              className="flex-shrink-0 text-slate-400 hover:text-white theme-text-muted"
               aria-label="Close"
             >
               <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -205,7 +205,7 @@ const Error: React.FC<ErrorProps> = ({
           {title || 'Something Went Wrong'}
         </h2>
 
-        <p className="text-slate-300 mb-6">
+        <p className="text-slate-300 mb-6 theme-text-secondary">
           {message}
         </p>
 
@@ -223,7 +223,7 @@ const Error: React.FC<ErrorProps> = ({
             {onDismiss && (
               <button
                 onClick={onDismiss}
-                className="px-6 py-3 rounded-lg bg-slate-700 hover:bg-slate-600 text-white font-bold transition-colors"
+                className="px-6 py-3 rounded-lg bg-slate-700 hover:bg-slate-600 text-white font-bold transition-colors theme-button-neutral theme-hover-surface"
               >
                 Dismiss
               </button>

@@ -1,0 +1,103 @@
+:root,
+:root[data-ui-theme-resolved="dark"] {
+  --app-bg: #0f172a;
+  --app-fg: #f8fafc;
+  --surface-bg: rgba(15, 23, 42, 0.7);
+  --surface-elevated-bg: #1e293b;
+  --surface-muted-bg: rgba(15, 23, 42, 0.45);
+  --surface-hover-bg: rgba(51, 65, 85, 0.85);
+  --border-color: rgba(100, 116, 139, 0.6);
+  --border-soft-color: rgba(100, 116, 139, 0.35);
+  --text-primary: #f8fafc;
+  --text-secondary: #cbd5e1;
+  --text-muted: #94a3b8;
+  --input-bg: #0f172a;
+  --input-fg: #e2e8f0;
+}
+
+:root[data-ui-theme-resolved="light"] {
+  --app-bg: #f8fafc;
+  --app-fg: #0f172a;
+  --surface-bg: rgba(255, 255, 255, 0.88);
+  --surface-elevated-bg: #ffffff;
+  --surface-muted-bg: rgba(226, 232, 240, 0.65);
+  --surface-hover-bg: rgba(226, 232, 240, 0.95);
+  --border-color: rgba(148, 163, 184, 0.9);
+  --border-soft-color: rgba(148, 163, 184, 0.55);
+  --text-primary: #0f172a;
+  --text-secondary: #334155;
+  --text-muted: #64748b;
+  --input-bg: #ffffff;
+  --input-fg: #0f172a;
+}
+
+body {
+  background-color: var(--app-bg);
+  color: var(--app-fg);
+}
+
+.theme-shell {
+  background-color: var(--app-bg) !important;
+  color: var(--app-fg) !important;
+}
+
+.theme-surface {
+  background-color: var(--surface-bg) !important;
+}
+
+.theme-surface-elevated {
+  background-color: var(--surface-elevated-bg) !important;
+}
+
+.theme-surface-muted {
+  background-color: var(--surface-muted-bg) !important;
+}
+
+.theme-hover-surface:hover {
+  background-color: var(--surface-hover-bg) !important;
+}
+
+.theme-border {
+  border-color: var(--border-color) !important;
+}
+
+.theme-border-soft {
+  border-color: var(--border-soft-color) !important;
+}
+
+.theme-text-primary {
+  color: var(--text-primary) !important;
+}
+
+.theme-text-secondary {
+  color: var(--text-secondary) !important;
+}
+
+.theme-text-muted {
+  color: var(--text-muted) !important;
+}
+
+.theme-input {
+  background-color: var(--input-bg) !important;
+  color: var(--input-fg) !important;
+  border-color: var(--border-color) !important;
+}
+
+.theme-pill {
+  background-color: var(--surface-elevated-bg) !important;
+  color: var(--text-secondary) !important;
+}
+
+.theme-button-neutral {
+  background-color: var(--surface-elevated-bg) !important;
+  color: var(--text-primary) !important;
+  border-color: var(--border-color) !important;
+}
+
+.theme-ring-offset {
+  --tw-ring-offset-color: var(--app-bg) !important;
+}
+
+.theme-divider {
+  border-color: var(--border-soft-color) !important;
+}

@@ -46,7 +46,7 @@ const ShortcutHelpModal: React.FC<Props> = ({ isOpen, onClose, onZoomIn, onZoomO
 
   const renderShortcut = (shortcut: ShortcutAction) => (
     <li key={`${shortcut.key}-${shortcut.description}`} className="flex items-start gap-2">
-      <kbd className="px-2 py-1 bg-slate-700 rounded text-xs font-mono min-w-[3rem] text-center">
+      <kbd className="px-2 py-1 bg-slate-700 rounded text-xs font-mono min-w-[3rem] text-center theme-surface-elevated">
         {formatShortcut(shortcut)}
       </kbd>
       <span className="flex-1">{shortcut.description}</span>
@@ -61,7 +61,7 @@ const ShortcutHelpModal: React.FC<Props> = ({ isOpen, onClose, onZoomIn, onZoomO
         role="dialog"
         aria-modal="true"
         aria-labelledby="shortcut-help-title"
-        className="relative bg-slate-800 text-white rounded-lg shadow-lg max-w-2xl w-full mx-4 p-6 max-h-[90vh] overflow-y-auto"
+        className="relative bg-slate-800 text-white rounded-lg shadow-lg max-w-2xl w-full mx-4 p-6 max-h-[90vh] overflow-y-auto border theme-surface-elevated theme-border theme-text-primary"
         onClick={(e) => e.stopPropagation()}
       >
         <div className="flex items-center justify-between mb-4">
@@ -69,7 +69,7 @@ const ShortcutHelpModal: React.FC<Props> = ({ isOpen, onClose, onZoomIn, onZoomO
           <button
             ref={closeButtonRef}
             onClick={onClose}
-            className="p-2 rounded hover:bg-slate-700 focus:outline-none focus:ring-2 focus:ring-sky-500"
+            className="p-2 rounded hover:bg-slate-700 focus:outline-none focus:ring-2 focus:ring-sky-500 theme-hover-surface"
             aria-label="Close help"
           >
             ✕
@@ -78,7 +78,7 @@ const ShortcutHelpModal: React.FC<Props> = ({ isOpen, onClose, onZoomIn, onZoomO
 
         {/* Global shortcuts */}
         <div className="mb-6">
-          <h4 className="text-sm font-semibold text-slate-400 uppercase tracking-wide mb-3">Global</h4>
+          <h4 className="text-sm font-semibold text-slate-400 uppercase tracking-wide mb-3 theme-text-secondary">Global</h4>
           <ul className="space-y-2 text-sm">
             {globalShortcuts.map(renderShortcut)}
           </ul>
@@ -87,7 +87,7 @@ const ShortcutHelpModal: React.FC<Props> = ({ isOpen, onClose, onZoomIn, onZoomO
         {/* Reader shortcuts */}
         {activeReader && (
           <div className="mb-6">
-            <h4 className="text-sm font-semibold text-slate-400 uppercase tracking-wide mb-3">
+            <h4 className="text-sm font-semibold text-slate-400 uppercase tracking-wide mb-3 theme-text-secondary">
               Reader ({activeReader === 'epub' ? 'EPUB' : 'PDF'})
             </h4>
             <ul className="space-y-2 text-sm">
@@ -98,13 +98,13 @@ const ShortcutHelpModal: React.FC<Props> = ({ isOpen, onClose, onZoomIn, onZoomO
 
         {/* Action buttons for reader controls */}
         {activeReader && onZoomIn && onZoomOut && onToggleFit && (
-          <div className="mt-6 pt-4 border-t border-slate-700">
-            <h4 className="text-sm font-semibold text-slate-400 uppercase tracking-wide mb-3">Quick Actions</h4>
+          <div className="mt-6 pt-4 border-t border-slate-700 theme-divider">
+            <h4 className="text-sm font-semibold text-slate-400 uppercase tracking-wide mb-3 theme-text-secondary">Quick Actions</h4>
             <div className="flex gap-2">
               <Tooltip label="Zoom out (-)">
                 <button
                   onClick={onZoomOut}
-                  className="p-3 rounded-full bg-slate-700 hover:bg-slate-600 focus:outline-none focus:ring-2 focus:ring-sky-500"
+                  className="p-3 rounded-full bg-slate-700 hover:bg-slate-600 focus:outline-none focus:ring-2 focus:ring-sky-500 theme-button-neutral theme-hover-surface"
                   aria-label="Zoom out"
                 >
                   <MinusIcon className="w-5 h-5 text-slate-50" />
@@ -113,7 +113,7 @@ const ShortcutHelpModal: React.FC<Props> = ({ isOpen, onClose, onZoomIn, onZoomO
               <Tooltip label="Zoom in (+)">
                 <button
                   onClick={onZoomIn}
-                  className="p-3 rounded-full bg-slate-700 hover:bg-slate-600 focus:outline-none focus:ring-2 focus:ring-sky-500"
+                  className="p-3 rounded-full bg-slate-700 hover:bg-slate-600 focus:outline-none focus:ring-2 focus:ring-sky-500 theme-button-neutral theme-hover-surface"
                   aria-label="Zoom in"
                 >
                   <PlusIcon className="w-5 h-5 text-slate-50" />
@@ -122,7 +122,7 @@ const ShortcutHelpModal: React.FC<Props> = ({ isOpen, onClose, onZoomIn, onZoomO
               <Tooltip label="Toggle fit (F)">
                 <button
                   onClick={onToggleFit}
-                  className="p-3 rounded-full bg-slate-700 hover:bg-slate-600 focus:outline-none focus:ring-2 focus:ring-sky-500"
+                  className="p-3 rounded-full bg-slate-700 hover:bg-slate-600 focus:outline-none focus:ring-2 focus:ring-sky-500 theme-button-neutral theme-hover-surface"
                   aria-label="Toggle fit mode"
                 >
                   <AdjustmentsVerticalIcon className="w-5 h-5 text-slate-50" />
@@ -132,9 +132,9 @@ const ShortcutHelpModal: React.FC<Props> = ({ isOpen, onClose, onZoomIn, onZoomO
           </div>
         )}
 
-        <div className="mt-6 pt-4 border-t border-slate-700 text-xs text-slate-400">
+        <div className="mt-6 pt-4 border-t border-slate-700 text-xs text-slate-400 theme-divider theme-text-secondary">
           <p>💡 Tip: Keyboard shortcuts are disabled when typing in text fields.</p>
-          <p className="mt-1">Press <kbd className="px-1 py-0.5 bg-slate-700 rounded text-xs">?</kbd> anytime to view this help.</p>
+          <p className="mt-1">Press <kbd className="px-1 py-0.5 bg-slate-700 rounded text-xs theme-surface-elevated">?</kbd> anytime to view this help.</p>
         </div>
       </div>
     </div>

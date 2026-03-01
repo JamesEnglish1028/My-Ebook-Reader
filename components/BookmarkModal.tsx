@@ -44,22 +44,22 @@ const BookmarkModal: React.FC<BookmarkModalProps> = ({ isOpen, onClose, onSave }
     >
       <div
         ref={modalRef}
-        className="bg-slate-800 rounded-lg shadow-xl w-full max-w-md p-6 text-white"
+        className="theme-surface-elevated theme-border theme-text-primary w-full max-w-md rounded-lg border p-6 shadow-xl"
         onClick={(e) => e.stopPropagation()}
       >
         <div className="flex justify-between items-center mb-4">
           <h2 className="text-xl font-bold text-sky-300">Add Bookmark</h2>
-          <button onClick={onClose} className="p-2 rounded-full hover:bg-slate-700 transition-colors" aria-label="Close">
+          <button onClick={onClose} className="theme-hover-surface rounded-full p-2 transition-colors" aria-label="Close">
             <CloseIcon className="w-6 h-6" />
           </button>
         </div>
 
-        <p className="text-slate-300 mb-4 text-sm">
+        <p className="text-slate-300 mb-4 text-sm theme-text-secondary">
           A bookmark for the current location will be created. You can add an optional note below.
         </p>
 
         <div>
-          <label htmlFor="bookmark-note" className="block text-sm font-medium text-slate-400 mb-2">
+          <label htmlFor="bookmark-note" className="block text-sm font-medium text-slate-400 mb-2 theme-text-secondary">
             Note (optional)
           </label>
           <textarea
@@ -72,10 +72,10 @@ const BookmarkModal: React.FC<BookmarkModalProps> = ({ isOpen, onClose, onSave }
                 setNote(e.target.value);
               }
             }}
-            className="w-full bg-slate-700 rounded-md p-2 text-sm focus:outline-none focus:ring-2 focus:ring-sky-500"
+            className="theme-input w-full rounded-md p-2 text-sm focus:outline-none focus:ring-2 focus:ring-sky-500"
             placeholder="Add a brief note..."
           />
-          <p className={`text-xs mt-1 text-right ${remainingChars < 20 ? 'text-red-400' : 'text-slate-500'}`}>
+          <p className={`mt-1 text-right text-xs ${remainingChars < 20 ? 'text-red-400' : 'theme-text-muted'}`}>
             {remainingChars} characters remaining
           </p>
         </div>
@@ -83,7 +83,7 @@ const BookmarkModal: React.FC<BookmarkModalProps> = ({ isOpen, onClose, onSave }
         <div className="flex justify-end gap-4 mt-6">
           <button
             onClick={onClose}
-            className="py-2 px-4 rounded-md bg-slate-600 hover:bg-slate-500 transition-colors font-semibold"
+            className="theme-button-neutral theme-hover-surface rounded-md px-4 py-2 font-semibold transition-colors"
           >
             Cancel
           </button>

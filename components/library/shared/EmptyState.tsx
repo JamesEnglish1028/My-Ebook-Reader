@@ -32,13 +32,13 @@ const EmptyState: React.FC<EmptyStateProps> = ({
         return {
           title: 'Your library is empty.',
           message: 'Import your first book or add a catalog to get started!',
-          textColor: 'text-slate-50',
+          textColor: 'theme-text-primary',
         };
       case 'catalog':
         return {
           title: 'Empty Section',
           message: 'No categories or books were found here.',
-          textColor: 'text-slate-50',
+          textColor: 'theme-text-primary',
         };
       case 'error':
         return {
@@ -50,7 +50,7 @@ const EmptyState: React.FC<EmptyStateProps> = ({
         return {
           title: 'No Content',
           message: 'Nothing to display here.',
-          textColor: 'text-white',
+          textColor: 'theme-text-primary',
         };
     }
   };
@@ -61,11 +61,11 @@ const EmptyState: React.FC<EmptyStateProps> = ({
   const titleColor = defaultContent.textColor;
 
   return (
-    <div className="text-center py-20 bg-slate-700 rounded-lg">
+    <div className="theme-surface-elevated theme-text-primary rounded-lg py-20 text-center">
       <h2 className={`text-2xl font-semibold ${titleColor}`}>
         {displayTitle}
       </h2>
-      <p className="text-slate-100 mt-2 max-w-xl mx-auto">
+      <p className="theme-text-secondary mx-auto mt-2 max-w-xl">
         {displayMessage}
       </p>
     </div>

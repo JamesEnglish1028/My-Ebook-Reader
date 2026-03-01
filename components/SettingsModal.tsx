@@ -88,29 +88,29 @@ const SettingsModal: React.FC<SettingsModalProps> = ({
 
   return (
     <div className="fixed inset-0 bg-black/60 z-50 flex items-center justify-center p-4" onClick={handleClose} aria-modal="true" role="dialog">
-      <div ref={modalRef} className="bg-slate-800 rounded-lg shadow-xl w-full max-w-lg p-6 text-white" onClick={(e) => e.stopPropagation()}>
+      <div ref={modalRef} className="theme-surface-elevated theme-border theme-text-primary w-full max-w-lg rounded-lg border p-6 shadow-xl" onClick={(e) => e.stopPropagation()}>
         <div className="flex justify-between items-center mb-6">
           <h2 className="text-xl font-bold text-sky-300">Cloud Sync</h2>
-          <button onClick={handleClose} className="p-2 rounded-full hover:bg-slate-700 transition-colors" aria-label="Close" disabled={isSyncing}>
+          <button onClick={handleClose} className="theme-hover-surface rounded-full p-2 transition-colors" aria-label="Close" disabled={isSyncing}>
             <CloseIcon className="w-6 h-6" />
           </button>
         </div>
 
         <div className="space-y-6">
-          <div className="bg-slate-900/50 p-4 rounded-lg">
-            <h3 className="text-lg font-semibold mb-4 text-slate-200">Account & Sync</h3>
+          <div className="bg-slate-900/50 p-4 rounded-lg theme-surface-muted">
+            <h3 className="theme-text-primary mb-4 text-lg font-semibold">Account & Sync</h3>
             {isLoggedIn && user ? (
               <div className="space-y-3">
                 <div className="flex items-center gap-4">
                   <img src={user.picture} alt="User" className="w-12 h-12 rounded-full" />
                   <div className="flex-grow">
                     <p className="font-semibold">{user.name}</p>
-                    <p className="text-sm text-slate-400">{user.email}</p>
+                    <p className="theme-text-secondary text-sm">{user.email}</p>
                   </div>
                   <button onClick={reauthorizeDrive} className="py-2 px-3 rounded-md bg-sky-700 hover:bg-sky-600 transition-colors font-semibold text-xs">
                     Refresh Drive Access
                   </button>
-                  <button onClick={signOut} className="py-2 px-4 rounded-md bg-slate-600 hover:bg-slate-500 transition-colors font-semibold text-sm">
+                  <button onClick={signOut} className="theme-button-neutral theme-hover-surface rounded-md px-4 py-2 text-sm font-semibold transition-colors">
                     Sign Out
                   </button>
                 </div>
@@ -123,7 +123,7 @@ const SettingsModal: React.FC<SettingsModalProps> = ({
               </div>
             ) : (
               <div>
-                <p className="text-sm text-slate-400 mb-3">Sign in with your Google account to back up and sync your library across devices using Google Drive.</p>
+                <p className="theme-text-secondary mb-3 text-sm">Sign in with your Google account to back up and sync your library across devices using Google Drive.</p>
                 {authStatus === 'not_configured' && (
                   <p className="text-xs text-amber-300 mb-3" role="status">Google sync is not configured for this deployment. Set `VITE_GOOGLE_CLIENT_ID` and redeploy.</p>
                 )}
@@ -143,17 +143,17 @@ const SettingsModal: React.FC<SettingsModalProps> = ({
           </div>
 
           {isLoggedIn && (
-            <div className="bg-slate-900/50 p-4 rounded-lg">
-              <h3 className="text-lg font-semibold mb-2 text-slate-200">Google Drive Sync</h3>
-              <p className="text-xs text-slate-500 mb-4">Last synced: {lastSyncString}</p>
+            <div className="bg-slate-900/50 p-4 rounded-lg theme-surface-muted">
+              <h3 className="theme-text-primary mb-2 text-lg font-semibold">Google Drive Sync</h3>
+              <p className="theme-text-muted mb-4 text-xs">Last synced: {lastSyncString}</p>
 
-              <div className="mb-4 p-3 rounded-md bg-slate-800/60 border border-slate-700">
+              <div className="theme-surface-elevated theme-border mb-4 rounded-md border p-3">
                 <div className="flex items-center justify-between gap-3 mb-2">
-                  <p className="text-xs font-semibold text-slate-300 uppercase">Restore Point</p>
+                  <p className="theme-text-secondary text-xs font-semibold uppercase">Restore Point</p>
                   <button
                     onClick={onRefreshSnapshots}
                     disabled={isSyncing || isLoadingSnapshots}
-                    className="text-xs px-2 py-1 rounded bg-slate-700 hover:bg-slate-600 disabled:opacity-60"
+                    className="theme-button-neutral theme-hover-surface rounded px-2 py-1 text-xs disabled:opacity-60"
                   >
                     {isLoadingSnapshots ? 'Refreshing...' : 'Refresh'}
                   </button>
@@ -162,7 +162,7 @@ const SettingsModal: React.FC<SettingsModalProps> = ({
                   value={selectedSnapshotId}
                   onChange={(e) => onSelectSnapshotId(e.target.value)}
                   disabled={isSyncing || isLoadingSnapshots || driveSnapshots.length === 0}
-                  className="w-full p-2 rounded bg-slate-900 border border-slate-700 text-sm text-white"
+                  className="theme-input w-full rounded border p-2 text-sm"
                 >
                   {driveSnapshots.length === 0 ? (
                     <option value="">No snapshots found yet</option>
@@ -174,28 +174,28 @@ const SettingsModal: React.FC<SettingsModalProps> = ({
                     ))
                   )}
                 </select>
-                <p className="mt-2 text-xs text-slate-400">
+                <p className="theme-text-secondary mt-2 text-xs">
                   Select which cloud snapshot to use when downloading. Upload creates a new timestamped snapshot automatically.
                 </p>
               </div>
 
               {syncStatus.state !== 'idle' ? (
-                <div className="p-4 rounded-md bg-slate-700/50 text-center">
+                <div className="theme-surface-elevated rounded-md p-4 text-center">
                   {isSyncing && <Spinner text={syncStatus.message} />}
                   {syncStatus.state === 'success' && <p className="text-green-400">{syncStatus.message}</p>}
                   {syncStatus.state === 'error' && <p className="text-red-400">{syncStatus.message}</p>}
                 </div>
               ) : (
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                  <button onClick={onUploadToDrive} className="flex flex-col items-center justify-center gap-2 p-4 rounded-md bg-slate-700 hover:bg-slate-600 transition-colors disabled:opacity-50" disabled={isSyncing}>
+                  <button onClick={onUploadToDrive} className="theme-button-neutral theme-hover-surface flex flex-col items-center justify-center gap-2 rounded-md p-4 transition-colors disabled:opacity-50" disabled={isSyncing}>
                     <UploadIcon className="w-6 h-6 text-sky-400" />
                     <span className="font-semibold">Upload to Drive</span>
-                    <span className="text-xs text-slate-400 text-center">Save your local library to the cloud. This will overwrite any existing data in Drive.</span>
+                    <span className="theme-text-secondary text-center text-xs">Save your local library to the cloud. This will overwrite any existing data in Drive.</span>
                   </button>
-                  <button onClick={onDownloadFromDrive} className="flex flex-col items-center justify-center gap-2 p-4 rounded-md bg-slate-700 hover:bg-slate-600 transition-colors disabled:opacity-50" disabled={isSyncing}>
+                  <button onClick={onDownloadFromDrive} className="theme-button-neutral theme-hover-surface flex flex-col items-center justify-center gap-2 rounded-md p-4 transition-colors disabled:opacity-50" disabled={isSyncing}>
                     <DownloadIcon className="w-6 h-6 text-sky-400" />
                     <span className="font-semibold">Download from Drive</span>
-                    <span className="text-xs text-slate-400 text-center">Replace your local library with the one from Drive. Local changes will be lost.</span>
+                    <span className="theme-text-secondary text-center text-xs">Replace your local library with the one from Drive. Local changes will be lost.</span>
                   </button>
                 </div>
               )}

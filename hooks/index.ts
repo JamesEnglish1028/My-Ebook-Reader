@@ -6,6 +6,8 @@
 // Local storage and data management
 export { useCatalogs } from './useCatalogs';
 export { getFromStorage, saveToStorage, useLocalStorage } from './useLocalStorage';
+export { useUiTheme } from './useUiTheme';
+export type { ResolvedUiTheme, UiThemePreference } from './useUiTheme';
 export { SORT_OPTIONS, useSortedBooks } from './useSortedBooks';
 export type { SortOrder } from './useSortedBooks';
 

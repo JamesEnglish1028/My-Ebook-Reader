@@ -6,6 +6,7 @@ import App from './App';
 import { ConfirmProvider } from './components/ConfirmContext';
 import { ToastProvider } from './components/toast/ToastContext';
 import { AuthProvider } from './contexts/AuthContext';
+import './styles/ui-theme.css';
 
 const rootElement = document.getElementById('root');
 if (!rootElement) {

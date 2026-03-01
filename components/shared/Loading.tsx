@@ -88,7 +88,7 @@ const Loading: React.FC<LoadingProps> = ({
             d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
           />
         </svg>
-        {message && <span className="text-sm text-slate-300">{message}</span>}
+        {message && <span className="text-sm text-slate-300 theme-text-secondary">{message}</span>}
       </div>
     );
   }
@@ -102,11 +102,11 @@ const Loading: React.FC<LoadingProps> = ({
           {Array.from({ length: 12 }).map((_, index) => (
             <div key={index} className="space-y-3">
               {/* Book cover skeleton */}
-              <div className="aspect-[2/3] bg-slate-700 rounded-lg" />
+              <div className="aspect-[2/3] bg-slate-700 rounded-lg theme-surface-elevated" />
               {/* Title skeleton */}
-              <div className="h-4 bg-slate-700 rounded w-3/4" />
+              <div className="h-4 bg-slate-700 rounded w-3/4 theme-surface-elevated" />
               {/* Author skeleton */}
-              <div className="h-3 bg-slate-700 rounded w-1/2" />
+              <div className="h-3 bg-slate-700 rounded w-1/2 theme-surface-elevated" />
             </div>
           ))}
         </div>
@@ -120,7 +120,7 @@ const Loading: React.FC<LoadingProps> = ({
     const spinnerSize = size === 'large' ? 'medium' : size;
     return (
       <div className={`fixed inset-0 bg-slate-900 bg-opacity-75 flex items-center justify-center z-50 ${className}`}>
-        <div className="bg-slate-800 p-8 rounded-lg shadow-xl text-center max-w-sm w-full">
+        <div className="bg-slate-800 p-8 rounded-lg shadow-xl text-center max-w-sm w-full border theme-surface-elevated theme-border theme-text-primary">
           <Spinner text={message} size={spinnerSize} />
         </div>
       </div>

@@ -29,18 +29,18 @@ const DuplicateBookModal: React.FC<DuplicateBookModalProps> = ({ isOpen, onClose
     >
       <div
         ref={modalRef}
-        className="bg-slate-800 rounded-lg shadow-xl w-full max-w-md p-6 text-white"
+        className="theme-surface-elevated theme-border theme-text-primary w-full max-w-md rounded-lg border p-6 shadow-xl"
         onClick={(e) => e.stopPropagation()}
       >
         <div className="flex justify-between items-center mb-4">
           <h2 className="text-xl font-bold text-yellow-300">Duplicate Book Found</h2>
-          <button onClick={onClose} className="p-2 rounded-full hover:bg-slate-700 transition-colors" aria-label="Close">
+          <button onClick={onClose} className="theme-hover-surface rounded-full p-2 transition-colors" aria-label="Close">
             <CloseIcon className="w-6 h-6" />
           </button>
         </div>
 
-        <p className="text-slate-300 mb-6 text-sm">
-          The book "<strong className="font-semibold text-slate-100">{bookTitle}</strong>" is already in your library. What would you like to do?
+        <p className="text-slate-300 mb-6 text-sm theme-text-secondary">
+          The book "<strong className="font-semibold text-slate-100 theme-text-primary">{bookTitle}</strong>" is already in your library. What would you like to do?
         </p>
 
         <div className="flex flex-col gap-3">
@@ -52,13 +52,13 @@ const DuplicateBookModal: React.FC<DuplicateBookModalProps> = ({ isOpen, onClose
           </button>
           <button
             onClick={onAddAnyway}
-            className="w-full py-2.5 px-4 rounded-md bg-slate-600 hover:bg-slate-500 transition-colors font-semibold"
+            className="theme-button-neutral theme-hover-surface w-full rounded-md px-4 py-2.5 font-semibold transition-colors"
           >
             Add as New Copy
           </button>
           <button
             onClick={onClose}
-            className="w-full py-2 px-4 text-sm text-slate-400 hover:text-white transition-colors"
+            className="theme-text-muted w-full px-4 py-2 text-sm transition-colors hover:text-sky-400"
           >
             Cancel Import
           </button>

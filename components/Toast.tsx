@@ -30,7 +30,7 @@ const Toast: React.FC<ToastProps> = ({ message, duration = 3000, onClose }) => {
       tabIndex={-1}
       className="fixed bottom-6 right-6 z-50"
     >
-      <div className="bg-slate-800 border border-slate-700 text-slate-200 px-4 py-2 rounded shadow">
+      <div className="bg-slate-800 border border-slate-700 text-slate-200 px-4 py-2 rounded shadow theme-surface-elevated theme-border theme-text-secondary">
         {message}
       </div>
     </div>

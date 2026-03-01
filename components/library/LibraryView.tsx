@@ -4,7 +4,7 @@ import { useQueryClient } from '@tanstack/react-query';
 
 import { mebooksBook } from '../../assets';
 import { useAuth } from '../../contexts/AuthContext';
-import { bookKeys, useCatalogs } from '../../hooks';
+import { bookKeys, useCatalogs, useUiTheme } from '../../hooks';
 import { db, logger } from '../../services';
 import type { BookMetadata, BookRecord, Catalog, CatalogBook, CatalogRegistry, CoverAnimationData } from '../../types';
 import DuplicateBookModal from '../DuplicateBookModal';
@@ -70,6 +70,7 @@ const LibraryView: React.FC<LibraryViewProps> = ({
   // React Query client for cache invalidation
   const queryClient = useQueryClient();
   const { user, isLoggedIn } = useAuth();
+  const { uiTheme, setUiTheme } = useUiTheme();
 
   // Catalog management
   const {
@@ -328,10 +329,10 @@ const LibraryView: React.FC<LibraryViewProps> = ({
       ? 'text-emerald-300'
       : syncStatus.state === 'syncing'
         ? 'text-sky-300'
-        : 'text-slate-400';
+        : 'theme-text-muted';
 
   return (
-    <div className="container mx-auto p-4 md:p-8">
+    <div className="container mx-auto p-4 md:p-8 theme-text-primary">
       {/* Header */}
       <header className="flex flex-col md:flex-row md:justify-between md:items-center mb-6 gap-4">
         {/* Title with source dropdown */}
@@ -340,7 +341,7 @@ const LibraryView: React.FC<LibraryViewProps> = ({
           <div ref={dropdownRef} className="relative">
             <button
               onClick={() => setIsCatalogDropdownOpen(prev => !prev)}
-              className="flex items-center gap-2 text-white text-left"
+              className="theme-text-primary flex items-center gap-2 text-left"
               aria-label="Select book source"
               aria-expanded={isCatalogDropdownOpen ? 'true' : 'false'}
               aria-haspopup="true"
@@ -353,20 +354,20 @@ const LibraryView: React.FC<LibraryViewProps> = ({
 
             {/* Source Dropdown */}
             {isCatalogDropdownOpen && (
-              <div className="absolute top-full mt-2 w-72 bg-slate-800 border border-slate-700 rounded-lg shadow-xl z-20">
-                <ul className="p-1 text-white max-h-96 overflow-y-auto">
+              <div className="theme-surface-elevated theme-border absolute top-full z-20 mt-2 w-72 rounded-lg border shadow-xl">
+                <ul className="theme-text-primary max-h-96 overflow-y-auto p-1">
                   <li>
-                    <button onClick={() => handleSelectSource('library')} className={`w-full text-left px-3 py-2 text-sm rounded-md ${!isBrowsingOpds ? 'bg-sky-600' : 'hover:bg-slate-700'}`}>
+                    <button onClick={() => handleSelectSource('library')} className={`w-full rounded-md px-3 py-2 text-left text-sm ${!isBrowsingOpds ? 'bg-sky-600' : 'theme-hover-surface'}`}>
                       My Library
                     </button>
                   </li>
-                  {(catalogs.length > 0 || registries.length > 0) && <li className="my-1 border-t border-slate-700" />}
+                  {(catalogs.length > 0 || registries.length > 0) && <li className="theme-divider my-1 border-t" />}
 
                   {catalogs.length > 0 && <>
-                    <li className="px-3 pt-2 pb-1 text-xs font-semibold text-slate-400 uppercase">Catalogs</li>
+                    <li className="theme-text-secondary px-3 pb-1 pt-2 text-xs font-semibold uppercase">Catalogs</li>
                     {catalogs.map(catalog => (
                       <li key={catalog.id}>
-                        <button onClick={() => handleSelectSource(catalog)} className={`w-full text-left px-3 py-2 text-sm rounded-md truncate ${isBrowsingOpds && activeOpdsSource?.id === catalog.id ? 'bg-sky-600' : 'hover:bg-slate-700'}`}>
+                        <button onClick={() => handleSelectSource(catalog)} className={`w-full truncate rounded-md px-3 py-2 text-left text-sm ${isBrowsingOpds && activeOpdsSource?.id === catalog.id ? 'bg-sky-600' : 'theme-hover-surface'}`}>
                           {catalog.name}
                         </button>
                       </li>
@@ -374,10 +375,10 @@ const LibraryView: React.FC<LibraryViewProps> = ({
                   </>}
 
                   {registries.length > 0 && <>
-                    <li className="px-3 pt-2 pb-1 text-xs font-semibold text-slate-400 uppercase">Registries</li>
+                    <li className="theme-text-secondary px-3 pb-1 pt-2 text-xs font-semibold uppercase">Registries</li>
                     {registries.map(registry => (
                       <li key={registry.id}>
-                        <button onClick={() => handleSelectSource(registry)} className={`w-full text-left px-3 py-2 text-sm rounded-md truncate ${isBrowsingOpds && activeOpdsSource?.id === registry.id ? 'bg-sky-600' : 'hover:bg-slate-700'}`}>
+                        <button onClick={() => handleSelectSource(registry)} className={`w-full truncate rounded-md px-3 py-2 text-left text-sm ${isBrowsingOpds && activeOpdsSource?.id === registry.id ? 'bg-sky-600' : 'theme-hover-surface'}`}>
                           {registry.name}
                         </button>
                       </li>
@@ -395,14 +396,14 @@ const LibraryView: React.FC<LibraryViewProps> = ({
           <div ref={settingsMenuRef} className="relative">
             <button
               onClick={() => setIsSettingsMenuOpen(prev => !prev)}
-              className="cursor-pointer bg-slate-900/80 hover:bg-slate-800 text-slate-200 p-2 rounded-md inline-flex items-center transition-colors duration-200 h-[36px] w-[36px] justify-center border border-slate-700/80"
+              className="cursor-pointer bg-slate-900/80 hover:bg-slate-800 text-slate-200 p-2 rounded-md inline-flex items-center transition-colors duration-200 h-[36px] w-[36px] justify-center border border-slate-700/80 theme-surface theme-border theme-text-secondary"
               aria-label="Open main menu"
             >
               <ListIcon className="w-4 h-4" />
             </button>
             {isSettingsMenuOpen && (
-              <div className="absolute top-full right-0 mt-2 w-64 bg-slate-900/95 border border-slate-700/80 rounded-md shadow-xl z-20 overflow-hidden backdrop-blur-sm">
-                <div className="px-3 py-2.5 border-b border-slate-700/60 bg-slate-800/50">
+              <div className="absolute top-full right-0 mt-2 w-64 bg-slate-900/95 border border-slate-700/80 rounded-md shadow-xl z-20 overflow-hidden backdrop-blur-sm theme-surface-elevated theme-border">
+                <div className="px-3 py-2.5 border-b border-slate-700/60 bg-slate-800/50 theme-surface-muted theme-divider">
                   {isLoggedIn && user ? (
                     <div className="flex items-center gap-2.5">
                       <img
@@ -412,16 +413,16 @@ const LibraryView: React.FC<LibraryViewProps> = ({
                         referrerPolicy="no-referrer"
                       />
                       <div className="min-w-0">
-                        <p className="text-[13px] font-medium text-slate-100 truncate leading-tight">{user.name}</p>
-                        <p className="text-[11px] text-slate-500 truncate leading-tight">{user.email}</p>
+                        <p className="theme-text-primary truncate text-[13px] font-medium leading-tight">{user.name}</p>
+                        <p className="theme-text-muted truncate text-[11px] leading-tight">{user.email}</p>
                       </div>
                     </div>
                   ) : (
-                    <p className="text-[12px] font-medium text-slate-300">Browsing locally</p>
+                    <p className="theme-text-secondary text-[12px] font-medium">Browsing locally</p>
                   )}
                   <p className={`mt-2 text-[11px] leading-tight ${syncSummaryTone}`}>{syncSummary}</p>
                 </div>
-                <ul className="p-1.5 text-white">
+                <ul className="theme-text-primary p-1.5">
                   {!isBrowsingOpds && (
                     <li>
                       <ImportButton
@@ -429,30 +430,49 @@ const LibraryView: React.FC<LibraryViewProps> = ({
                         onFileChange={handleFileChange}
                         onActivate={() => setIsSettingsMenuOpen(false)}
                         alwaysShowLabel={true}
-                        className="w-full justify-start rounded-sm bg-transparent hover:bg-slate-800/80 text-slate-100 font-medium px-2.5 py-2 border-0 text-[13px]"
+                        className="theme-text-primary theme-hover-surface w-full justify-start rounded-sm border-0 bg-transparent px-2.5 py-2 text-[13px] font-medium"
                       />
                     </li>
                   )}
-                  {!isBrowsingOpds && <li className="my-1 border-t border-slate-700/40" />}
+                  {!isBrowsingOpds && <li className="theme-divider my-1 border-t" />}
                   <li>
                     <button
                       onClick={() => {
                         setIsManageCatalogsOpen(true);
                         setIsSettingsMenuOpen(false);
                       }}
-                      className="w-full text-left px-2.5 py-2 text-[13px] rounded-sm hover:bg-slate-800/80 text-slate-200 block"
+                        className="w-full text-left px-2.5 py-2 text-[13px] rounded-sm hover:bg-slate-800/80 text-slate-200 block theme-text-secondary theme-hover-surface"
                     >
                       Manage Sources
                     </button>
                   </li>
-                  <li className="my-1 border-t border-slate-700/40" />
+                  <li className="theme-divider my-1 border-t" />
+                  <li className="px-2.5 py-2">
+                    <p className="theme-text-muted mb-2 text-[11px] font-semibold uppercase tracking-[0.14em]">Theme</p>
+                    <div className="grid grid-cols-3 gap-1.5">
+                      {(['system', 'light', 'dark'] as const).map((themeOption) => (
+                        <button
+                          key={themeOption}
+                          onClick={() => setUiTheme(themeOption)}
+                          className={`rounded-sm px-2 py-1.5 text-[12px] font-medium capitalize transition-colors ${
+                            uiTheme === themeOption
+                              ? 'bg-sky-600 text-white'
+                              : 'bg-slate-800/80 text-slate-300 hover:bg-slate-700/80 theme-button-neutral theme-hover-surface'
+                          }`}
+                        >
+                          {themeOption}
+                        </button>
+                      ))}
+                    </div>
+                  </li>
+                  <li className="theme-divider my-1 border-t" />
                   <li>
                     <button
                       onClick={() => {
                         onOpenLocalStorageModal();
                         setIsSettingsMenuOpen(false);
                       }}
-                      className="w-full text-left px-2.5 py-2 text-[13px] rounded-sm hover:bg-slate-800/80 text-slate-200 block"
+                      className="w-full text-left px-2.5 py-2 text-[13px] rounded-sm hover:bg-slate-800/80 text-slate-200 block theme-text-secondary theme-hover-surface"
                     >
                       Local Storage
                     </button>
@@ -463,19 +483,19 @@ const LibraryView: React.FC<LibraryViewProps> = ({
                         onOpenCloudSyncModal();
                         setIsSettingsMenuOpen(false);
                       }}
-                      className="w-full text-left px-2.5 py-2 text-[13px] rounded-sm hover:bg-slate-800/80 text-slate-200 block"
+                      className="w-full text-left px-2.5 py-2 text-[13px] rounded-sm hover:bg-slate-800/80 text-slate-200 block theme-text-secondary theme-hover-surface"
                     >
                       Cloud Sync
                     </button>
                   </li>
-                  <li className="my-1 border-t border-slate-700/40" />
+                  <li className="theme-divider my-1 border-t" />
                   <li>
                     <button
                       onClick={() => {
                         onShowAbout();
                         setIsSettingsMenuOpen(false);
                       }}
-                      className="w-full text-left px-2.5 py-2 text-[13px] rounded-sm hover:bg-slate-800/80 text-slate-200 block"
+                      className="w-full text-left px-2.5 py-2 text-[13px] rounded-sm hover:bg-slate-800/80 text-slate-200 block theme-text-secondary theme-hover-surface"
                     >
                       About
                     </button>
