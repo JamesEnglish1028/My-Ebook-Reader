@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useEffect, useState } from 'react';
 
 import { proxiedUrl } from '../../../services/utils';
 import type { BookMetadata, CatalogBook } from '../../../types';
@@ -62,7 +62,11 @@ const BookCard = React.forwardRef<HTMLDivElement, BookCardProps>(({
   const proxiedCatalogCoverImage = isCatalogBook(book) && book.coverImage
     ? proxiedUrl(book.coverImage)
     : null;
-  const coverImageSrc = proxiedCatalogCoverImage || coverImage;
+  const [coverImageSrc, setCoverImageSrc] = useState<string | null>(coverImage);
+
+  useEffect(() => {
+    setCoverImageSrc(coverImage);
+  }, [coverImage]);
 
   const contributors = isCatalogBook(book) ? book.contributors ?? [] : [];
   const categories = isCatalogBook(book)
@@ -87,14 +91,12 @@ const BookCard = React.forwardRef<HTMLDivElement, BookCardProps>(({
             alt={book.title}
             className="w-full h-full object-cover"
             loading="lazy"
-            onError={(e) => {
-              const img = e.currentTarget as HTMLImageElement;
-              img.onerror = null as any;
-              if (proxiedCatalogCoverImage && img.src !== proxiedCatalogCoverImage) {
-                img.src = proxiedCatalogCoverImage;
+            onError={() => {
+              if (proxiedCatalogCoverImage && coverImageSrc !== proxiedCatalogCoverImage) {
+                setCoverImageSrc(proxiedCatalogCoverImage);
                 return;
               }
-              img.src = '/default-cover.png';
+              setCoverImageSrc('/default-cover.png');
             }}
           />
         ) : (
