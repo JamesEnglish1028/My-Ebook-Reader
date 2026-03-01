@@ -113,24 +113,24 @@ const BookAnnotationsAside: React.FC<{
   return (
     <section className="mt-8 space-y-6">
       <div>
-        <h3 className="text-lg font-semibold text-slate-200 mb-2">Bookmarks</h3>
+        <h3 className="theme-text-primary mb-2 text-lg font-semibold">Bookmarks</h3>
         {bookmarks.length > 0 ? (
           <ul className="space-y-2">
             {bookmarks.map((bm, idx) => (
-              <li key={bm.id || idx} className="bg-slate-800 rounded p-3 text-slate-300">
+              <li key={bm.id || idx} className="theme-surface-elevated theme-text-secondary rounded p-3">
                 <div className="font-semibold">{bm.label || `Bookmark ${idx + 1}`}</div>
-                {bm.description && <div className="text-slate-400 text-sm mt-1">{bm.description}</div>}
-                {bm.chapter && <div className="text-xs text-slate-500 mt-1">Chapter: {bm.chapter}</div>}
-                <div className="text-xs text-slate-500">Created: {formatDate(bm.createdAt)}</div>
+                {bm.description && <div className="theme-text-secondary mt-1 text-sm">{bm.description}</div>}
+                {bm.chapter && <div className="theme-text-muted mt-1 text-xs">Chapter: {bm.chapter}</div>}
+                <div className="theme-text-muted text-xs">Created: {formatDate(bm.createdAt)}</div>
               </li>
             ))}
           </ul>
         ) : (
-          <div className="text-slate-500 text-sm">No bookmarks yet.</div>
+          <div className="theme-text-muted text-sm">No bookmarks yet.</div>
         )}
       </div>
       <div>
-        <h3 className="text-lg font-semibold text-slate-200 mb-2 flex items-center justify-between">
+        <h3 className="theme-text-primary mb-2 flex items-center justify-between text-lg font-semibold">
           Citations
           <button
             className="ml-2 px-3 py-1 rounded bg-sky-700 text-white text-xs font-bold hover:bg-sky-600"
@@ -150,19 +150,19 @@ const BookAnnotationsAside: React.FC<{
               const citationFormat = rawCitationFormat === 'mla' ? 'mla' : 'apa';
               const formatted = citationService.formatCitation(libraryBook, ct, citationFormat);
               return (
-                <li key={ct.id || idx} className="bg-slate-800 rounded p-3 text-slate-300">
+                <li key={ct.id || idx} className="theme-surface-elevated theme-text-secondary rounded p-3">
                   <div className="font-semibold mb-1">{formatted.text}</div>
-                  {ct.note && <div className="text-slate-400 text-sm mt-1">{ct.note}</div>}
-                  {ct.chapter && <div className="text-xs text-slate-500 mt-1">Chapter: {ct.chapter}</div>}
-                  {ct.pageNumber && <div className="text-xs text-slate-500 mt-1">Page: {ct.pageNumber}</div>}
-                  <div className="text-xs text-slate-500">Created: {formatDate(ct.createdAt)}</div>
+                  {ct.note && <div className="theme-text-secondary mt-1 text-sm">{ct.note}</div>}
+                  {ct.chapter && <div className="theme-text-muted mt-1 text-xs">Chapter: {ct.chapter}</div>}
+                  {ct.pageNumber && <div className="theme-text-muted mt-1 text-xs">Page: {ct.pageNumber}</div>}
+                  <div className="theme-text-muted text-xs">Created: {formatDate(ct.createdAt)}</div>
                   <span className="inline-block mt-2 px-2 py-0.5 rounded text-xs font-bold bg-sky-900 text-sky-300">{formatted.format.toUpperCase()}</span>
                 </li>
               );
             })}
           </ul>
         ) : (
-          <div className="text-slate-500 text-sm">No citations yet.</div>
+          <div className="theme-text-muted text-sm">No citations yet.</div>
         )}
       </div>
     </section>

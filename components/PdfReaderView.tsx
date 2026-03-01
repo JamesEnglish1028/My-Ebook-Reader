@@ -485,9 +485,9 @@ const PdfReaderView: React.FC<PdfReaderViewProps> = ({ bookId: propBookId, onClo
     if (error) {
       return (
         <div className="absolute inset-0 flex items-center justify-center p-4">
-          <div className="text-center bg-slate-800 p-8 rounded-lg shadow-lg max-w-lg mx-auto">
+          <div className="theme-surface-elevated theme-border theme-text-primary mx-auto max-w-lg rounded-lg border p-8 text-center shadow-lg">
               <h3 className="text-xl font-bold text-red-300 mb-2">Could Not Open PDF</h3>
-              <p className="text-slate-300">{error}</p>
+              <p className="theme-text-secondary">{error}</p>
           </div>
         </div>
       );
@@ -498,10 +498,10 @@ const PdfReaderView: React.FC<PdfReaderViewProps> = ({ bookId: propBookId, onClo
       return (
         <div className="w-full h-full flex flex-col">
 
-          <div ref={containerRef} className="flex-grow relative overflow-auto bg-slate-900/10 p-4 md:p-8">
+          <div ref={containerRef} className="flex-grow relative overflow-auto p-4 md:p-8 theme-surface">
             <Suspense fallback={<div className="w-full h-full flex items-center justify-center"><Spinner text="Loading viewer..."/></div>}>
               <div className="w-full max-w-[1100px] mx-auto">
-                <div className="flex items-center justify-between text-sm text-slate-300 mb-2">
+                <div className="theme-text-secondary mb-2 flex items-center justify-between text-sm">
                   <div>Size: {blobSize ? `${(blobSize/1024).toFixed(1)} KB` : 'unknown'}</div>
                   {pdfUrl && (
                     <div className="flex items-center gap-2">
@@ -551,10 +551,10 @@ const PdfReaderView: React.FC<PdfReaderViewProps> = ({ bookId: propBookId, onClo
           </div>
 
           {/* Footer controls to mirror EPUB reader layout */}
-          <footer className="flex items-center gap-4 p-4 bg-slate-800 z-20 text-white flex-shrink-0">
+          <footer className="theme-surface-elevated theme-border theme-text-primary z-20 flex shrink-0 items-center gap-4 border-t p-4">
             <div className="flex items-center gap-2">
-              <button onClick={goToPrev} className="p-2 rounded-full hover:bg-slate-700 transition-colors focus:outline-none focus:ring-2 focus:ring-sky-500" aria-label="Previous page" disabled={currentPage <= 1}><LeftArrowIcon className="w-5 h-5"/></button>
-              <button onClick={goToNext} className="p-2 rounded-full hover:bg-slate-700 transition-colors focus:outline-none focus:ring-2 focus:ring-sky-500" aria-label="Next page" disabled={numPages !== null && currentPage >= numPages}><RightArrowIcon className="w-5 h-5"/></button>
+              <button onClick={goToPrev} className="theme-hover-surface p-2 rounded-full transition-colors focus:outline-none focus:ring-2 focus:ring-sky-500" aria-label="Previous page" disabled={currentPage <= 1}><LeftArrowIcon className="w-5 h-5"/></button>
+              <button onClick={goToNext} className="theme-hover-surface p-2 rounded-full transition-colors focus:outline-none focus:ring-2 focus:ring-sky-500" aria-label="Next page" disabled={numPages !== null && currentPage >= numPages}><RightArrowIcon className="w-5 h-5"/></button>
             </div>
 
             <div className="flex-grow flex flex-col justify-center">
@@ -568,17 +568,17 @@ const PdfReaderView: React.FC<PdfReaderViewProps> = ({ bookId: propBookId, onClo
                 aria-label="PDF progress"
                 disabled={!numPages}
               />
-              <div className="text-center text-sm text-slate-300 mt-2" aria-live="polite">
+              <div className="theme-text-secondary mt-2 text-center text-sm" aria-live="polite">
                 {numPages ? (
                   <span>Page {currentPage} of {numPages}</span>
                 ) : (
-                  <span className="text-slate-400">Loading pages...</span>
+                  <span className="theme-text-muted">Loading pages...</span>
                 )}
               </div>
             </div>
 
-            <div className="w-28 flex flex-col items-center text-sm">
-              <label className="text-slate-300 text-xs">Go to</label>
+            <div className="flex w-28 flex-col items-center text-sm">
+              <label className="theme-text-secondary text-xs">Go to</label>
               <input
                 type="number"
                 min={1}
@@ -589,7 +589,7 @@ const PdfReaderView: React.FC<PdfReaderViewProps> = ({ bookId: propBookId, onClo
                   if (isNaN(v) || v < 1) return;
                   setCurrentPage(Math.min(numPages || v, Math.max(1, v)));
                 }}
-                className="w-full text-center rounded-md bg-slate-700 px-2 py-1 focus:outline-none focus:ring-2 focus:ring-sky-500"
+                className="theme-input w-full rounded-md px-2 py-1 text-center focus:outline-none focus:ring-2 focus:ring-sky-500"
                 aria-label="Jump to page"
               />
             </div>
