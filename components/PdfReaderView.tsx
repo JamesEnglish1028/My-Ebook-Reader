@@ -602,15 +602,15 @@ const PdfReaderView: React.FC<PdfReaderViewProps> = ({ bookId: propBookId, onClo
   };
 
   return (
-    <div className="fixed inset-0 bg-slate-900 flex flex-col select-none">
+    <div className="theme-shell theme-text-primary fixed inset-0 flex flex-col select-none">
       <ZoomHud value={fitMode === 'page' ? `${zoomPercent}%` : `Fit: ${fitMode}`} isOpen={showZoomHud} />
       <AddedHud message={addedHudMessage || ''} isOpen={!!addedHudMessage} />
-      <header className="flex items-center justify-between p-2 bg-slate-800 shadow-md z-20 text-white flex-shrink-0">
+      <header className="theme-surface-elevated theme-border theme-text-primary z-20 flex shrink-0 items-center justify-between border-b p-2 shadow-md">
         <div className="flex items-center gap-2">
-          <button onClick={onClose} className="p-2 rounded-full hover:bg-slate-700 transition-colors focus:outline-none focus:ring-2 focus:ring-sky-500" aria-label="Close Reader">
+          <button onClick={onClose} className="theme-hover-surface rounded-full p-2 transition-colors focus:outline-none focus:ring-2 focus:ring-sky-500" aria-label="Close Reader">
             <CloseIcon className="w-6 h-6" />
           </button>
-          <button onClick={() => setShowNavPanel(true)} className="p-2 rounded-full hover:bg-slate-700 transition-colors focus:outline-none focus:ring-2 focus:ring-sky-500" aria-label="Contents and Bookmarks">
+          <button onClick={() => setShowNavPanel(true)} className="theme-hover-surface relative rounded-full p-2 transition-colors focus:outline-none focus:ring-2 focus:ring-sky-500" aria-label="Contents and Bookmarks">
             <ListIcon className="w-6 h-6" />
             {(bookmarks.length > 0 || citations.length > 0) && (
               <span className="absolute top-1 right-1 block h-2 w-2 rounded-full bg-sky-400 ring-2 ring-slate-800" />
@@ -619,26 +619,26 @@ const PdfReaderView: React.FC<PdfReaderViewProps> = ({ bookId: propBookId, onClo
         </div>
         <div className="text-center truncate px-2">
           <h2 className="text-lg font-bold">{bookData?.title || 'PDF Reader'}</h2>
-          <p className="text-sm text-slate-400">{bookData?.author}</p>
+          <p className="theme-text-secondary text-sm">{bookData?.author}</p>
         </div>
         <div className="flex items-center gap-2">
           <div className="hidden sm:flex items-center gap-1">
-            <button onClick={() => setZoomPercent(z => Math.max(20, Math.round(z / 1.15)))} className="p-2 rounded hover:bg-slate-700" aria-label="Zoom out">-</button>
-            <div className="text-sm text-slate-300 px-2">{zoomPercent}%</div>
-            <button onClick={() => setZoomPercent(z => Math.min(400, Math.round(z * 1.15)))} className="p-2 rounded hover:bg-slate-700" aria-label="Zoom in">+</button>
-      <button onClick={() => setFitMode(m => m === 'page' ? 'width' : 'page')} className="p-2 rounded hover:bg-slate-700" aria-label="Toggle fit mode">{fitMode === 'page' ? 'Fit Page' : 'Fit Width'}</button>
-      <button onClick={() => setShowCitationModal(true)} className="p-2 rounded-full hover:bg-slate-700 transition-colors focus:outline-none focus:ring-2 focus:ring-sky-500" aria-label="Create citation for this page">
+            <button onClick={() => setZoomPercent(z => Math.max(20, Math.round(z / 1.15)))} className="theme-hover-surface rounded p-2" aria-label="Zoom out">-</button>
+            <div className="theme-text-secondary px-2 text-sm">{zoomPercent}%</div>
+            <button onClick={() => setZoomPercent(z => Math.min(400, Math.round(z * 1.15)))} className="theme-hover-surface rounded p-2" aria-label="Zoom in">+</button>
+      <button onClick={() => setFitMode(m => m === 'page' ? 'width' : 'page')} className="theme-hover-surface rounded p-2" aria-label="Toggle fit mode">{fitMode === 'page' ? 'Fit Page' : 'Fit Width'}</button>
+      <button onClick={() => setShowCitationModal(true)} className="theme-hover-surface rounded-full p-2 transition-colors focus:outline-none focus:ring-2 focus:ring-sky-500" aria-label="Create citation for this page">
         <AcademicCapIcon className="w-6 h-6" />
       </button>
-      <button onClick={() => setShowBookmarkModal(true)} className="p-2 rounded-full hover:bg-slate-700 transition-colors focus:outline-none focus:ring-2 focus:ring-sky-500" aria-label="Add bookmark to this page">
+      <button onClick={() => setShowBookmarkModal(true)} className="theme-hover-surface rounded-full p-2 transition-colors focus:outline-none focus:ring-2 focus:ring-sky-500" aria-label="Add bookmark to this page">
         <BookmarkIcon className="w-6 h-6" />
       </button>
-      <button onClick={() => setShowHelp(s => !s)} className="p-2 rounded hover:bg-slate-700" aria-label="Keyboard help">?</button>
+      <button onClick={() => setShowHelp(s => !s)} className="theme-hover-surface rounded p-2" aria-label="Keyboard help">?</button>
           </div>
         </div>
       </header>
 
-      <main className="flex-grow relative min-h-0 bg-slate-800/50">
+      <main className="theme-surface flex-grow relative min-h-0">
         {renderContent()}
       </main>
         <TocPanel

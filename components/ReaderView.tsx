@@ -1115,7 +1115,7 @@ const ReaderView: React.FC<ReaderViewProps> = ({ bookId, onClose, animationData 
     <>
       {animationData && animationState !== 'finished' && (
         <div
-          className={`fixed inset-0 bg-slate-900 z-50 flex justify-center items-center transition-opacity duration-300 ${animationState === 'fading' ? 'opacity-0' : 'opacity-100'}`}
+          className={`theme-shell fixed inset-0 z-50 flex items-center justify-center transition-opacity duration-300 ${animationState === 'fading' ? 'opacity-0' : 'opacity-100'}`}
           onTransitionEnd={() => {
             if (animationState === 'fading') setAnimationState('finished');
           }}
@@ -1135,9 +1135,9 @@ const ReaderView: React.FC<ReaderViewProps> = ({ bookId, onClose, animationData 
           )}
         </div>
       )}
-      <div className={`fixed inset-0 bg-slate-900 flex flex-col select-none transition-opacity duration-500 ${animationState === 'fading' || animationState === 'finished' ? 'opacity-100' : 'opacity-0'}`}>
+      <div className={`theme-shell theme-text-primary fixed inset-0 flex flex-col select-none transition-opacity duration-500 ${animationState === 'fading' || animationState === 'finished' ? 'opacity-100' : 'opacity-0'}`}>
         <header
-          className={`flex flex-wrap sm:flex-nowrap items-center justify-between sm:justify-start sm:gap-4 p-2 bg-slate-800 shadow-md z-20 text-white flex-shrink-0 transition-transform duration-300 ease-in-out ${controlsVisible ? 'translate-y-0' : '-translate-y-full'}`}
+          className={`theme-surface-elevated theme-border theme-text-primary z-20 flex shrink-0 flex-wrap items-center justify-between border-b p-2 shadow-md transition-transform duration-300 ease-in-out sm:flex-nowrap sm:justify-start sm:gap-4 ${controlsVisible ? 'translate-y-0' : '-translate-y-full'}`}
           onMouseEnter={clearControlsTimeout}
           onMouseLeave={resetControlsTimeout}
         >
@@ -1157,10 +1157,10 @@ const ReaderView: React.FC<ReaderViewProps> = ({ bookId, onClose, animationData 
           )}
           {/* Left controls */}
           <div className="flex items-center gap-2 sm:order-1">
-            <button onClick={onClose} className="p-2 rounded-full hover:bg-slate-700 transition-colors" aria-label="Close Reader">
+            <button onClick={onClose} className="theme-hover-surface rounded-full p-2 transition-colors" aria-label="Close Reader">
               <CloseIcon className="w-6 h-6" />
             </button>
-            <button onClick={() => setShowNavPanel(true)} className="p-2 rounded-full hover:bg-slate-700 transition-colors relative" aria-label="Contents and Bookmarks">
+            <button onClick={() => setShowNavPanel(true)} className="theme-hover-surface relative rounded-full p-2 transition-colors" aria-label="Contents and Bookmarks">
               <ListIcon className="w-6 h-6" />
               {(bookmarks.length > 0 || citations.length > 0) && (
                 <span className="absolute top-1 right-1 block h-2 w-2 rounded-full bg-sky-400 ring-2 ring-slate-800" />
@@ -1170,21 +1170,21 @@ const ReaderView: React.FC<ReaderViewProps> = ({ bookId, onClose, animationData 
 
           {/* Right controls */}
           <div className="flex justify-end items-center gap-2 sm:order-3">
-            <button onClick={toggleSpeech} className="p-2 rounded-full hover:bg-slate-700 transition-colors focus:outline-none focus:ring-2 focus:ring-sky-500" aria-label={speechState === 'playing' ? 'Pause Read Aloud' : 'Start Read Aloud'}>
+            <button onClick={toggleSpeech} className="theme-hover-surface rounded-full p-2 transition-colors focus:outline-none focus:ring-2 focus:ring-sky-500" aria-label={speechState === 'playing' ? 'Pause Read Aloud' : 'Start Read Aloud'}>
               {speechState === 'playing' ? <PauseIcon className="w-6 h-6 text-sky-400" /> : <PlayIcon className="w-6 h-6" />}
             </button>
-            <button onClick={() => setShowSearch(true)} className="p-2 rounded-full hover:bg-slate-700 transition-colors focus:outline-none focus:ring-2 focus:ring-sky-500" aria-label="Search in book">
+            <button onClick={() => setShowSearch(true)} className="theme-hover-surface rounded-full p-2 transition-colors focus:outline-none focus:ring-2 focus:ring-sky-500" aria-label="Search in book">
               <SearchIcon className="w-6 h-6" />
             </button>
-            <button onClick={() => setShowCitationModal(true)} className="p-2 rounded-full hover:bg-slate-700 transition-colors focus:outline-none focus:ring-2 focus:ring-sky-500" aria-label="Create citation for this page">
+            <button onClick={() => setShowCitationModal(true)} className="theme-hover-surface rounded-full p-2 transition-colors focus:outline-none focus:ring-2 focus:ring-sky-500" aria-label="Create citation for this page">
               <AcademicCapIcon className="w-6 h-6" />
             </button>
-            <button onClick={toggleBookmark} className="p-2 rounded-full hover:bg-slate-700 transition-colors focus:outline-none focus:ring-2 focus:ring-sky-500" aria-label={isCurrentPageBookmarked ? 'Remove bookmark from this page' : 'Add bookmark to this page'}>
+            <button onClick={toggleBookmark} className="theme-hover-surface rounded-full p-2 transition-colors focus:outline-none focus:ring-2 focus:ring-sky-500" aria-label={isCurrentPageBookmarked ? 'Remove bookmark from this page' : 'Add bookmark to this page'}>
               <BookmarkIcon className="w-6 h-6" filled={isCurrentPageBookmarked} />
             </button>
-            <button onClick={() => setShowHelp(true)} className="p-2 rounded-full hover:bg-slate-700 transition-colors focus:outline-none focus:ring-2 focus:ring-sky-500" aria-label="Keyboard help">?
+            <button onClick={() => setShowHelp(true)} className="theme-hover-surface rounded-full p-2 transition-colors focus:outline-none focus:ring-2 focus:ring-sky-500" aria-label="Keyboard help">?
             </button>
-            <button onClick={() => setShowSettings(true)} className="p-2 rounded-full hover:bg-slate-700 transition-colors focus:outline-none focus:ring-2 focus:ring-sky-500" aria-label="Settings">
+            <button onClick={() => setShowSettings(true)} className="theme-hover-surface rounded-full p-2 transition-colors focus:outline-none focus:ring-2 focus:ring-sky-500" aria-label="Settings">
               <SettingsIcon className="w-6 h-6" />
             </button>
           </div>
@@ -1192,7 +1192,7 @@ const ReaderView: React.FC<ReaderViewProps> = ({ bookId, onClose, animationData 
           {/* Title/Author - Placed last in DOM for flexbox ordering */}
           <div className="text-center truncate px-2 w-full pt-2 sm:order-2 sm:w-auto sm:flex-grow sm:min-w-0 sm:pt-0">
             <h2 className="text-lg font-bold">{bookData?.title || 'Loading...'}</h2>
-            <p className="text-sm text-slate-400">{bookData?.author}</p>
+            <p className="theme-text-secondary text-sm">{bookData?.author}</p>
           </div>
         </header>
 
@@ -1202,21 +1202,21 @@ const ReaderView: React.FC<ReaderViewProps> = ({ bookId, onClose, animationData 
           onTouchEnd={handleTouchEnd}
         >
           {isLoading && (
-            <div className="absolute inset-0 flex items-center justify-center bg-slate-900 z-30">
+            <div className="theme-shell absolute inset-0 z-30 flex items-center justify-center">
               <Spinner text="Loading Book..." />
             </div>
           )}
           {/* Viewer receives epub.js rendered content; add subtle padding and max-width for readability */}
-          <div ref={viewerRef} id="viewer" className="w-full h-full p-4 md:p-8 bg-slate-900/20" />
+          <div ref={viewerRef} id="viewer" className="theme-surface h-full w-full p-4 md:p-8" />
         </div>
 
         <footer
-          className={`flex items-center gap-4 p-4 bg-slate-800 z-20 text-white flex-shrink-0 transition-transform duration-300 ease-in-out ${controlsVisible ? 'translate-y-0' : 'translate-y-full'}`}
+          className={`theme-surface-elevated theme-border theme-text-primary z-20 flex shrink-0 items-center gap-4 border-t p-4 transition-transform duration-300 ease-in-out ${controlsVisible ? 'translate-y-0' : 'translate-y-full'}`}
           onMouseEnter={clearControlsTimeout}
           onMouseLeave={resetControlsTimeout}
         >
           {settings.flow === 'paginated' ? (
-            <button onClick={prevPage} className="p-2 rounded-full hover:bg-slate-700 transition-colors flex-shrink-0" aria-label="Previous Page">
+            <button onClick={prevPage} className="theme-hover-surface shrink-0 rounded-full p-2 transition-colors" aria-label="Previous Page">
               <LeftArrowIcon className="w-6 h-6" />
             </button>
           ) : <div className="w-10 h-10 flex-shrink-0" /> /* Placeholder to keep layout consistent */}
@@ -1232,18 +1232,18 @@ const ReaderView: React.FC<ReaderViewProps> = ({ bookId, onClose, animationData 
               aria-label="Book progress"
               disabled={!locationsReadyRef.current || locationInfo.totalPages === 0}
             />
-            <div className="text-center text-sm text-slate-300 mt-2" aria-live="polite">
+            <div className="theme-text-secondary mt-2 text-center text-sm" aria-live="polite">
               {locationInfo.totalPages > 0 && locationsReadyRef.current ? (
                 <span>Page {locationInfo.currentPage} of {locationInfo.totalPages} &bull; {locationInfo.progress}%</span>
               ) : (
-                <span className="text-slate-400">Calculating progress...</span>
+                <span className="theme-text-muted">Calculating progress...</span>
               )}
             </div>
           </div>
 
           {/* Page jump input for quick navigation */}
-          <div className="w-28 flex flex-col items-center text-sm">
-            <label className="text-slate-300 text-xs">Go to</label>
+          <div className="flex w-28 flex-col items-center text-sm">
+            <label className="theme-text-secondary text-xs">Go to</label>
             <input
               type="number"
               min={1}
@@ -1255,13 +1255,13 @@ const ReaderView: React.FC<ReaderViewProps> = ({ bookId, onClose, animationData 
                 const cfi = bookRef.current.locations.cfiFromLocation(v - 1);
                 if (cfi) void safeDisplay(cfi);
               }}
-              className="w-full text-center rounded-md bg-slate-700 px-2 py-1 focus:outline-none focus:ring-2 focus:ring-sky-500"
+              className="theme-input w-full rounded-md px-2 py-1 text-center focus:outline-none focus:ring-2 focus:ring-sky-500"
               aria-label="Jump to page"
             />
           </div>
 
           {settings.flow === 'paginated' ? (
-            <button onClick={nextPage} className="p-2 rounded-full hover:bg-slate-700 transition-colors flex-shrink-0" aria-label="Next Page">
+            <button onClick={nextPage} className="theme-hover-surface shrink-0 rounded-full p-2 transition-colors" aria-label="Next Page">
               <RightArrowIcon className="w-6 h-6" />
             </button>
           ) : <div className="w-10 h-10 flex-shrink-0" /> /* Placeholder */}
