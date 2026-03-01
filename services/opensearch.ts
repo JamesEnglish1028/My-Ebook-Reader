@@ -4,12 +4,26 @@ import type {
   OpenSearchTemplateParameter,
   OpenSearchUrlTemplate,
 } from '../types';
-import { maybeProxyForCors } from './utils';
+import { maybeProxyForCors, proxiedUrl } from './utils';
 
 const OPDS_ATOM_TYPE = 'application/atom+xml;profile=opds-catalog';
 const OPDS_JSON_TYPE = 'application/opds+json';
 const TEMPLATE_OPEN = '__OPENSEARCH_OPEN__';
 const TEMPLATE_CLOSE = '__OPENSEARCH_CLOSE__';
+
+function isPalaceHost(url: string): boolean {
+  try {
+    const hostname = new URL(url).hostname.toLowerCase();
+    return hostname.endsWith('palace.io')
+      || hostname.endsWith('palaceproject.io')
+      || hostname.endsWith('thepalaceproject.org')
+      || hostname === 'palace.io'
+      || hostname.endsWith('.palace.io')
+      || hostname.endsWith('.thepalaceproject.org');
+  } catch {
+    return false;
+  }
+}
 
 function getDirectChildText(parent: Element, localName: string): string | undefined {
   const child = Array.from(parent.children).find((node) => {
@@ -258,7 +272,9 @@ export async function fetchOpenSearchDescription(
   descriptionUrl: string,
 ): Promise<OpenSearchDescriptionDocument> {
   try {
-    const fetchUrl = await maybeProxyForCors(descriptionUrl);
+    const fetchUrl = isPalaceHost(descriptionUrl)
+      ? proxiedUrl(descriptionUrl)
+      : await maybeProxyForCors(descriptionUrl);
     const response = await fetch(fetchUrl, {
       method: 'GET',
       headers: {

@@ -84,4 +84,36 @@ describe('fetchOpenSearchDescription', () => {
       }),
     );
   });
+
+  it('forces the proxy for Palace OpenSearch URLs without a direct CORS probe', async () => {
+    vi.spyOn(utils, 'proxiedUrl').mockReturnValue(
+      'https://proxy.example.org?url=https%3A%2F%2Fminotaur.dev.palaceproject.io%2Fminotaur-test-library%2Fsearch%2F%3Fentrypoint%3DAll',
+    );
+    const maybeProxySpy = vi.spyOn(utils, 'maybeProxyForCors');
+    const fetchMock = vi.spyOn(global, 'fetch' as any).mockResolvedValue(
+      new Response(
+        `<?xml version="1.0" encoding="UTF-8"?>
+<OpenSearchDescription xmlns="http://a9.com/-/spec/opensearch/1.1/">
+  <ShortName>Palace Search</ShortName>
+  <Url type="application/atom+xml;profile=opds-catalog" template="/search{?query}" />
+</OpenSearchDescription>`,
+        {
+          status: 200,
+          headers: { 'Content-Type': 'application/opensearchdescription+xml' },
+        },
+      ),
+    );
+
+    await fetchOpenSearchDescription(
+      'https://minotaur.dev.palaceproject.io/minotaur-test-library/search/?entrypoint=All',
+    );
+
+    expect(maybeProxySpy).not.toHaveBeenCalled();
+    expect(fetchMock).toHaveBeenCalledWith(
+      'https://proxy.example.org?url=https%3A%2F%2Fminotaur.dev.palaceproject.io%2Fminotaur-test-library%2Fsearch%2F%3Fentrypoint%3DAll',
+      expect.objectContaining({
+        method: 'GET',
+      }),
+    );
+  });
 });
