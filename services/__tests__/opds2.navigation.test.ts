@@ -124,12 +124,77 @@ describe('parseOpds2Json - navigation/catalog inference', () => {
 
     const { navLinks, search } = parseOpds2Json(json, 'https://example.org/catalog/');
     expect(search).toEqual({
+      kind: 'opensearch',
       descriptionUrl: 'https://example.org/opensearch.xml',
       type: 'application/opensearchdescription+xml',
       title: 'Search catalog',
       rel: 'search',
     });
     expect(navLinks).toHaveLength(0);
+  });
+
+  it('captures inline OPDS 2 templated search links without requiring OpenSearch', () => {
+    const json = {
+      metadata: { title: 'Feed' },
+      links: [
+        {
+          rel: 'search',
+          href: '/search{?query,title,author}',
+          type: 'application/opds+json',
+          templated: true,
+          title: 'Search catalog',
+        },
+      ],
+    };
+
+    const { search } = parseOpds2Json(json, 'https://example.org/catalog/');
+    expect(search).toEqual({
+      kind: 'opds2-template',
+      template: 'https://example.org/search{?query,title,author}',
+      templated: true,
+      params: [
+        { name: 'query', required: true, namespace: undefined },
+        { name: 'title', required: false, namespace: undefined },
+        { name: 'author', required: false, namespace: undefined },
+      ],
+      type: 'application/opds+json',
+      title: 'Search catalog',
+      rel: 'search',
+    });
+  });
+
+  it('prefers inline OPDS 2 templated search over OpenSearch when both are present', () => {
+    const json = {
+      metadata: { title: 'Feed' },
+      links: [
+        {
+          rel: 'search',
+          href: '/opensearch.xml',
+          type: 'application/opensearchdescription+xml',
+          title: 'OpenSearch fallback',
+        },
+        {
+          rel: 'search',
+          href: '/search{?query}',
+          type: 'application/opds+json',
+          templated: true,
+          title: 'Inline search',
+        },
+      ],
+    };
+
+    const { search } = parseOpds2Json(json, 'https://example.org/catalog/');
+    expect(search).toEqual({
+      kind: 'opds2-template',
+      template: 'https://example.org/search{?query}',
+      templated: true,
+      params: [
+        { name: 'query', required: true, namespace: undefined },
+      ],
+      type: 'application/opds+json',
+      title: 'Inline search',
+      rel: 'search',
+    });
   });
 
   it('promotes top-level start and up links as explicit navigation options', () => {

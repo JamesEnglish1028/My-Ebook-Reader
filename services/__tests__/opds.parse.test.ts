@@ -178,6 +178,7 @@ describe('OPDS1 parseOpds1Xml', () => {
     const result = parseOpds1Xml(xml, 'https://example.com/');
 
     expect(result.search).toEqual({
+      kind: 'opensearch',
       descriptionUrl: 'https://example.com/search%7B?query}',
       type: 'application/opensearchdescription+xml',
       title: 'Search catalog',

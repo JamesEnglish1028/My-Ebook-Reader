@@ -1,8 +1,15 @@
-import React from 'react';
+import React, { useEffect, useState } from 'react';
+
+import type { CatalogSearchTemplateParameter } from '../../../types';
 
 interface CatalogSearchProps {
   value: string;
   onChange: (value: string) => void;
+  primaryLabel?: string;
+  primaryPlaceholder?: string;
+  advancedFields?: CatalogSearchTemplateParameter[];
+  advancedValues?: Record<string, string>;
+  onAdvancedChange?: (name: string, value: string) => void;
   onSubmit: () => void;
   onClear: () => void;
   disabled?: boolean;
@@ -14,6 +21,11 @@ interface CatalogSearchProps {
 const CatalogSearch: React.FC<CatalogSearchProps> = ({
   value,
   onChange,
+  primaryLabel = 'Search this catalog',
+  primaryPlaceholder = 'Search this catalog',
+  advancedFields = [],
+  advancedValues = {},
+  onAdvancedChange,
   onSubmit,
   onClear,
   disabled = false,
@@ -21,7 +33,22 @@ const CatalogSearch: React.FC<CatalogSearchProps> = ({
   errorMessage = null,
   hasActiveSearch = false,
 }) => {
+  const [showAdvanced, setShowAdvanced] = useState(false);
   const trimmedValue = value.trim();
+  const hasAdvancedFields = advancedFields.length > 0;
+
+  useEffect(() => {
+    if (!hasAdvancedFields) {
+      setShowAdvanced(false);
+    }
+  }, [hasAdvancedFields]);
+
+  const formatFieldLabel = (name: string) => name
+    .replace(/([A-Z])/g, ' $1')
+    .replace(/[_-]+/g, ' ')
+    .replace(/\s+/g, ' ')
+    .trim()
+    .replace(/^./, (char) => char.toUpperCase());
 
   return (
     <section className="mb-5 rounded-xl border border-slate-700/60 bg-slate-950/40 p-3">
@@ -44,10 +71,10 @@ const CatalogSearch: React.FC<CatalogSearchProps> = ({
           type="search"
           value={value}
           onChange={(event) => onChange(event.target.value)}
-          placeholder="Search this catalog"
+          placeholder={primaryPlaceholder}
           disabled={disabled}
           className="min-w-0 flex-1 rounded-lg border border-slate-700 bg-slate-900 px-3 py-2 text-sm text-slate-100 placeholder:text-slate-500 focus:border-sky-500 focus:outline-none focus:ring-1 focus:ring-sky-500 disabled:cursor-not-allowed disabled:opacity-60"
-          aria-label="Search this catalog"
+          aria-label={primaryLabel}
         />
         <div className="flex gap-2">
           <button
@@ -68,6 +95,40 @@ const CatalogSearch: React.FC<CatalogSearchProps> = ({
           )}
         </div>
       </form>
+
+      {hasAdvancedFields && (
+        <div className="mt-3">
+          <button
+            type="button"
+            onClick={() => setShowAdvanced((prev) => !prev)}
+            className="text-xs font-medium uppercase tracking-[0.14em] text-slate-400 transition-colors hover:text-slate-200"
+          >
+            {showAdvanced ? 'Hide Advanced' : 'Show Advanced'}
+          </button>
+
+          {showAdvanced && (
+            <div className="mt-3 grid gap-2 sm:grid-cols-2">
+              {advancedFields.map((field) => (
+                <label
+                  key={field.name}
+                  className="flex flex-col gap-1 text-xs font-medium uppercase tracking-[0.08em] text-slate-400"
+                >
+                  <span>{formatFieldLabel(field.name)}</span>
+                  <input
+                    type="text"
+                    value={advancedValues[field.name] || ''}
+                    onChange={(event) => onAdvancedChange?.(field.name, event.target.value)}
+                    placeholder={`Optional ${formatFieldLabel(field.name).toLowerCase()}`}
+                    disabled={disabled}
+                    className="rounded-lg border border-slate-700 bg-slate-900 px-3 py-2 text-sm normal-case tracking-normal text-slate-100 placeholder:text-slate-500 focus:border-sky-500 focus:outline-none focus:ring-1 focus:ring-sky-500 disabled:cursor-not-allowed disabled:opacity-60"
+                    aria-label={formatFieldLabel(field.name)}
+                  />
+                </label>
+              ))}
+            </div>
+          )}
+        </div>
+      )}
 
       {errorMessage && (
         <p className="mt-2 text-xs text-rose-300">{errorMessage}</p>

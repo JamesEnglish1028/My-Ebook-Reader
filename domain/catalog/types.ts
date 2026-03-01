@@ -164,23 +164,40 @@ export interface CatalogFacetGroup {
 }
 
 /**
- * OpenSearch metadata advertised by a catalog feed.
+ * Supported catalog search mechanism kinds.
+ */
+export type CatalogSearchKind = 'opensearch' | 'opds2-template';
+
+/**
+ * A generic catalog search template parameter.
+ * Used by both OpenSearch documents and inline OPDS 2 templated search links.
+ */
+export interface CatalogSearchTemplateParameter {
+  name: string;
+  required: boolean;
+  namespace?: string;
+}
+
+/**
+ * Catalog search metadata advertised by a catalog feed.
+ * Supports both fetched OpenSearch description documents and inline
+ * OPDS 2 templated search links.
  */
 export interface CatalogSearchMetadata {
-  descriptionUrl: string;
+  kind: CatalogSearchKind;
   type?: string;
   title?: string;
   rel?: string;
+  descriptionUrl?: string;
+  template?: string;
+  templated?: boolean;
+  params?: CatalogSearchTemplateParameter[];
 }
 
 /**
  * An OpenSearch template parameter extracted from a Url template.
  */
-export interface OpenSearchTemplateParameter {
-  name: string;
-  required: boolean;
-  namespace?: string;
-}
+export type OpenSearchTemplateParameter = CatalogSearchTemplateParameter;
 
 /**
  * A single Url entry from an OpenSearch description document.

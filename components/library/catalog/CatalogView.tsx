@@ -1,6 +1,6 @@
 import React, { useEffect, useMemo, useState } from 'react';
 
-import { useCatalogContent, useCatalogSearchDescription } from '../../../hooks';
+import { useCatalogContent, useResolvedCatalogSearch } from '../../../hooks';
 import { buildOpenSearchUrl } from '../../../services';
 import {
   filterBooksByAudience,
@@ -29,6 +29,7 @@ import type {
   MediaMode,
   PublicationMode,
   CatalogSearchMetadata,
+  CatalogSearchTemplateParameter,
 } from '../../../types';
 import { Error as ErrorDisplay, Loading } from '../../shared';
 import { CatalogFilters, CatalogNavigation, CatalogSearch, CatalogSidebar } from '../catalog';
@@ -56,6 +57,7 @@ const CatalogView: React.FC<CatalogViewProps> = ({
   const [catalogBooks, setCatalogBooks] = useState<CatalogBook[]>([]);
   const [pageHistory, setPageHistory] = useState<string[]>([]);
   const [searchInput, setSearchInput] = useState('');
+  const [searchAdvancedValues, setSearchAdvancedValues] = useState<Record<string, string>>({});
   const [activeSearchQuery, setActiveSearchQuery] = useState<string | null>(null);
   const [searchOriginPath, setSearchOriginPath] = useState<{ name: string; url: string }[] | null>(null);
   const [catalogSearch, setCatalogSearch] = useState<CatalogSearchMetadata | null>(null);
@@ -98,6 +100,7 @@ const CatalogView: React.FC<CatalogViewProps> = ({
   useEffect(() => {
     setCatalogSearch(null);
     setSearchInput('');
+    setSearchAdvancedValues({});
     setActiveSearchQuery(null);
     setSearchOriginPath(null);
     setSearchActionError(null);
@@ -110,10 +113,10 @@ const CatalogView: React.FC<CatalogViewProps> = ({
   }, [discoveredSearch]);
 
   const {
-    data: searchDescription,
+    data: resolvedSearch,
     isLoading: isSearchLoading,
     error: searchError,
-  } = useCatalogSearchDescription(catalogSearch, !!catalogSearch?.descriptionUrl);
+  } = useResolvedCatalogSearch(catalogSearch, !!catalogSearch);
 
   const effectivePagination = useMemo(() => {
     if (!catalogPagination) return null;
@@ -201,12 +204,27 @@ const CatalogView: React.FC<CatalogViewProps> = ({
 
   const handleSearchSubmit = () => {
     const query = searchInput.trim();
-    const template = searchDescription?.activeTemplate;
+    const template = resolvedSearch?.activeTemplate;
     if (!query || !template) return;
+
+    const templateParams = template.params || [];
+    const primaryParam = templateParams.find((param) => param.name === 'searchTerms')?.name
+      || templateParams.find((param) => param.name === 'query')?.name
+      || templateParams.find((param) => param.required)?.name
+      || templateParams[0]?.name
+      || 'searchTerms';
+    const searchValues = templateParams.reduce<Record<string, string>>((values, param) => {
+      if (param.name === primaryParam) return values;
+      const nextValue = searchAdvancedValues[param.name]?.trim();
+      if (nextValue) {
+        values[param.name] = nextValue;
+      }
+      return values;
+    }, { [primaryParam]: query });
 
     let searchUrl: string;
     try {
-      searchUrl = buildOpenSearchUrl(template, { searchTerms: query });
+      searchUrl = buildOpenSearchUrl(template, searchValues);
     } catch (error) {
       setSearchActionError(error instanceof Error ? error.message : 'Unable to build search URL.');
       return;
@@ -236,8 +254,13 @@ const CatalogView: React.FC<CatalogViewProps> = ({
     setActiveSearchQuery(null);
     setSearchOriginPath(null);
     setSearchInput('');
+    setSearchAdvancedValues({});
     setSearchActionError(null);
     setPageHistory([]);
+  };
+
+  const handleAdvancedSearchChange = (name: string, value: string) => {
+    setSearchAdvancedValues((prev) => ({ ...prev, [name]: value }));
   };
 
   const handleNavigationSelect = (link: CatalogNavigationLink) => {
@@ -302,6 +325,17 @@ const CatalogView: React.FC<CatalogViewProps> = ({
 
   const hasSidebarContent = displayNavigationLinks.length > 0
     || normalizedFacetGroups.some((group) => group.links.length > 0);
+  const searchTemplateParams = resolvedSearch?.activeTemplate?.params || [];
+  const primarySearchParam = searchTemplateParams.find((param) => param.name === 'searchTerms')
+    || searchTemplateParams.find((param) => param.name === 'query')
+    || searchTemplateParams.find((param) => param.required)
+    || searchTemplateParams[0]
+    || null;
+  const advancedSearchFields = searchTemplateParams.filter((param) => param.name !== primarySearchParam?.name);
+  const primarySearchLabel = primarySearchParam?.name === 'query' ? 'Search query' : 'Search this catalog';
+  const primarySearchPlaceholder = primarySearchParam?.name === 'query'
+    ? 'Enter search keywords'
+    : 'Search this catalog';
 
   if (isLoading) {
     return <Loading variant="spinner" message="Loading catalog..." />;
@@ -350,9 +384,14 @@ const CatalogView: React.FC<CatalogViewProps> = ({
           <CatalogSearch
             value={searchInput}
             onChange={setSearchInput}
+            primaryLabel={primarySearchLabel}
+            primaryPlaceholder={primarySearchPlaceholder}
+            advancedFields={advancedSearchFields as CatalogSearchTemplateParameter[]}
+            advancedValues={searchAdvancedValues}
+            onAdvancedChange={handleAdvancedSearchChange}
             onSubmit={handleSearchSubmit}
             onClear={handleSearchClear}
-            disabled={isSearchLoading || !searchDescription?.activeTemplate}
+            disabled={isSearchLoading || !resolvedSearch?.activeTemplate}
             isLoading={isSearchLoading}
             errorMessage={searchActionError || (searchError instanceof Error ? searchError.message : null)}
             hasActiveSearch={!!activeSearchQuery}

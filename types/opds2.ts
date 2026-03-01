@@ -30,6 +30,7 @@ export interface Opds2Link {
   rel?: string | string[];
   title?: string;
   type?: string;
+  templated?: boolean;
   isCatalog?: boolean;
   indirectAcquisition?: unknown;
   properties?: {

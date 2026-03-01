@@ -377,6 +377,7 @@ export const parseOpds1Xml = (xmlText: string, baseUrl: string): { books: Catalo
             if (rel === 'search') {
                 if (linkType?.toLowerCase().includes('application/opensearchdescription+xml')) {
                     search ||= {
+                        kind: 'opensearch',
                         descriptionUrl: fullUrl,
                         type: linkType,
                         title: link.getAttribute('title')?.trim() || 'Search',

@@ -12,16 +12,18 @@ export function useCatalogSearchDescription(
   search: CatalogSearchMetadata | null | undefined,
   enabled: boolean = true,
 ) {
+  const descriptionUrl = search?.kind === 'opensearch' ? (search.descriptionUrl || '') : '';
+
   return useQuery<OpenSearchDescriptionDocument>({
-    queryKey: catalogSearchKeys.description(search?.descriptionUrl || ''),
+    queryKey: catalogSearchKeys.description(descriptionUrl),
     queryFn: async () => {
-      if (!search?.descriptionUrl) {
+      if (search?.kind !== 'opensearch' || !search.descriptionUrl) {
         throw new Error('No OpenSearch description URL provided');
       }
 
       return fetchOpenSearchDescription(search.descriptionUrl);
     },
-    enabled: enabled && !!search?.descriptionUrl,
+    enabled: enabled && !!descriptionUrl,
     staleTime: 10 * 60 * 1000,
     retry: false,
   });

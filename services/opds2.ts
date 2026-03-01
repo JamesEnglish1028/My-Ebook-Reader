@@ -46,6 +46,7 @@ function normalizeRelValues(rel: unknown): string[] {
 }
 import type { CatalogBook, CatalogFacetGroup, CatalogFacetLink, CatalogNavigationLink, CatalogPagination, CatalogSearchMetadata } from '../types';
 import type { Opds2Link, Opds2NavigationGroup, Opds2Publication } from '../types/opds2';
+import { parseCatalogSearchTemplateParameters, resolveCatalogSearchTemplateUrl } from './opensearch';
 
 function isOpdsNavigationTarget(link: Partial<Opds2Link> | undefined): boolean {
   if (!link) return false;
@@ -203,6 +204,34 @@ function parseOpds2FacetGroups(jsonData: any, baseUrl: string): CatalogFacetGrou
 function parseOpds2SearchLink(jsonData: any, baseUrl: string): CatalogSearchMetadata | undefined {
   if (!Array.isArray(jsonData?.links)) return undefined;
 
+  const templatedLink = (jsonData.links as Opds2Link[]).find((candidate) => {
+    const rels = normalizeRelValues(candidate?.rel);
+    const type = toLowerSafe(candidate?.type);
+    return rels.some((rel) => rel.includes('search'))
+      && type.includes('application/opds+json')
+      && candidate?.templated === true
+      && typeof candidate?.href === 'string'
+      && candidate.href.includes('{');
+  });
+
+  if (templatedLink?.href) {
+    const resolvedTemplate = resolveCatalogSearchTemplateUrl(templatedLink.href, baseUrl);
+    const normalizedParams = parseCatalogSearchTemplateParameters(resolvedTemplate)
+      .map((param) => ({
+        ...param,
+        required: param.name === 'query',
+      }));
+    return {
+      kind: 'opds2-template',
+      template: resolvedTemplate,
+      templated: true,
+      params: normalizedParams,
+      type: typeof templatedLink.type === 'string' ? templatedLink.type : undefined,
+      title: toNonEmptyString(templatedLink.title) || 'Search',
+      rel: normalizeRelValues(templatedLink.rel)[0] || 'search',
+    };
+  }
+
   const link = (jsonData.links as Opds2Link[]).find((candidate) => {
     const rels = normalizeRelValues(candidate?.rel);
     const type = toLowerSafe(candidate?.type);
@@ -212,6 +241,7 @@ function parseOpds2SearchLink(jsonData: any, baseUrl: string): CatalogSearchMeta
   if (!link?.href) return undefined;
 
   return {
+    kind: 'opensearch',
     descriptionUrl: new URL(link.href, baseUrl).href,
     type: typeof link.type === 'string' ? link.type : undefined,
     title: toNonEmptyString(link.title) || 'Search',

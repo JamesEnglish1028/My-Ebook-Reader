@@ -1,4 +1,5 @@
 import type {
+  CatalogSearchTemplateParameter,
   OpenSearchDescriptionDocument,
   OpenSearchTemplateParameter,
   OpenSearchUrlTemplate,
@@ -19,9 +20,9 @@ function getDirectChildText(parent: Element, localName: string): string | undefi
   return text || undefined;
 }
 
-function parseTemplateParameters(template: string): OpenSearchTemplateParameter[] {
+export function parseCatalogSearchTemplateParameters(template: string): CatalogSearchTemplateParameter[] {
   const matches = template.matchAll(/\{([^}]+)\}/g);
-  const params: OpenSearchTemplateParameter[] = [];
+  const params: CatalogSearchTemplateParameter[] = [];
 
   for (const match of matches) {
     const rawValue = String(match[1] || '').trim();
@@ -51,7 +52,7 @@ function parseTemplateParameters(template: string): OpenSearchTemplateParameter[
   return params;
 }
 
-function resolveTemplateUrl(template: string, baseUrl: string): string {
+export function resolveCatalogSearchTemplateUrl(template: string, baseUrl: string): string {
   const masked = template
     .replaceAll('{', TEMPLATE_OPEN)
     .replaceAll('}', TEMPLATE_CLOSE);
@@ -105,13 +106,32 @@ function getTemplateLookupKeys(
   };
 }
 
+function createTemplateParameterLookup(
+  params: CatalogSearchTemplateParameter[] | undefined,
+): Map<string, boolean> {
+  const lookup = new Map<string, boolean>();
+
+  (params || []).forEach((param) => {
+    lookup.set(param.name, param.required);
+    if (param.namespace) {
+      lookup.set(`${param.namespace}:${param.name}`, param.required);
+    }
+  });
+
+  return lookup;
+}
+
 function resolveTemplateValue(
   rawToken: string,
   values: Record<string, string | number | undefined>,
+  parameterLookup?: Map<string, boolean>,
 ): string {
-  const required = !rawToken.endsWith('?');
-  const normalized = required ? rawToken : rawToken.slice(0, -1);
+  const requiredByTemplate = !rawToken.endsWith('?');
+  const normalized = requiredByTemplate ? rawToken : rawToken.slice(0, -1);
   const { lookupKey } = getTemplateLookupKeys(normalized);
+  const required = parameterLookup?.get(normalized)
+    ?? parameterLookup?.get(lookupKey)
+    ?? requiredByTemplate;
   const resolved = values[lookupKey] ?? values[normalized];
 
   if (resolved === undefined || resolved === null || String(resolved).length === 0) {
@@ -127,6 +147,7 @@ function resolveTemplateValue(
 function expandTemplateExpression(
   rawExpression: string,
   values: Record<string, string | number | undefined>,
+  parameterLookup?: Map<string, boolean>,
 ): string {
   const operator = '?&'.includes(rawExpression[0] || '') ? rawExpression[0] : '';
   const expression = operator ? rawExpression.slice(1) : rawExpression;
@@ -134,15 +155,18 @@ function expandTemplateExpression(
 
   if (!operator) {
     return variables
-      .map((variable) => resolveTemplateValue(variable, values))
+      .map((variable) => resolveTemplateValue(variable, values, parameterLookup))
       .join(',');
   }
 
   const pairs = variables
     .map((variable) => {
-      const required = !variable.endsWith('?');
-      const normalized = required ? variable : variable.slice(0, -1);
+      const requiredByTemplate = !variable.endsWith('?');
+      const normalized = requiredByTemplate ? variable : variable.slice(0, -1);
       const { lookupKey, queryKey } = getTemplateLookupKeys(normalized);
+      const required = parameterLookup?.get(normalized)
+        ?? parameterLookup?.get(lookupKey)
+        ?? requiredByTemplate;
       const resolved = values[lookupKey] ?? values[normalized];
 
       if (resolved === undefined || resolved === null || String(resolved).length === 0) {
@@ -188,7 +212,7 @@ export function parseOpenSearchDescription(
       const template = node.getAttribute('template')?.trim();
       if (!template) return null;
 
-      const resolvedTemplate = resolveTemplateUrl(template, baseUrl);
+      const resolvedTemplate = resolveCatalogSearchTemplateUrl(template, baseUrl);
       const method = node.getAttribute('method')?.trim() || 'GET';
       const rel = node.getAttribute('rel')?.trim() || undefined;
       const indexOffset = Number(node.getAttribute('indexOffset'));
@@ -201,7 +225,7 @@ export function parseOpenSearchDescription(
         rel,
         indexOffset: Number.isFinite(indexOffset) ? indexOffset : undefined,
         pageOffset: Number.isFinite(pageOffset) ? pageOffset : undefined,
-        params: parseTemplateParameters(resolvedTemplate),
+        params: parseCatalogSearchTemplateParameters(resolvedTemplate) as OpenSearchTemplateParameter[],
       } satisfies OpenSearchUrlTemplate;
     })
     .filter((value): value is OpenSearchUrlTemplate => value !== null);
@@ -220,8 +244,11 @@ export function buildOpenSearchUrl(
   values: Record<string, string | number | undefined>,
 ): string {
   const rawTemplate = typeof template === 'string' ? template : template.template;
+  const parameterLookup = createTemplateParameterLookup(
+    typeof template === 'string' ? undefined : template.params,
+  );
   const resolved = rawTemplate.replace(/\{([^}]+)\}/g, (_match, rawToken) =>
-    expandTemplateExpression(String(rawToken || '').trim(), values),
+    expandTemplateExpression(String(rawToken || '').trim(), values, parameterLookup),
   );
 
   return cleanUrlArtifacts(resolved);

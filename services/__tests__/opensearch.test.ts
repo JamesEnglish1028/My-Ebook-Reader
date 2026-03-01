@@ -63,6 +63,26 @@ describe('OpenSearch utilities', () => {
     expect(url).toBe('https://example.org/opds/search?searchTerms=maps&geo:box=1%2C2%2C3%2C4');
   });
 
+  it('honors explicit parameter metadata when a template object relaxes optional fields', () => {
+    const url = buildOpenSearchUrl(
+      {
+        template: 'https://example.org/opds/search{?query,title,author}',
+        type: 'application/opds+json',
+        method: 'GET',
+        params: [
+          { name: 'query', required: true },
+          { name: 'title', required: false },
+          { name: 'author', required: false },
+        ],
+      },
+      {
+        query: 'archives',
+      },
+    );
+
+    expect(url).toBe('https://example.org/opds/search?query=archives');
+  });
+
   it('throws when a required template parameter is missing', () => {
     expect(() => buildOpenSearchUrl(
       'https://example.org/opds/search{?searchTerms,count}',

@@ -22,6 +22,7 @@ export {
 export {
   catalogSearchKeys, useCatalogSearchDescription,
 } from './useCatalogSearchDescription';
+export { useResolvedCatalogSearch } from './useResolvedCatalogSearch';
 
 // Catalog management mutations
 export {
