@@ -55,10 +55,10 @@ const CatalogSwimLane: React.FC<CatalogSwimLaneProps> = ({
     scrollRef.current.scrollBy({ left: delta, behavior: 'smooth' });
   };
   const { displayTitle, itemCount } = parseLaneTitleMetadata(laneTitle);
-  const primaryStatusLabel = isLoading
-    ? 'Loading preview'
-    : books.length > 0
-      ? `${books.length} preview titles`
+  const primaryStatusLabel = books.length > 0
+    ? (isLoading ? 'Refreshing preview' : `${books.length} preview titles`)
+    : isLoading
+      ? 'Loading preview'
       : error
         ? 'Preview unavailable'
         : hasFetched
@@ -136,21 +136,6 @@ const CatalogSwimLane: React.FC<CatalogSwimLaneProps> = ({
         <div className="theme-surface-muted theme-border theme-text-muted rounded-xl border px-4 py-6 text-sm">
           {error}
         </div>
-      ) : isLoading ? (
-        <div className="flex gap-4 overflow-x-auto pb-2" aria-label={`${laneTitle} loading`}>
-          {Array.from({ length: 4 }).map((_, index) => (
-            <div
-              key={`${laneTitle}-loading-${index}`}
-              className="theme-surface-muted theme-border w-36 flex-shrink-0 rounded-xl border"
-            >
-              <div className="aspect-[2/3] animate-pulse rounded-t-xl bg-slate-300/20" />
-              <div className="space-y-2 p-3">
-                <div className="h-3 w-3/4 animate-pulse rounded bg-slate-300/20" />
-                <div className="h-3 w-1/2 animate-pulse rounded bg-slate-300/20" />
-              </div>
-            </div>
-          ))}
-        </div>
       ) : books.length > 0 ? (
         <div
           ref={scrollRef}
@@ -164,6 +149,21 @@ const CatalogSwimLane: React.FC<CatalogSwimLaneProps> = ({
               onClick={(selectedBook) => onBookClick(selectedBook as CatalogBook)}
               className="w-36 flex-shrink-0"
             />
+          ))}
+        </div>
+      ) : isLoading ? (
+        <div className="flex gap-4 overflow-x-auto pb-2" aria-label={`${laneTitle} loading`}>
+          {Array.from({ length: 4 }).map((_, index) => (
+            <div
+              key={`${laneTitle}-loading-${index}`}
+              className="theme-surface-muted theme-border w-36 flex-shrink-0 rounded-xl border"
+            >
+              <div className="aspect-[2/3] animate-pulse rounded-t-xl bg-slate-300/20" />
+              <div className="space-y-2 p-3">
+                <div className="h-3 w-3/4 animate-pulse rounded bg-slate-300/20" />
+                <div className="h-3 w-1/2 animate-pulse rounded bg-slate-300/20" />
+              </div>
+            </div>
           ))}
         </div>
       ) : !hasFetched ? (

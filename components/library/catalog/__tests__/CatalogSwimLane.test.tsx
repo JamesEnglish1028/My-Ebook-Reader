@@ -91,4 +91,30 @@ describe('CatalogSwimLane', () => {
 
     expect(screen.getByText(/configured CORS proxy/i)).toBeInTheDocument();
   });
+
+  it('keeps rendered books visible while a preview refresh is in flight', () => {
+    render(
+      <CatalogSwimLane
+        laneTitle="Featured"
+        laneLink={laneLink}
+        books={[
+          {
+            title: 'Preview Book',
+            author: 'Lane Author',
+            coverImage: null,
+            downloadUrl: 'https://demo.palaceproject.io/books/preview.epub',
+            summary: null,
+          },
+        ]}
+        isLoading={true}
+        hasFetched={true}
+        onOpenLane={vi.fn()}
+        onBookClick={vi.fn()}
+      />,
+    );
+
+    expect(screen.getByLabelText('Preview Book by Lane Author')).toBeInTheDocument();
+    expect(screen.queryByLabelText(/featured loading/i)).not.toBeInTheDocument();
+    expect(screen.getByText(/refreshing preview/i)).toBeInTheDocument();
+  });
 });
