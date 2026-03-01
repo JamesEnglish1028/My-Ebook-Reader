@@ -302,7 +302,7 @@ const BookDetailView: React.FC<BookDetailViewProps> = ({ book, onBack, source, c
           <h3 className="text-xl font-bold text-sky-300 mb-4">Book Details</h3>
           <ul className="space-y-2 text-base">
             <li>
-              <span className="font-semibold text-slate-200">Provider:</span> <span className="text-slate-400">{bookAny.providerName || (source === 'catalog' ? catalogName : 'Imported locally')}</span>
+              <span className="font-semibold text-slate-200">Catalog Provider:</span> <span className="text-slate-400">{bookAny.providerName || (source === 'catalog' ? catalogName : 'Imported locally')}</span>
               {bookAny.providerId ? (
                 <div className="text-xs text-slate-500 mt-1">
                   Provider ID: {
@@ -315,6 +315,9 @@ const BookDetailView: React.FC<BookDetailViewProps> = ({ book, onBack, source, c
                 <div className="text-xs text-slate-500 mt-1">Imported locally</div>
               )}
             </li>
+            {bookAny.distributor && (
+              <li><span className="font-semibold text-slate-200">Distributor:</span> <span className="text-slate-400">{bookAny.distributor}</span></li>
+            )}
             {bookAny.accessibilitySummary && <li><span className="font-semibold text-slate-200">Accessibility:</span> <span className="text-slate-400">{bookAny.accessibilitySummary}</span></li>}
             {bookAny.accessibilityFeatures && bookAny.accessibilityFeatures.length > 0 && (
               <li><span className="font-semibold text-slate-200">Features:</span> <span className="text-slate-400">{bookAny.accessibilityFeatures.join(', ')}</span></li>
