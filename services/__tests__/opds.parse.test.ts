@@ -164,6 +164,24 @@ describe('OPDS1 parseOpds1Xml', () => {
     expect(result.books[0].coverImage).toBe('https://example.com/covers/collab-thumb.png');
   });
 
+  it('recognizes non-standard thumbnail rels as cover images', () => {
+    const xml = `<?xml version="1.0" encoding="UTF-8"?>
+<feed xmlns="http://www.w3.org/2005/Atom">
+  <title>Thumbnail Feed</title>
+  <entry>
+    <title>Thumbnail Book</title>
+    <author><name>Author</name></author>
+    <link rel="http://opds-spec.org/acquisition" href="/books/thumb.epub" type="application/epub+zip"/>
+    <link rel="thumbnail" href="/covers/thumb.jpg" type="image/jpeg"/>
+  </entry>
+</feed>`;
+
+    const result = parseOpds1Xml(xml, 'https://example.com/');
+
+    expect(result.books).toHaveLength(1);
+    expect(result.books[0].coverImage).toBe('https://example.com/covers/thumb.jpg');
+  });
+
   it('captures OpenSearch description links as catalog search metadata', () => {
     const xml = `<?xml version="1.0" encoding="UTF-8"?>
 <feed xmlns="http://www.w3.org/2005/Atom">

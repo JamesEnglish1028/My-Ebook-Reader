@@ -510,8 +510,21 @@ export const parseOpds1Xml = (xmlText: string, baseUrl: string): { books: Catalo
                 .filter((name): name is string => !!name);
             const author = authorNames[0] || 'Unknown Author';
             const summary = entry.querySelector('summary')?.textContent?.trim() || entry.querySelector('content')?.textContent?.trim() || null;
-            const coverLink = entry.querySelector('link[rel="http://opds-spec.org/image"]')
-                || entry.querySelector('link[rel="http://opds-spec.org/image/thumbnail"]');
+            const coverLink = allLinks.find((candidate) => {
+                const rel = (candidate.getAttribute('rel') || '').toLowerCase();
+                if (rel === 'http://opds-spec.org/image') return true;
+                if (rel === 'http://opds-spec.org/image/thumbnail') return true;
+                if (rel.includes('image/thumbnail')) return true;
+                if (rel.includes('thumbnail')) return true;
+                return false;
+            }) || allLinks.find((candidate) => {
+                const rel = (candidate.getAttribute('rel') || '').toLowerCase();
+                const type = (candidate.getAttribute('type') || '').toLowerCase();
+                return rel.includes('image') && type.startsWith('image/');
+            }) || allLinks.find((candidate) => {
+                const type = (candidate.getAttribute('type') || '').toLowerCase();
+                return type.startsWith('image/');
+            }) || null;
             const coverImageHref = coverLink?.getAttribute('href');
             const coverImage = coverImageHref ? new URL(coverImageHref, baseUrl).href : null;
             const downloadUrlHref = acquisitionLink?.getAttribute('href');
