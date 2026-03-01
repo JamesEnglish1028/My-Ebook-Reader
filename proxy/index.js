@@ -23,8 +23,16 @@ app.use(helmet({
 }));
 app.use(bodyParser.raw({ type: '*/*', limit: '200mb' }));
 
-// Basic rate limit
-app.use(rateLimit({ windowMs: 60_000, max: 60 }));
+// Basic rate limit. The default must be high enough for Palace lane previews,
+// which can trigger dozens of proxied image requests in a short burst.
+const rateLimitWindowMs = Number.parseInt(process.env.RATE_LIMIT_WINDOW_MS || '60000', 10);
+const rateLimitMax = Number.parseInt(process.env.RATE_LIMIT_MAX || '240', 10);
+app.use(rateLimit({
+  windowMs: Number.isFinite(rateLimitWindowMs) ? rateLimitWindowMs : 60_000,
+  max: Number.isFinite(rateLimitMax) ? rateLimitMax : 240,
+  standardHeaders: true,
+  legacyHeaders: false,
+}));
 
 const rawHosts = process.env.HOST_ALLOWLIST || 'opds.example,cdn.example';
 const hostList = rawHosts.split(',').map(s => s.trim()).filter(Boolean);
