@@ -42,6 +42,60 @@ describe('CatalogSwimLane', () => {
     }
   });
 
+  it('requests a preview immediately when the lane is already near the viewport', async () => {
+    const onRequestPreview = vi.fn();
+    const observe = vi.fn();
+    const disconnect = vi.fn();
+    const originalObserver = window.IntersectionObserver;
+
+    class MockIntersectionObserver {
+      observe = observe;
+      disconnect = disconnect;
+      unobserve = vi.fn();
+      takeRecords = vi.fn(() => []);
+      root = null;
+      rootMargin = '240px 0px';
+      thresholds = [0];
+      constructor() {}
+    }
+
+    // @ts-expect-error intentional test override
+    window.IntersectionObserver = MockIntersectionObserver;
+
+    const rectSpy = vi.spyOn(HTMLElement.prototype, 'getBoundingClientRect').mockReturnValue({
+      x: 0,
+      y: 0,
+      top: 20,
+      bottom: 320,
+      left: 0,
+      right: 240,
+      width: 240,
+      height: 300,
+      toJSON: () => ({}),
+    });
+
+    try {
+      render(
+        <CatalogSwimLane
+          laneTitle="Featured"
+          laneLink={laneLink}
+          books={[]}
+          hasFetched={false}
+          onRequestPreview={onRequestPreview}
+          onOpenLane={vi.fn()}
+          onBookClick={vi.fn()}
+        />,
+      );
+
+      await waitFor(() => expect(onRequestPreview).toHaveBeenCalledWith(laneLink));
+      expect(observe).not.toHaveBeenCalled();
+      expect(disconnect).not.toHaveBeenCalled();
+    } finally {
+      rectSpy.mockRestore();
+      window.IntersectionObserver = originalObserver;
+    }
+  });
+
   it('explains when a lane opens to nested groups instead of preview books', () => {
     render(
       <CatalogSwimLane

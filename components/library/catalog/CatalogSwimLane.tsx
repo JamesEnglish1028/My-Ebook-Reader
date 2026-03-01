@@ -79,6 +79,14 @@ const CatalogSwimLane: React.FC<CatalogSwimLaneProps> = ({
     const node = laneRef.current;
     if (!node) return;
 
+    const viewportHeight = window.innerHeight || document.documentElement?.clientHeight || 0;
+    const rect = node.getBoundingClientRect();
+    const isAlreadyNearViewport = rect.top <= viewportHeight + 240 && rect.bottom >= -240;
+    if (isAlreadyNearViewport) {
+      onRequestPreview(laneLink);
+      return;
+    }
+
     const observer = new window.IntersectionObserver((entries) => {
       if (entries.some((entry) => entry.isIntersecting)) {
         onRequestPreview(laneLink);

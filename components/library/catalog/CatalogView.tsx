@@ -434,7 +434,20 @@ const CatalogView: React.FC<CatalogViewProps> = ({
   const shouldShowPalaceLanes = usePalaceSwimLanes && (lanePreviews.length > 0 || isLanePreviewsLoading || hasLanePreviewBooks);
   const isEmptyFeed = !hasOriginalBooks && !hasSidebarContent && !shouldShowPalaceLanes;
   const requestLanePreview = (link: CatalogNavigationLink) => {
-    setRequestedLaneUrls((prev) => (prev.includes(link.url) ? prev : [...prev, link.url]));
+    setRequestedLaneUrls((prev) => {
+      const targetIndex = palaceLaneLinks.findIndex((candidate) => candidate.url === link.url);
+      if (targetIndex === -1) {
+        return prev.includes(link.url) ? prev : [...prev, link.url];
+      }
+
+      const orderedUrls = palaceLaneLinks.slice(0, targetIndex + 1).map((candidate) => candidate.url);
+      const retainedPrev = prev.filter((url) => palaceLaneLinks.some((candidate) => candidate.url === url));
+      const nextUrls = Array.from(new Set([...orderedUrls, ...retainedPrev]));
+      if (nextUrls.length === prev.length && nextUrls.every((url, index) => prev[index] === url)) {
+        return prev;
+      }
+      return nextUrls;
+    });
   };
 
   return (
