@@ -47,6 +47,49 @@ const formatPublicationDate = (dateString: string | number | undefined): string 
   return date.toLocaleDateString('en-GB', { year: 'numeric', month: 'long', day: 'numeric', timeZone: 'UTC' });
 };
 
+const sanitizeDescriptionHtml = (rawText: string): string => {
+  if (!rawText.includes('<')) {
+    return rawText;
+  }
+
+  if (typeof window === 'undefined' || typeof DOMParser === 'undefined') {
+    return rawText
+      .replace(/<script[\s\S]*?>[\s\S]*?<\/script>/gi, '')
+      .replace(/<style[\s\S]*?>[\s\S]*?<\/style>/gi, '');
+  }
+
+  const parser = new DOMParser();
+  const doc = parser.parseFromString(`<div>${rawText}</div>`, 'text/html');
+  const allowedTags = new Set(['P', 'BR', 'EM', 'STRONG', 'B', 'I', 'UL', 'OL', 'LI']);
+
+  const sanitizeNode = (node: Node) => {
+    if (node.nodeType === Node.ELEMENT_NODE) {
+      const element = node as HTMLElement;
+      if (!allowedTags.has(element.tagName)) {
+        const fragment = document.createDocumentFragment();
+        while (element.firstChild) {
+          fragment.appendChild(element.firstChild);
+        }
+        element.replaceWith(fragment);
+        Array.from(fragment.childNodes).forEach(sanitizeNode);
+        return;
+      }
+
+      Array.from(element.attributes).forEach((attribute) => {
+        element.removeAttribute(attribute.name);
+      });
+    }
+
+    Array.from(node.childNodes).forEach(sanitizeNode);
+  };
+
+  const container = doc.body.firstElementChild;
+  if (!container) return rawText;
+
+  Array.from(container.childNodes).forEach(sanitizeNode);
+  return container.innerHTML;
+};
+
 // BookAnnotationsAside component
 const BookAnnotationsAside: React.FC<{
   libraryBook: BookMetadata;
@@ -136,6 +179,11 @@ const BookDetailView: React.FC<BookDetailViewProps> = ({ book, onBack, source, c
   const bookAny = book as any;
   const publisherText = typeof bookAny.publisher === 'string' ? bookAny.publisher : bookAny.publisher?.name;
   const publicationDateText = formatPublicationDate(bookAny.publicationDate);
+  const descriptionText = (bookAny.description || bookAny.summary || '') as string;
+  const descriptionHtml = React.useMemo(
+    () => (descriptionText ? sanitizeDescriptionHtml(descriptionText) : ''),
+    [descriptionText],
+  );
   const libraryBookForAnnotations: BookMetadata = {
     id: bookAny.id ?? 0,
     title: book.title,
@@ -295,7 +343,12 @@ const BookDetailView: React.FC<BookDetailViewProps> = ({ book, onBack, source, c
               </div>
             </div>
           )}
-          {(bookAny.description || bookAny.summary) && <div className="mt-4 text-slate-300 text-base">{bookAny.description || bookAny.summary}</div>}
+          {descriptionText && (
+            <div
+              className="mt-4 text-slate-300 text-base leading-7 [&_ol]:my-4 [&_ol]:list-decimal [&_ol]:pl-6 [&_p]:mb-4 [&_ul]:my-4 [&_ul]:list-disc [&_ul]:pl-6"
+              dangerouslySetInnerHTML={{ __html: descriptionHtml }}
+            />
+          )}
         </div>
         {/* Book Details Section (accessibility, provider) INSIDE container */}
         <div className="space-y-6 p-6 bg-slate-800 rounded-lg border border-slate-700 md:mt-4 md:mr-6 md:mb-4 md:p-8">
