@@ -21,6 +21,8 @@ jobs:
         run: npm ci
 
       - name: Build
+        env:
+          VITE_OWN_PROXY_URL: ${{ vars.VITE_OWN_PROXY_URL }}
         run: npm run build
 
       - name: Create release and upload artifact

@@ -26,6 +26,7 @@ jobs:
       - name: Build
         env:
           VITE_GOOGLE_CLIENT_ID: ${{ secrets.VITE_GOOGLE_CLIENT_ID }}
+          VITE_OWN_PROXY_URL: ${{ vars.VITE_OWN_PROXY_URL }}
         run: npm run build
       - name: Inspect dist output
         run: |
