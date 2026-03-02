@@ -24,6 +24,8 @@ const buildAuthorizationHeader = (auth: RequestAuthorization): string => (
     : `Basic ${btoa(`${auth.username}:${auth.password}`)}`
 );
 
+const normalizeResourceHref = (href: string): string => href.split('#')[0];
+
 const AudioReaderView: React.FC<AudioReaderViewProps> = ({ bookId: propBookId, onClose: propOnClose }) => {
   const bookId = propBookId ?? null;
   const onClose = propOnClose ?? (() => undefined);
@@ -95,6 +97,41 @@ const AudioReaderView: React.FC<AudioReaderViewProps> = ({ bookId: propBookId, o
 
   const currentTrack = manifest?.tracks[currentTrackIndex] || null;
   const coverImage = bookData?.coverImage || manifest?.coverImageUrl || null;
+  const chapterGroups = useMemo(() => {
+    if (!manifest || manifest.toc.length === 0) return [];
+
+    const trackStarts = manifest.toc
+      .map((item, tocIndex) => {
+        const normalizedTocHref = normalizeResourceHref(item.href);
+        const matchedTrackIndex = manifest.tracks.findIndex(
+          (track) => normalizeResourceHref(track.href) === normalizedTocHref,
+        );
+        if (matchedTrackIndex < 0) return null;
+        return {
+          title: item.title,
+          startIndex: matchedTrackIndex,
+          tocIndex,
+        };
+      })
+      .filter((item): item is { title: string; startIndex: number; tocIndex: number } => item !== null)
+      .sort((a, b) => a.startIndex - b.startIndex);
+
+    return trackStarts.map((group, index) => {
+      const endExclusive = index < trackStarts.length - 1
+        ? trackStarts[index + 1].startIndex
+        : manifest.tracks.length;
+      return {
+        title: group.title,
+        tocIndex: group.tocIndex,
+        tracks: manifest.tracks
+          .slice(group.startIndex, endExclusive)
+          .map((track, trackOffset) => ({
+            track,
+            trackIndex: group.startIndex + trackOffset,
+          })),
+      };
+    });
+  }, [manifest]);
 
   useEffect(() => {
     if (!audioRef.current) return;
@@ -274,10 +311,40 @@ const AudioReaderView: React.FC<AudioReaderViewProps> = ({ bookId: propBookId, o
           </button>
 
           {isContentsOpen && (
-            <div className="mt-4 grid gap-5 md:grid-cols-2">
-              <div>
-                <p className="theme-text-secondary mb-3 text-sm uppercase tracking-[0.16em]">Tracks</p>
-                <div className="max-h-[50vh] space-y-2 overflow-y-auto">
+            <div className="mt-4">
+              {chapterGroups.length > 0 ? (
+                <div className="max-h-[55vh] space-y-4 overflow-y-auto">
+                  {chapterGroups.map((group, groupIndex) => (
+                    <div key={`${group.title}-${group.tocIndex}-${groupIndex}`} className="rounded-xl border border-white/10 p-3">
+                      <div className="mb-2">
+                        <p className="theme-text-primary text-sm font-semibold">{group.title}</p>
+                        <p className="theme-text-muted text-xs">Chapter {groupIndex + 1}</p>
+                      </div>
+                      <div className="space-y-2">
+                        {group.tracks.map(({ track, trackIndex }) => (
+                          <button
+                            key={`${track.href}-${trackIndex}`}
+                            type="button"
+                            onClick={() => {
+                              setResumeTime(0);
+                              setCurrentTrackIndex(trackIndex);
+                            }}
+                            className={`w-full rounded-lg px-3 py-2 text-left text-sm transition-colors ${
+                              trackIndex === currentTrackIndex
+                                ? 'bg-sky-700 text-white'
+                                : 'theme-hover-surface theme-text-secondary'
+                            }`}
+                          >
+                            <span className="block font-medium">{track.title}</span>
+                            <span className="theme-text-muted text-xs">Track {trackIndex + 1}</span>
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <div className="max-h-[55vh] space-y-2 overflow-y-auto">
                   {manifest.tracks.map((track, index) => (
                     <button
                       key={`${track.href}-${index}`}
@@ -293,34 +360,9 @@ const AudioReaderView: React.FC<AudioReaderViewProps> = ({ bookId: propBookId, o
                       }`}
                     >
                       <span className="block font-medium">{track.title}</span>
-                      <span className="theme-text-muted text-xs">{index + 1} of {manifest.tracks.length}</span>
+                      <span className="theme-text-muted text-xs">Track {index + 1}</span>
                     </button>
                   ))}
-                </div>
-              </div>
-
-              {manifest.toc.length > 0 && (
-                <div>
-                  <p className="theme-text-secondary mb-3 text-sm uppercase tracking-[0.16em]">Table of Contents</p>
-                  <div className="max-h-[50vh] space-y-2 overflow-y-auto">
-                    {manifest.toc.map((item, index) => (
-                      <button
-                        key={`${item.href}-${item.title}`}
-                        type="button"
-                        onClick={() => {
-                          const matchedIndex = manifest.tracks.findIndex((track) => track.href === item.href);
-                          if (matchedIndex >= 0) {
-                            setResumeTime(0);
-                            setCurrentTrackIndex(matchedIndex);
-                          }
-                        }}
-                        className="theme-hover-surface theme-text-secondary w-full rounded-lg px-3 py-2 text-left text-sm transition-colors"
-                      >
-                        <span className="block font-medium">{item.title}</span>
-                        <span className="theme-text-muted text-xs">Section {index + 1}</span>
-                      </button>
-                    ))}
-                  </div>
                 </div>
               )}
             </div>
