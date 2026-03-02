@@ -81,6 +81,8 @@ function parseRelatedCatalogLinks(links: Opds2Link[], baseUrl: string): CatalogR
   const relatedLinks = links
     .filter((link) => {
       if (!link?.href) return false;
+      const fullUrl = new URL(String(link.href), baseUrl).href;
+      if (shouldFilterCrawlableLink(fullUrl)) return false;
       const rels = normalizeRelValues(link.rel);
       if (!rels.includes('related')) return false;
       const type = String(link.type || '').toLowerCase();
@@ -97,6 +99,16 @@ function parseRelatedCatalogLinks(links: Opds2Link[], baseUrl: string): CatalogR
     .filter((link, index, collection) => collection.findIndex((candidate) => candidate.url === link.url) === index);
 
   return relatedLinks.length > 0 ? relatedLinks : undefined;
+}
+
+function shouldFilterCrawlableLink(url: string): boolean {
+  try {
+    const parsed = new URL(url);
+    const normalizedPath = parsed.pathname.replace(/\/+$/, '').toLowerCase();
+    return normalizedPath.endsWith('/crawlable');
+  } catch {
+    return url.toLowerCase().includes('/crawlable');
+  }
 }
 
 function isOpdsNavigationTarget(link: Partial<Opds2Link> | undefined): boolean {
@@ -127,9 +139,11 @@ function parseOpds2NavigationLinks(jsonData: any, baseUrl: string): CatalogNavig
       };
       const link = pickCatalogLink();
       if (link && link.href) {
+        const fullUrl = new URL(link.href, baseUrl).href;
+        if (shouldFilterCrawlableLink(fullUrl)) return;
         navLinks.push({
           title,
-          url: new URL(link.href, baseUrl).href,
+          url: fullUrl,
           rel: 'subsection',
           isCatalog: true,
           source: 'registry',
@@ -146,6 +160,7 @@ function parseOpds2NavigationLinks(jsonData: any, baseUrl: string): CatalogNavig
           const linkTitle = toNonEmptyString(link.title);
           if (link.href && linkTitle && isOpdsNavigationTarget(link)) {
             const url = new URL(link.href, baseUrl).href;
+            if (shouldFilterCrawlableLink(url)) return;
             const navTitle = groupTitle ? `${groupTitle}: ${linkTitle}` : linkTitle;
             let inferredRel = '';
             if (typeof link.rel === 'string') {
@@ -168,6 +183,7 @@ function parseOpds2NavigationLinks(jsonData: any, baseUrl: string): CatalogNavig
       const linkTitle = toNonEmptyString(link.title);
       if (link.href && linkTitle && isOpdsNavigationTarget(link)) {
         const url = new URL(link.href, baseUrl).href;
+        if (shouldFilterCrawlableLink(url)) return;
         let inferredRel = '';
         if (typeof link.rel === 'string') {
           inferredRel = normalizeRel(link.rel);
@@ -187,6 +203,7 @@ function parseOpds2NavigationLinks(jsonData: any, baseUrl: string): CatalogNavig
       if (link.href && link.rel) {
         const rels = normalizeRelValues(link.rel);
         const fullUrl = new URL(link.href, baseUrl).href;
+        if (shouldFilterCrawlableLink(fullUrl)) return;
         const linkTitle = toNonEmptyString(link.title);
         const isStart = rels.some((r: string) => r.includes('start'));
         const isUp = rels.some((r: string) => r === 'up' || r.endsWith('/up'));

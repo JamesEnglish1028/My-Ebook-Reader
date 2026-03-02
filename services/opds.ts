@@ -327,6 +327,16 @@ const isPalaceHost = (url: string): boolean => {
     }
 };
 
+const shouldFilterCrawlableLink = (url: string): boolean => {
+    try {
+        const parsed = new URL(url);
+        const normalizedPath = parsed.pathname.replace(/\/+$/, '').toLowerCase();
+        return normalizedPath.endsWith('/crawlable');
+    } catch {
+        return url.toLowerCase().includes('/crawlable');
+    }
+};
+
 /**
  * Parses OPDS 1 XML feeds into a standardized format.
  * Handles audiobook detection via schema:additionalType attributes.
@@ -359,6 +369,7 @@ export const parseOpds1Xml = (xmlText: string, baseUrl: string): { books: Catalo
     const bookIndexes = new Map<string, number>();
     const palaceFeed = isPalaceHost(baseUrl);
     const addNavLink = (link: CatalogNavigationLink) => {
+        if (shouldFilterCrawlableLink(link.url)) return;
         const key = `${link.rel}|${link.url}`;
         if (navLinkKeys.has(key)) return;
         navLinkKeys.add(key);
@@ -661,8 +672,11 @@ export const parseOpds1Xml = (xmlText: string, baseUrl: string): { books: Catalo
                 .filter((candidate) => {
                     const rel = (candidate.getAttribute('rel') || '').toLowerCase();
                     const type = (candidate.getAttribute('type') || '').toLowerCase();
+                    const href = candidate.getAttribute('href');
+                    if (!href) return false;
+                    const fullUrl = new URL(href, baseUrl).href;
+                    if (shouldFilterCrawlableLink(fullUrl)) return false;
                     return rel.includes('related')
-                        && !!candidate.getAttribute('href')
                         && (
                             type.includes('application/opds+json')
                             || type.includes('profile=opds-catalog')

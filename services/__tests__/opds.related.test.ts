@@ -74,4 +74,29 @@ describe('related catalog link parsing', () => {
       },
     ]);
   });
+
+  it('filters crawlable machine-harvest related links', () => {
+    const xml = `<?xml version="1.0" encoding="utf-8"?>
+      <feed xmlns="http://www.w3.org/2005/Atom">
+        <title>Sample Feed</title>
+        <entry>
+          <title>Palace Example</title>
+          <author><name>Example Author</name></author>
+          <id>urn:uuid:test-related-crawlable</id>
+          <link
+            rel="http://opds-spec.org/acquisition/borrow"
+            type="application/epub+zip"
+            href="/fulfill/test-book" />
+          <link
+            href="/crawlable"
+            rel="related"
+            type="application/atom+xml;profile=opds-catalog;kind=acquisition"
+            title="Crawlable Export" />
+        </entry>
+      </feed>`;
+
+    const { books } = parseOpds1Xml(xml, 'https://catalog.example.org/feed.xml');
+    expect(books).toHaveLength(1);
+    expect(books[0].relatedLinks).toBeUndefined();
+  });
 });

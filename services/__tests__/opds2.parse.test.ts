@@ -167,4 +167,27 @@ describe('parseOpds2Json', () => {
     expect(books[0].author).toBe('Lead Author');
     expect(books[0].contributors).toEqual(['Editor One', 'Editor Two']);
   });
+
+  it('filters crawlable navigation links', () => {
+    const feed = {
+      navigation: [
+        {
+          title: 'Browse',
+          href: '/browse',
+          rel: 'subsection',
+          type: 'application/opds+json',
+        },
+        {
+          title: 'Crawlable Export',
+          href: '/crawlable',
+          rel: 'subsection',
+          type: 'application/opds+json',
+        },
+      ],
+    };
+
+    const { navLinks } = parseOpds2Json(feed, 'https://example.org/');
+    expect(navLinks).toHaveLength(1);
+    expect(navLinks[0].title).toBe('Browse');
+  });
 });
