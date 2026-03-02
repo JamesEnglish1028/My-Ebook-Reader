@@ -552,10 +552,14 @@ const PdfReaderView: React.FC<PdfReaderViewProps> = ({ bookId: propBookId, onClo
 
           {/* Footer controls to mirror EPUB reader layout */}
           <footer className="theme-surface-elevated theme-border theme-text-primary z-20 flex shrink-0 items-center gap-4 border-t p-4">
-            <div className="flex items-center gap-2">
-              <button onClick={goToPrev} className="theme-hover-surface p-2 rounded-full transition-colors focus:outline-none focus:ring-2 focus:ring-sky-500" aria-label="Previous page" disabled={currentPage <= 1}><LeftArrowIcon className="w-5 h-5"/></button>
-              <button onClick={goToNext} className="theme-hover-surface p-2 rounded-full transition-colors focus:outline-none focus:ring-2 focus:ring-sky-500" aria-label="Next page" disabled={numPages !== null && currentPage >= numPages}><RightArrowIcon className="w-5 h-5"/></button>
-            </div>
+            <button
+              onClick={goToPrev}
+              className="theme-hover-surface shrink-0 rounded-full p-2 transition-colors focus:outline-none focus:ring-2 focus:ring-sky-500"
+              aria-label="Previous page"
+              disabled={currentPage <= 1}
+            >
+              <LeftArrowIcon className="w-5 h-5" />
+            </button>
 
             <div className="flex-grow flex flex-col justify-center">
               <input
@@ -593,6 +597,15 @@ const PdfReaderView: React.FC<PdfReaderViewProps> = ({ bookId: propBookId, onClo
                 aria-label="Jump to page"
               />
             </div>
+
+            <button
+              onClick={goToNext}
+              className="theme-hover-surface shrink-0 rounded-full p-2 transition-colors focus:outline-none focus:ring-2 focus:ring-sky-500"
+              aria-label="Next page"
+              disabled={numPages !== null && currentPage >= numPages}
+            >
+              <RightArrowIcon className="w-5 h-5" />
+            </button>
           </footer>
         </div>
       );
