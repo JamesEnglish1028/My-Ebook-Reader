@@ -674,33 +674,42 @@ const ReaderView: React.FC<ReaderViewProps> = ({ bookId, onClose, animationData 
   }, []);
 
   useEffect(() => {
-    if (rendition) {
-      // Clear any previous scheduled resize
+    if (!rendition || isLoading || loadError) {
+      return;
+    }
+
+    if (renditionResizeTimerRef.current) {
+      clearTimeout(renditionResizeTimerRef.current);
+      renditionResizeTimerRef.current = null;
+    }
+
+    renditionResizeTimerRef.current = window.setTimeout(() => {
+      try {
+        const activeRendition = renditionRef.current as any;
+        const viewer = viewerRef.current;
+        if (
+          activeRendition
+          && activeRendition.manager
+          && activeRendition.manager.stage
+          && typeof activeRendition.resize === 'function'
+          && viewer
+          && viewer.isConnected
+        ) {
+          activeRendition.resize();
+        }
+      } catch (e) {
+        // Rendition may have been destroyed; swallow to avoid uncaught exceptions
+        console.warn('Safe resize failed, rendition may no longer be available.', e);
+      }
+    }, 50);
+
+    return () => {
       if (renditionResizeTimerRef.current) {
         clearTimeout(renditionResizeTimerRef.current);
         renditionResizeTimerRef.current = null;
       }
-      // Schedule a safe resize — check renditionRef.current at call time
-      renditionResizeTimerRef.current = window.setTimeout(() => {
-        try {
-          const activeRendition = renditionRef.current as any;
-          if (activeRendition && activeRendition.manager && typeof activeRendition.resize === 'function') {
-            activeRendition.resize();
-          }
-        } catch (e) {
-          // Rendition may have been destroyed; swallow to avoid uncaught exceptions
-          console.warn('Safe resize failed, rendition may no longer be available.', e);
-        }
-      }, 50);
-
-      return () => {
-        if (renditionResizeTimerRef.current) {
-          clearTimeout(renditionResizeTimerRef.current);
-          renditionResizeTimerRef.current = null;
-        }
-      };
-    }
-  }, [controlsVisible, rendition]);
+    };
+  }, [controlsVisible, isLoading, loadError, rendition]);
 
   useEffect(() => {
     if (controlsVisible && !isAnyPanelOpen) {
