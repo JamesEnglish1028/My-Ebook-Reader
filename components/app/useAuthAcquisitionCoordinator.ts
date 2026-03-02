@@ -1,6 +1,8 @@
 import { useCallback, useState } from 'react';
 import type { Dispatch, SetStateAction } from 'react';
 
+import type { CatalogImportMeta } from '../../domain/book';
+import { buildCatalogImportMeta } from '../../domain/book';
 import { opdsAcquisitionService } from '../../domain/catalog';
 import {
   cachePatronAuthorizationForUrl,
@@ -41,7 +43,7 @@ interface UseAuthAcquisitionCoordinatorOptions {
     providerId?: string,
     format?: string,
     coverImageUrl?: string | null,
-    catalogBookMeta?: Partial<CatalogBook>,
+    catalogBookMeta?: CatalogImportMeta,
   ) => Promise<{ success: boolean; bookRecord?: BookRecord; existingBook?: BookRecord }>;
   setImportStatus: Dispatch<SetStateAction<ImportStatusState>>;
   setActiveOpdsSource: Dispatch<SetStateAction<Catalog | CatalogRegistry | null>>;
@@ -334,32 +336,11 @@ export const useAuthAcquisitionCoordinator = ({
       if (book.format?.toUpperCase() === 'AUDIOBOOK') {
         cacheAudiobookTrackAuthorization(bookData, resolvedFulfill.resolvedUrl, resolvedFulfill.followUpAuth);
       }
-      const shouldExcludeContentFromSync = book.format?.toUpperCase() !== 'AUDIOBOOK' && !book.isOpenAccess;
-      const catalogBookMeta = book.format && book.format.toUpperCase() === 'PDF'
-        ? {
-            summary: book.summary,
-            publisher: book.publisher,
-            publicationDate: book.publicationDate,
-            subjects: book.subjects,
-            coverImage: book.coverImage,
-            contentExcludedFromSync: shouldExcludeContentFromSync || undefined,
-          }
-        : book.format && book.format.toUpperCase() === 'AUDIOBOOK'
-          ? {
-              summary: book.summary,
-              publisher: book.publisher,
-              publicationDate: book.publicationDate,
-              subjects: book.subjects,
-              coverImage: book.coverImage,
-              downloadUrl: resolvedFulfill.resolvedUrl || finalUrl,
-              manifestUrl: resolvedFulfill.resolvedUrl || finalUrl,
-              fulfillmentUrl: book.downloadUrl,
-              authDocument: activeAuthDocument || undefined,
-              contentExcludedFromSync: shouldExcludeContentFromSync || undefined,
-            }
-        : {
-            contentExcludedFromSync: shouldExcludeContentFromSync || undefined,
-          };
+      const catalogBookMeta = buildCatalogImportMeta(book, {
+        resolvedDownloadUrl: resolvedFulfill.resolvedUrl || finalUrl,
+        fulfillmentUrl: book.downloadUrl,
+        authDocument: activeAuthDocument,
+      });
 
       const result = await processAndSaveBook(
         bookData,
@@ -456,19 +437,11 @@ export const useAuthAcquisitionCoordinator = ({
           credentialPrompt.pendingBook.providerId,
           credentialPrompt.pendingBook.format,
           credentialPrompt.pendingBook.coverImage,
-          credentialPrompt.pendingBook.format?.toUpperCase() === 'AUDIOBOOK'
-            ? {
-                summary: credentialPrompt.pendingBook.summary,
-                publisher: credentialPrompt.pendingBook.publisher,
-                publicationDate: credentialPrompt.pendingBook.publicationDate,
-                subjects: credentialPrompt.pendingBook.subjects,
-                coverImage: credentialPrompt.pendingBook.coverImage,
-                downloadUrl: resolvedFulfill.resolvedUrl || credentialPrompt.pendingBook.downloadUrl,
-                manifestUrl: resolvedFulfill.resolvedUrl || credentialPrompt.pendingBook.downloadUrl,
-                fulfillmentUrl: credentialPrompt.pendingBook.downloadUrl,
-                authDocument: activeAuthDocument || undefined,
-              }
-            : undefined,
+          buildCatalogImportMeta(credentialPrompt.pendingBook, {
+            resolvedDownloadUrl: resolvedFulfill.resolvedUrl || credentialPrompt.pendingBook.downloadUrl,
+            fulfillmentUrl: credentialPrompt.pendingBook.downloadUrl,
+            authDocument: activeAuthDocument,
+          }),
         );
         if (!importResult.success && importResult.existingBook) {
           setImportStatus({
@@ -529,19 +502,11 @@ export const useAuthAcquisitionCoordinator = ({
         credentialPrompt.pendingBook.providerId,
         credentialPrompt.pendingBook.format,
         credentialPrompt.pendingBook.coverImage,
-        credentialPrompt.pendingBook.format?.toUpperCase() === 'AUDIOBOOK'
-          ? {
-              summary: credentialPrompt.pendingBook.summary,
-              publisher: credentialPrompt.pendingBook.publisher,
-              publicationDate: credentialPrompt.pendingBook.publicationDate,
-              subjects: credentialPrompt.pendingBook.subjects,
-              coverImage: credentialPrompt.pendingBook.coverImage,
-              downloadUrl: credentialPrompt.pendingBook.downloadUrl,
-              manifestUrl: credentialPrompt.pendingBook.downloadUrl,
-              fulfillmentUrl: credentialPrompt.pendingBook.downloadUrl,
-              authDocument: credentialPrompt.authDocument || getCachedAuthDocumentForUrl(credentialPrompt.pendingBook.downloadUrl) || undefined,
-            }
-          : undefined,
+        buildCatalogImportMeta(credentialPrompt.pendingBook, {
+          resolvedDownloadUrl: credentialPrompt.pendingBook.downloadUrl,
+          fulfillmentUrl: credentialPrompt.pendingBook.downloadUrl,
+          authDocument: credentialPrompt.authDocument || getCachedAuthDocumentForUrl(credentialPrompt.pendingBook.downloadUrl),
+        }),
       );
       if (!importResult.success && importResult.existingBook) {
         setImportStatus({

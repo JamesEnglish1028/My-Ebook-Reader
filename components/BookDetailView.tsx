@@ -175,6 +175,106 @@ interface AnimationData {
   coverImage?: string;
 }
 
+interface PrimaryActionState {
+  label: string;
+  disabled: boolean;
+}
+
+interface PrimaryActionNotice {
+  tone: 'default' | 'warning';
+  message: string;
+}
+
+const getLibraryPrimaryActionState = (
+  normalizedFormat: string,
+  isPreparingPlayback: boolean,
+  isContentExcludedFromSync: boolean,
+): PrimaryActionState => {
+  if (isContentExcludedFromSync) {
+    return {
+      label: 'Re-download to Read',
+      disabled: true,
+    };
+  }
+
+  if (isPreparingPlayback) {
+    return {
+      label: 'Refreshing Access...',
+      disabled: false,
+    };
+  }
+
+  return {
+    label: normalizedFormat === 'AUDIOBOOK' ? 'Listen' : 'Read Book',
+    disabled: false,
+  };
+};
+
+const getCatalogPrimaryActionState = (
+  isImporting: boolean,
+  isAlreadyInLibrary: boolean,
+  isImportable: boolean,
+  drmBlockReason: string | null,
+): PrimaryActionState => {
+  if (isImporting) {
+    return {
+      label: 'Importing...',
+      disabled: true,
+    };
+  }
+
+  if (isAlreadyInLibrary) {
+    return {
+      label: 'Already in My Shelf',
+      disabled: true,
+    };
+  }
+
+  if (!isImportable) {
+    return {
+      label: drmBlockReason ? `Cannot Import: ${drmBlockReason}` : 'Cannot Import: Unsupported format',
+      disabled: true,
+    };
+  }
+
+  return {
+    label: 'Import to My Shelf',
+    disabled: false,
+  };
+};
+
+const getPrimaryActionNotice = (
+  source: string,
+  isAlreadyInLibrary: boolean,
+  isContentExcludedFromSync: boolean,
+  drmBlockReason: string | null,
+  isLcpProtected: boolean,
+): PrimaryActionNotice | null => {
+  if (source === 'catalog' && isAlreadyInLibrary) {
+    return {
+      tone: 'default',
+      message: 'This title is already in My Shelf.',
+    };
+  }
+
+  if (source === 'library' && isContentExcludedFromSync) {
+    return {
+      tone: 'warning',
+      message: 'This protected title was synced as a record only. Re-download it from its source to read it on this device.',
+    };
+  }
+
+  if (source === 'catalog' && drmBlockReason) {
+    return {
+      tone: 'warning',
+      message: isLcpProtected
+        ? 'This title is protected with Readium LCP and cannot be imported by this application.'
+        : 'This title is protected with Adobe DRM and cannot be imported by this application.',
+    };
+  }
+
+  return null;
+};
 
 const BookDetailView: React.FC<BookDetailViewProps> = ({ book, onBack, source, catalogName, userCitationFormat = 'apa', onReadBook, onImportFromCatalog, importStatus, setImportStatus }) => {
   const bookAny = book as any;
@@ -352,6 +452,16 @@ const BookDetailView: React.FC<BookDetailViewProps> = ({ book, onBack, source, c
     if (drmBlockReason) return false;
     return hasSupportedBookFormat || hasSupportedBookMediaType;
   })();
+  const primaryAction = source === 'library'
+    ? getLibraryPrimaryActionState(normalizedFormat, isPreparingPlayback, isContentExcludedFromSync)
+    : getCatalogPrimaryActionState(isImporting, isAlreadyInLibrary, isImportable, drmBlockReason);
+  const primaryActionNotice = getPrimaryActionNotice(
+    source,
+    isAlreadyInLibrary,
+    isContentExcludedFromSync,
+    drmBlockReason,
+    isLcpProtected,
+  );
 
   React.useEffect(() => {
     let cancelled = false;
@@ -421,52 +531,16 @@ const BookDetailView: React.FC<BookDetailViewProps> = ({ book, onBack, source, c
               <span className="font-semibold">{book.title}</span>
             </div>
           )}
-          {source === 'library' ? (
-            <button
-              className="mt-2 px-4 py-2 rounded bg-sky-700 text-white font-bold hover:bg-sky-600 disabled:opacity-60 disabled:cursor-not-allowed"
-              onClick={handleReadClick}
-              disabled={isContentExcludedFromSync}
-            >
-              {isContentExcludedFromSync
-                ? 'Re-download to Read'
-                : isPreparingPlayback
-                  ? 'Refreshing Access...'
-                  : normalizedFormat === 'AUDIOBOOK'
-                    ? 'Listen'
-                    : 'Read Book'}
-            </button>
-          ) : (
-            <button
-              className="mt-2 px-4 py-2 rounded bg-sky-700 text-white font-bold hover:bg-sky-600 disabled:opacity-60 disabled:cursor-not-allowed"
-              onClick={handleImportClick}
-              disabled={isImporting || isAlreadyInLibrary || !isImportable}
-            >
-              {isImporting
-                ? 'Importing...'
-                : isAlreadyInLibrary
-                  ? 'Already in My Shelf'
-                  : isImportable
-                  ? 'Import to My Shelf'
-                  : drmBlockReason
-                    ? `Cannot Import: ${drmBlockReason}`
-                    : 'Cannot Import: Unsupported format'}
-            </button>
-          )}
-          {source === 'catalog' && isAlreadyInLibrary && (
-            <div className="theme-text-secondary mt-3 max-w-xs text-center text-sm">
-              This title is already in My Shelf.
-            </div>
-          )}
-          {source === 'library' && isContentExcludedFromSync && (
-            <div className="theme-text-warning mt-3 max-w-xs text-center text-sm">
-              This protected title was synced as a record only. Re-download it from its source to read it on this device.
-            </div>
-          )}
-          {source === 'catalog' && drmBlockReason && (
-            <div className="theme-text-warning mt-3 max-w-xs text-center text-sm">
-              {isLcpProtected
-                ? 'This title is protected with Readium LCP and cannot be imported by this application.'
-                : 'This title is protected with Adobe DRM and cannot be imported by this application.'}
+          <button
+            className="mt-2 px-4 py-2 rounded bg-sky-700 text-white font-bold hover:bg-sky-600 disabled:opacity-60 disabled:cursor-not-allowed"
+            onClick={source === 'library' ? handleReadClick : handleImportClick}
+            disabled={primaryAction.disabled}
+          >
+            {primaryAction.label}
+          </button>
+          {primaryActionNotice && (
+            <div className={`${primaryActionNotice.tone === 'warning' ? 'theme-text-warning' : 'theme-text-secondary'} mt-3 max-w-xs text-center text-sm`}>
+              {primaryActionNotice.message}
             </div>
           )}
           {showImportSuccess && (

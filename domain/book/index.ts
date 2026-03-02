@@ -5,5 +5,5 @@
  */
 
 export * from './repository';
+export * from './importMetadata';
 export * from './types';
-

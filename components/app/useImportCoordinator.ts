@@ -1,10 +1,12 @@
 import { useCallback, useState } from 'react';
 
+import type { CatalogImportMeta } from '../../domain/book';
+import { resolveStoredImportSourceUrls } from '../../domain/book';
 import { db, generatePdfCover, imageUrlToBase64, logger } from '../../services';
 import { parseAudiobookManifest } from '../../services/audiobookManifest';
 import { extractBookMetadataFromOpf } from '../../services/epubParser';
 import { extractCoverImageFromEpub, extractOpfXmlFromEpub } from '../../services/epubZipUtils';
-import type { AuthDocument, BookRecord, CatalogBook } from '../../types';
+import type { BookRecord, CatalogBook } from '../../types';
 
 export interface ImportStatusState {
   isLoading: boolean;
@@ -22,13 +24,6 @@ interface ImportResult {
   existingBook?: BookRecord;
 }
 
-type PersistedImportMeta = Partial<CatalogBook> & {
-  manifestUrl?: string;
-  fulfillmentUrl?: string;
-  authDocument?: AuthDocument;
-  contentExcludedFromSync?: boolean;
-};
-
 const initialImportState: ImportStatusState = {
   isLoading: false,
   message: '',
@@ -38,11 +33,6 @@ const initialImportState: ImportStatusState = {
 const normalizePublisher = (publisher: CatalogBook['publisher'] | undefined): string | undefined => {
   if (!publisher) return undefined;
   return typeof publisher === 'string' ? publisher : publisher.name;
-};
-
-const isHttpUrl = (value: string | undefined | null): value is string => {
-  if (!value) return false;
-  return /^https?:\/\//i.test(value);
 };
 
 const getStoredProviderName = (
@@ -70,7 +60,7 @@ export const useImportCoordinator = ({ onCatalogImportSuccess }: UseImportCoordi
     providerId?: string,
     format?: string,
     coverImageUrl?: string | null,
-    catalogBookMeta?: PersistedImportMeta,
+    catalogBookMeta?: CatalogImportMeta,
   ): Promise<ImportResult> => {
     let finalCoverImage: string | null = null;
     const storedProviderName = getStoredProviderName(source, providerName);
@@ -83,7 +73,7 @@ export const useImportCoordinator = ({ onCatalogImportSuccess }: UseImportCoordi
     if (effectiveFormat === 'AUDIOBOOK') {
       setImportStatus({ isLoading: true, message: 'Saving audiobook to library...', error: null });
       try {
-        const runtimeMeta = catalogBookMeta as PersistedImportMeta | undefined;
+        const runtimeMeta = catalogBookMeta;
         const manifestBaseUrl = runtimeMeta?.manifestUrl || providerId || undefined;
         const manifest = parseAudiobookManifest(bookData, manifestBaseUrl);
         if (!finalCoverImage && manifest.coverImageUrl) {
@@ -91,12 +81,7 @@ export const useImportCoordinator = ({ onCatalogImportSuccess }: UseImportCoordi
         }
 
         const finalProviderId = providerId || fileName;
-        const manifestUrl = runtimeMeta?.manifestUrl
-          || runtimeMeta?.downloadUrl
-          || (isHttpUrl(providerId) ? providerId : undefined);
-        const fulfillmentUrl = runtimeMeta?.fulfillmentUrl
-          || runtimeMeta?.downloadUrl
-          || (isHttpUrl(providerId) ? providerId : undefined);
+        const { manifestUrl, fulfillmentUrl } = resolveStoredImportSourceUrls(runtimeMeta, providerId);
         const newBook: BookRecord = {
           title: manifest.title || fileName,
           author: manifest.author || authorName || 'Unknown Author',
