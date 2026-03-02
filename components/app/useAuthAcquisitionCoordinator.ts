@@ -62,6 +62,29 @@ const buildAuthorizationHeader = (auth: RequestAuthorization): string => (
     : `Basic ${btoa(`${auth.username}:${auth.password}`)}`
 );
 
+const validateFulfillResponse = (
+  response: Response,
+  book: Pick<CatalogBook, 'title' | 'format'>,
+) => {
+  const contentType = (response.headers && typeof response.headers.get === 'function'
+    ? (response.headers.get('Content-Type') || '')
+    : '').toLowerCase();
+  if (!contentType) return;
+
+  const looksLikeDocument = contentType.includes('json') || contentType.includes('xml') || contentType.includes('html');
+  const allowsEpub = contentType.includes('application/epub') || contentType.includes('application/octet-stream') || contentType.includes('application/zip');
+  const allowsPdf = contentType.includes('application/pdf') || contentType.includes('application/octet-stream');
+  const normalizedFormat = (book.format || '').toUpperCase();
+
+  if (normalizedFormat === 'EPUB' && looksLikeDocument && !allowsEpub) {
+    throw new Error(`Import failed for "${book.title}". The fulfill endpoint returned ${contentType || 'a document response'} instead of a downloadable EPUB file.`);
+  }
+
+  if (normalizedFormat === 'PDF' && looksLikeDocument && !allowsPdf) {
+    throw new Error(`Import failed for "${book.title}". The fulfill endpoint returned ${contentType || 'a document response'} instead of a downloadable PDF file.`);
+  }
+};
+
 export const useAuthAcquisitionCoordinator = ({
   processAndSaveBook,
   setImportStatus,
@@ -181,6 +204,8 @@ export const useAuthAcquisitionCoordinator = ({
         throw new Error(errorMessage);
       }
 
+      validateFulfillResponse(response, book);
+
       const bookData = await response.arrayBuffer();
       const catalogBookMeta = book.format && book.format.toUpperCase() === 'PDF'
         ? {
@@ -207,6 +232,12 @@ export const useAuthAcquisitionCoordinator = ({
       if (result.success) {
         setActiveOpdsSource(null);
         setCurrentView('library');
+      } else if (!result.existingBook) {
+        setImportStatus({
+          isLoading: false,
+          message: '',
+          error: 'Import failed after download. The fulfill endpoint may not have returned a directly importable EPUB or PDF file.',
+        });
       }
 
       return result;
@@ -265,6 +296,7 @@ export const useAuthAcquisitionCoordinator = ({
         if (!response.ok) {
           throw new Error(`Download failed: ${response.status}`);
         }
+        validateFulfillResponse(response, credentialPrompt.pendingBook);
         const bookData = await response.arrayBuffer();
         const importResult = await processAndSaveBook(
           bookData,
@@ -281,6 +313,12 @@ export const useAuthAcquisitionCoordinator = ({
             isLoading: false,
             message: '',
             error: `A book with the same identifier is already in your library: "${importResult.existingBook.title}".`,
+          });
+        } else if (!importResult.success) {
+          setImportStatus({
+            isLoading: false,
+            message: '',
+            error: 'Import failed after download. The fulfill endpoint may not have returned a directly importable EPUB or PDF file.',
           });
         }
       } else {
