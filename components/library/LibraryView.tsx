@@ -394,7 +394,7 @@ const LibraryView: React.FC<LibraryViewProps> = ({
               <div className="theme-surface-elevated theme-border absolute top-full z-20 mt-2 w-72 rounded-lg border shadow-xl">
                 <ul className="theme-text-primary max-h-96 overflow-y-auto p-1">
                   <li>
-                    <button onClick={() => handleSelectSource('library')} className={`w-full rounded-md px-3 py-2 text-left text-sm ${!isBrowsingOpds ? 'bg-sky-600' : 'theme-hover-surface'}`}>
+                    <button onClick={() => handleSelectSource('library')} className={`w-full rounded-md px-3 py-2 text-left text-sm ${!isBrowsingOpds ? 'theme-nav-link-active' : 'theme-hover-surface'}`}>
                       My Shelf
                     </button>
                   </li>
@@ -404,7 +404,7 @@ const LibraryView: React.FC<LibraryViewProps> = ({
                     <li className="theme-text-secondary px-3 pb-1 pt-2 text-xs font-semibold uppercase">Catalogs</li>
                     {catalogs.map(catalog => (
                       <li key={catalog.id}>
-                        <button onClick={() => handleSelectSource(catalog)} className={`w-full truncate rounded-md px-3 py-2 text-left text-sm ${isBrowsingOpds && activeOpdsSource?.id === catalog.id ? 'bg-sky-600' : 'theme-hover-surface'}`}>
+                        <button onClick={() => handleSelectSource(catalog)} className={`w-full truncate rounded-md px-3 py-2 text-left text-sm ${isBrowsingOpds && activeOpdsSource?.id === catalog.id ? 'theme-nav-link-active' : 'theme-hover-surface'}`}>
                           {catalog.name}
                         </button>
                       </li>
@@ -415,7 +415,7 @@ const LibraryView: React.FC<LibraryViewProps> = ({
                     <li className="theme-text-secondary px-3 pb-1 pt-2 text-xs font-semibold uppercase">Registries</li>
                     {registries.map(registry => (
                       <li key={registry.id}>
-                        <button onClick={() => handleSelectSource(registry)} className={`w-full truncate rounded-md px-3 py-2 text-left text-sm ${isBrowsingOpds && activeOpdsSource?.id === registry.id ? 'bg-sky-600' : 'theme-hover-surface'}`}>
+                        <button onClick={() => handleSelectSource(registry)} className={`w-full truncate rounded-md px-3 py-2 text-left text-sm ${isBrowsingOpds && activeOpdsSource?.id === registry.id ? 'theme-nav-link-active' : 'theme-hover-surface'}`}>
                           {registry.name}
                         </button>
                       </li>

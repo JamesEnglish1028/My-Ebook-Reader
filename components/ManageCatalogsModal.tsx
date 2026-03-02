@@ -95,28 +95,28 @@ const ManageCatalogsModal: React.FC<ManageCatalogsModalProps> = ({
         <div className="fixed inset-0 bg-black/60 z-50 flex items-center justify-center p-4" onClick={onClose} aria-modal="true" role="dialog">
             <div ref={modalRef} className="theme-surface-elevated theme-border theme-text-primary w-full max-w-lg rounded-lg border p-6 shadow-xl" onClick={(e) => e.stopPropagation()}>
                 <div className="flex justify-between items-center mb-4">
-                    <h2 className="text-xl font-bold text-sky-300">Manage Sources</h2>
+                    <h2 className="theme-accent-text-emphasis text-xl font-bold">Manage Sources</h2>
                     <button onClick={onClose} className="theme-hover-surface rounded-full p-2 transition-colors" aria-label="Close">
                         <CloseIcon className="w-6 h-6" />
                     </button>
                 </div>
 
-                <div className="border-b border-slate-700 mb-6 theme-divider">
+                <div className="theme-divider mb-6 border-b">
                     <nav className="flex -mb-px gap-4">
                         <button
                             onClick={() => setActiveTab('catalogs')}
-                            className={`py-3 px-2 text-sm font-medium border-b-2 transition-colors duration-200 ${activeTab === 'catalogs'
-                                    ? 'border-sky-400 text-sky-300'
-                                    : 'theme-text-secondary border-transparent hover:border-slate-500 hover:text-sky-400'
+                            className={`border-b-2 px-2 py-3 text-sm font-medium transition-colors duration-200 ${activeTab === 'catalogs'
+                                    ? 'theme-accent-border theme-accent-text-emphasis'
+                                    : 'theme-text-secondary border-transparent theme-accent-text-emphasis-hover theme-border-hover'
                                 }`}
                         >
                             Catalogs
                         </button>
                         <button
                             onClick={() => setActiveTab('registries')}
-                            className={`py-3 px-2 text-sm font-medium border-b-2 transition-colors duration-200 ${activeTab === 'registries'
-                                    ? 'border-sky-400 text-sky-300'
-                                    : 'theme-text-secondary border-transparent hover:border-slate-500 hover:text-sky-400'
+                            className={`border-b-2 px-2 py-3 text-sm font-medium transition-colors duration-200 ${activeTab === 'registries'
+                                    ? 'theme-accent-border theme-accent-text-emphasis'
+                                    : 'theme-text-secondary border-transparent theme-accent-text-emphasis-hover theme-border-hover'
                                 }`}
                         >
                             Registries
@@ -167,8 +167,8 @@ const ManageCatalogsModal: React.FC<ManageCatalogsModalProps> = ({
                             {activeTab === 'registries' && (
                             <p className="text-sm text-slate-400 theme-text-secondary">Registries are always OPDS 2.0 (JSON) format.</p>
                             )}
-                            {error && <p className="text-sm text-red-400">{error}</p>}
-                            <button type="submit" className="w-full py-2 px-4 rounded-md bg-sky-500 hover:bg-sky-600 transition-colors font-bold text-sm">
+                            {error && <p className="theme-text-danger text-sm">{error}</p>}
+                            <button type="submit" className="theme-button-primary w-full rounded-md px-4 py-2 text-sm font-bold transition-colors">
                                 Add {activeTab === 'catalogs' ? 'Catalog' : 'Registry'}
                             </button>
                         </form>
@@ -194,10 +194,10 @@ const ManageCatalogsModal: React.FC<ManageCatalogsModalProps> = ({
                                                     onKeyDown={(e) => { if (e.key === 'Enter') handleSaveEdit(); if (e.key === 'Escape') handleCancelEdit(); }}
                                                 />
                                                 <div className="flex items-center flex-shrink-0">
-                                                    <button onClick={handleSaveEdit} className="p-2 rounded-full hover:bg-green-500/20 text-green-400 transition-colors" aria-label={`Save changes for ${item.name}`}>
+                                                    <button onClick={handleSaveEdit} className="theme-hover-surface theme-text-success p-2 rounded-full transition-colors" aria-label={`Save changes for ${item.name}`}>
                                                         <CheckIcon className="w-4 h-4" />
                                                     </button>
-                                                    <button onClick={handleCancelEdit} className="p-2 rounded-full hover:bg-red-500/20 text-slate-500 hover:text-red-400 transition-colors theme-text-muted" aria-label="Cancel editing">
+                                                    <button onClick={handleCancelEdit} className="theme-hover-surface theme-text-muted p-2 rounded-full transition-colors" aria-label="Cancel editing">
                                                         <CloseIcon className="w-4 h-4" />
                                                     </button>
                                                 </div>
@@ -209,10 +209,10 @@ const ManageCatalogsModal: React.FC<ManageCatalogsModalProps> = ({
                                                     <p className="text-xs text-slate-400 truncate theme-text-secondary">{item.url}</p>
                                                 </div>
                                                 <div className="flex items-center flex-shrink-0">
-                                                    <button onClick={() => handleStartEdit(item)} className="p-2 rounded-full hover:bg-sky-500/20 text-slate-500 hover:text-sky-400 transition-colors theme-text-muted" aria-label={`Edit ${item.name}`}>
+                                                    <button onClick={() => handleStartEdit(item)} className="theme-hover-surface theme-text-muted theme-accent-text-emphasis-hover p-2 rounded-full transition-colors" aria-label={`Edit ${item.name}`}>
                                                         <PencilIcon className="w-4 h-4" />
                                                     </button>
-                                                    <button onClick={() => handleDelete(item.id)} className="p-2 rounded-full hover:bg-red-500/20 text-slate-500 hover:text-red-400 transition-colors theme-text-muted" aria-label={`Delete ${item.name}`}>
+                                                    <button onClick={() => handleDelete(item.id)} className="theme-hover-surface theme-text-muted theme-text-danger-hover p-2 rounded-full transition-colors" aria-label={`Delete ${item.name}`}>
                                                         <TrashIcon className="w-4 h-4" />
                                                     </button>
                                                 </div>

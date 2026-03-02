@@ -292,6 +292,10 @@ body {
   color: var(--status-danger-fg) !important;
 }
 
+.theme-text-danger-hover:hover {
+  color: var(--status-danger-fg) !important;
+}
+
 .theme-text-info {
   color: var(--status-info-fg) !important;
 }
