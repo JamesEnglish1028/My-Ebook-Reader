@@ -224,7 +224,14 @@ export const useAuthAcquisitionCoordinator = ({
             });
             return { success: false };
           }
-          logger.warn('Failed to resolve acquisition chain, using original URL', errorResult.error);
+          if (!isPalaceUrl(book.downloadUrl)) {
+            logger.warn('Failed to resolve acquisition chain, using original URL', errorResult.error);
+          } else {
+            logger.debug('Using original Palace fulfill URL after unresolved acquisition chain', {
+              url: book.downloadUrl,
+              error: errorResult.error,
+            });
+          }
         }
       }
 

@@ -78,13 +78,6 @@ function setProxyDiagnosticHeaders(res, source, status) {
   }
 }
 
-function redactAuthorizationHeader(value) {
-  if (!value || typeof value !== 'string') return null;
-  const [scheme, token] = value.split(/\s+/, 2);
-  if (!scheme || !token) return `${value.slice(0, 12)}...`;
-  return `${scheme} ${token.slice(0, 6)}...`;
-}
-
 app.options('/proxy', (req, res) => {
   // Respect the requesting Origin when present so callers that send credentials
   // can be allowed. Fall back to configured ALLOW_ORIGIN or wildcard.
@@ -197,7 +190,6 @@ app.all('/proxy', async (req, res) => {
     // palace hosts to improve compatibility.
     const upstreamHeaders = stripHopByHop(req.headers);
     const targetHost = targetUrl.hostname || '';
-    const isLoansRequest = targetUrl.pathname.toLowerCase().includes('/loans');
     const incomingAuthorization = req.headers.authorization;
     const hadAuthorization = typeof incomingAuthorization === 'string' && incomingAuthorization.length > 0;
     const isPalaceTarget = targetHost.includes('palace')
@@ -209,14 +201,6 @@ app.all('/proxy', async (req, res) => {
     if (isPalaceTarget && hadAuthorization) {
       // Match Palace's recommended authenticated request shape more closely.
       upstreamHeaders['accept-language'] = '';
-    }
-
-    if (isLoansRequest && hadAuthorization) {
-      console.log('proxy: authenticated loans request', {
-        target: targetUrl.toString(),
-        incomingAuthorization: redactAuthorizationHeader(incomingAuthorization),
-        forwardedAuthorization: redactAuthorizationHeader(upstreamHeaders.authorization),
-      });
     }
 
     const fetchOpts = {

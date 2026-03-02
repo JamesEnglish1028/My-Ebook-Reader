@@ -1,3 +1,7 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
 :root,
 :root[data-ui-theme-resolved="dark"] {
   --app-bg: #0f172a;
