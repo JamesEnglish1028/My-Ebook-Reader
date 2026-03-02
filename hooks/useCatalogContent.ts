@@ -1,7 +1,11 @@
 import { useQuery } from '@tanstack/react-query';
 
 import { opdsParserService } from '../domain/catalog';
-import { fetchAndCacheAuthDocument, getCachedAuthDocumentForUrl } from '../services';
+import {
+  fetchAndCacheAuthDocument,
+  getCachedAuthDocumentForUrl,
+  getCachedPatronAuthorizationForUrl,
+} from '../services';
 import { logger } from '../services/logger';
 import type {
   AuthDocument,
@@ -74,7 +78,8 @@ export function useCatalogContent(
 
       logger.debug(`[useCatalogContent] Fetching: ${url}`);
 
-      const result = await opdsParserService.fetchCatalog(url, baseUrl, opdsVersion, auth);
+      const effectiveAuth = auth ?? getCachedPatronAuthorizationForUrl(url);
+      const result = await opdsParserService.fetchCatalog(url, baseUrl, opdsVersion, effectiveAuth);
       if (!result.success) {
         return {
           books: [],
