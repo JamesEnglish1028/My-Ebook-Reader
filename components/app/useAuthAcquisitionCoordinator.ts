@@ -62,13 +62,71 @@ const buildAuthorizationHeader = (auth: RequestAuthorization): string => (
     : `Basic ${btoa(`${auth.username}:${auth.password}`)}`
 );
 
+const getContentType = (response: Response): string => (
+  response.headers && typeof response.headers.get === 'function'
+    ? (response.headers.get('Content-Type') || '')
+    : ''
+);
+
+const resolveLibrarySimplifiedBearerTokenDocument = async (
+  response: Response,
+  fallbackUrl: string,
+): Promise<Response> => {
+  const contentType = getContentType(response).toLowerCase();
+  if (!contentType.includes('application/vnd.librarysimplified.bearer-token+json')) {
+    return response;
+  }
+
+  const bodyText = await response.text().catch(() => '');
+  let payload: any = null;
+  try {
+    payload = bodyText ? JSON.parse(bodyText) : null;
+  } catch {
+    payload = null;
+  }
+
+  const accessToken = typeof payload?.access_token === 'string'
+    ? payload.access_token
+    : typeof payload?.accessToken === 'string'
+      ? payload.accessToken
+      : null;
+  const tokenType = typeof payload?.token_type === 'string'
+    ? payload.token_type
+    : typeof payload?.tokenType === 'string'
+      ? payload.tokenType
+      : 'Bearer';
+  const location = typeof payload?.location === 'string' ? payload.location : null;
+
+  if (!accessToken || !location) {
+    throw new Error('Import failed. The fulfill endpoint returned an incomplete bearer-token document.');
+  }
+
+  const resolvedLocation = new URL(location, response.url || fallbackUrl).href;
+  const nextUrl = proxiedUrl(resolvedLocation);
+  if (typeof nextUrl === 'string' && nextUrl.includes('corsproxy.io')) {
+    throw new Error('Import failed. The follow-up download would use a public CORS proxy which may strip authorization headers. Configure an owned proxy (VITE_OWN_PROXY_URL).');
+  }
+
+  const followUpResponse = await fetch(nextUrl, {
+    headers: {
+      Authorization: `${tokenType} ${accessToken}`,
+    },
+    credentials: nextUrl === resolvedLocation ? 'include' : 'omit',
+    redirect: 'follow',
+  });
+
+  if (!followUpResponse.ok) {
+    throw new Error(`Import failed. The bearer-token follow-up download returned ${followUpResponse.status}.`);
+  }
+
+  return followUpResponse;
+};
+
 const validateFulfillResponse = (
   response: Response,
   book: Pick<CatalogBook, 'title' | 'format'>,
 ) => {
-  const contentType = (response.headers && typeof response.headers.get === 'function'
-    ? (response.headers.get('Content-Type') || '')
-    : '').toLowerCase();
+  const contentType = getContentType(response).toLowerCase();
   if (!contentType) return;
 
   const looksLikeDocument = contentType.includes('json') || contentType.includes('xml') || contentType.includes('html');
@@ -204,6 +262,7 @@ export const useAuthAcquisitionCoordinator = ({
         throw new Error(errorMessage);
       }
 
+      response = await resolveLibrarySimplifiedBearerTokenDocument(response, finalUrl);
       validateFulfillResponse(response, book);
 
       const bookData = await response.arrayBuffer();
@@ -296,8 +355,9 @@ export const useAuthAcquisitionCoordinator = ({
         if (!response.ok) {
           throw new Error(`Download failed: ${response.status}`);
         }
-        validateFulfillResponse(response, credentialPrompt.pendingBook);
-        const bookData = await response.arrayBuffer();
+        const finalResponse = await resolveLibrarySimplifiedBearerTokenDocument(response, resolveResult.data);
+        validateFulfillResponse(finalResponse, credentialPrompt.pendingBook);
+        const bookData = await finalResponse.arrayBuffer();
         const importResult = await processAndSaveBook(
           bookData,
           credentialPrompt.pendingBook.title,

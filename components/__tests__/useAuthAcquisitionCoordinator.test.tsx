@@ -88,4 +88,90 @@ describe('useAuthAcquisitionCoordinator', () => {
       }),
     );
   });
+
+  it('follows Library Simplified bearer-token fulfillment documents to the actual file', async () => {
+    const processAndSaveBook = vi.fn(async () => ({
+      success: true,
+      bookRecord: { id: 'book-2' } as any,
+    }));
+    const setImportStatus = vi.fn();
+    const setActiveOpdsSource = vi.fn();
+    const setCurrentView = vi.fn();
+    const pushToast = vi.fn();
+    vi.spyOn(opdsAcquisitionService, 'resolve').mockResolvedValue({
+      success: true,
+      data: 'https://minotaur.dev.palaceproject.io/minotaur-test-library/works/1/fulfill/9',
+    });
+    vi.spyOn(services, 'findCredentialForUrl').mockResolvedValue(null);
+    vi.spyOn(services, 'getCachedAuthDocumentForUrl').mockReturnValue(null);
+    vi.spyOn(services, 'getCachedPatronAuthorizationForUrl').mockReturnValue({
+      scheme: 'bearer',
+      token: 'palace-token',
+    });
+    vi.spyOn(services, 'maybeProxyForCors').mockResolvedValue('https://my-ebook-reader.onrender.com/proxy?url=fulfill9');
+
+    const initialResponse = {
+      ok: true,
+      url: 'https://my-ebook-reader.onrender.com/proxy?url=fulfill9',
+      headers: {
+        get: (name: string) => name === 'Content-Type'
+          ? 'application/vnd.librarysimplified.bearer-token+json'
+          : null,
+      },
+      text: async () => JSON.stringify({
+        token_type: 'Bearer',
+        access_token: 'ls-follow-up-token',
+        expires_in: 3600,
+        location: 'https://downloads.example.org/book.pdf',
+      }),
+    };
+    const finalResponse = {
+      ok: true,
+      headers: {
+        get: (name: string) => name === 'Content-Type'
+          ? 'application/pdf'
+          : null,
+      },
+      arrayBuffer: async () => new ArrayBuffer(16),
+    };
+    globalThis.fetch = vi.fn()
+      .mockResolvedValueOnce(initialResponse as any)
+      .mockResolvedValueOnce(finalResponse as any) as any;
+
+    const book: CatalogBook = {
+      title: 'Token Wrapped Book',
+      author: 'Author',
+      coverImage: null,
+      downloadUrl: 'https://minotaur.dev.palaceproject.io/minotaur-test-library/works/1/fulfill/9',
+      summary: null,
+      providerId: 'palace-2',
+      format: 'PDF',
+      isOpenAccess: false,
+    };
+
+    const { result } = renderHook(() => useAuthAcquisitionCoordinator({
+      processAndSaveBook,
+      setImportStatus,
+      setActiveOpdsSource,
+      setCurrentView,
+      pushToast,
+    }));
+
+    await act(async () => {
+      await result.current.handleImportFromCatalog(book, 'Palace');
+    });
+
+    await waitFor(() => {
+      expect(globalThis.fetch).toHaveBeenNthCalledWith(
+        2,
+        expect.stringContaining('/proxy?url=https%3A%2F%2Fdownloads.example.org%2Fbook.pdf'),
+        expect.objectContaining({
+          headers: expect.objectContaining({
+            Authorization: 'Bearer ls-follow-up-token',
+          }),
+        }),
+      );
+    });
+    expect(processAndSaveBook).toHaveBeenCalled();
+  });
 });
