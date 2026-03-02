@@ -1,5 +1,6 @@
 import type { AuthDocument, RequestAuthorization } from '../types';
 
+import { findCredential } from './credentials';
 import { logger } from './logger';
 import { proxiedUrl } from './utils';
 
@@ -61,6 +62,52 @@ export function cachePatronAuthorizationForUrl(url: string, auth: RequestAuthori
       expiresIn: 3600,
     });
   }
+}
+
+export async function ensureFreshPatronAuthorization(
+  url: string,
+  minimumValidityMs = 60_000,
+): Promise<{ authorization: RequestAuthorization | null; refreshed: boolean }> {
+  const host = getHostFromUrl(url);
+  if (!host) {
+    return { authorization: null, refreshed: false };
+  }
+
+  const token = patronTokenCache.get(host);
+  if (token) {
+    if (token.expiresAt > Date.now() + minimumValidityMs) {
+      return { authorization: getCachedPatronAuthorizationForUrl(url), refreshed: false };
+    }
+
+    patronTokenCache.delete(host);
+    const existing = sessionAuthorizationCache.get(host);
+    if (existing?.scheme === 'bearer') {
+      sessionAuthorizationCache.delete(host);
+    }
+  }
+
+  const existing = sessionAuthorizationCache.get(host);
+  if (existing?.scheme === 'basic') {
+    return { authorization: existing, refreshed: false };
+  }
+
+  const authDocument = authDocumentCache.get(host);
+  const credential = await findCredential(host);
+  if (!authDocument || !credential) {
+    return { authorization: getCachedPatronAuthorizationForUrl(url), refreshed: false };
+  }
+
+  const authorization = await getAuthorizationForAuthDocument(
+    authDocument,
+    url,
+    credential.username,
+    credential.password,
+  );
+
+  return {
+    authorization,
+    refreshed: true,
+  };
 }
 
 function cachePatronTokenForUrl(

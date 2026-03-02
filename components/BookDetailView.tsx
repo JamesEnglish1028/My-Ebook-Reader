@@ -28,6 +28,7 @@ export interface BookDetailViewProps {
 
 import { LeftArrowIcon } from './icons';
 import BookBadges from './library/shared/BookBadges';
+import { ensureFreshPatronAuthorization } from '../services';
 
 const handleImgError = (e: React.SyntheticEvent<HTMLImageElement, Event>) => {
   (e.target as HTMLImageElement).src = '/default-cover.png';
@@ -229,17 +230,91 @@ const BookDetailView: React.FC<BookDetailViewProps> = ({ book, onBack, source, c
     }
   }, [bookAny.id]);
   const coverRef = useRef<HTMLImageElement>(null);
-  const handleReadClick = () => {
+  const normalizedFormat = book.format?.toUpperCase() || '';
+  const effectiveMediaType = (bookAny.mediaType || bookAny.acquisitionMediaType || '') as string;
+  const normalizedMediaType = effectiveMediaType.toLowerCase();
+  const [isPreparingPlayback, setIsPreparingPlayback] = React.useState(false);
+  const [playbackNotice, setPlaybackNotice] = React.useState<string | null>(null);
+  const audiobookSourceUrl = (bookAny.sourceUrl || bookAny.providerId || '') as string;
+
+  const prepareAudiobookPlayback = React.useCallback(async (announceOnlyWhenRefreshing: boolean) => {
+    if (source !== 'library' || normalizedFormat !== 'AUDIOBOOK' || !audiobookSourceUrl) {
+      return true;
+    }
+
+    setIsPreparingPlayback(true);
+    setPlaybackNotice(null);
+    try {
+      const shouldAnnounceRefresh = announceOnlyWhenRefreshing;
+      if (shouldAnnounceRefresh && setImportStatus) {
+        (setImportStatus as React.Dispatch<React.SetStateAction<LegacyImportStatus>>)({
+          isLoading: true,
+          message: 'Checking audiobook access...',
+          error: null,
+        });
+      }
+
+      const result = await ensureFreshPatronAuthorization(audiobookSourceUrl);
+      if (result.refreshed) {
+        setPlaybackNotice('Refreshing audiobook access token...');
+        if (setImportStatus) {
+          (setImportStatus as React.Dispatch<React.SetStateAction<LegacyImportStatus>>)({
+            isLoading: true,
+            message: 'Refreshing audiobook access token...',
+            error: null,
+          });
+        }
+        window.setTimeout(() => {
+          setPlaybackNotice('Audiobook access refreshed.');
+          window.setTimeout(() => setPlaybackNotice(null), 2500);
+        }, 250);
+      } else if (setImportStatus) {
+        (setImportStatus as React.Dispatch<React.SetStateAction<LegacyImportStatus>>)({
+          isLoading: false,
+          message: '',
+          error: null,
+        });
+      }
+      return true;
+    } catch (error) {
+      const message = error instanceof Error ? error.message : 'Failed to refresh audiobook access.';
+      setPlaybackNotice(message);
+      if (setImportStatus) {
+        (setImportStatus as React.Dispatch<React.SetStateAction<LegacyImportStatus>>)({
+          isLoading: false,
+          message: '',
+          error: message,
+        });
+      }
+      return false;
+    } finally {
+      if (setImportStatus) {
+        window.setTimeout(() => {
+          (setImportStatus as React.Dispatch<React.SetStateAction<LegacyImportStatus>>)({
+            isLoading: false,
+            message: '',
+            error: null,
+          });
+        }, 500);
+      }
+      setIsPreparingPlayback(false);
+    }
+  }, [audiobookSourceUrl, normalizedFormat, setImportStatus, source]);
+
+  React.useEffect(() => {
+    void prepareAudiobookPlayback(false);
+  }, [prepareAudiobookPlayback]);
+
+  const handleReadClick = async () => {
     if (onReadBook && bookAny.id) {
+      const ready = await prepareAudiobookPlayback(true);
+      if (!ready) return;
       onReadBook(book);
     }
   };
   // Import button state and modal
   const [showImportSuccess, setShowImportSuccess] = React.useState(false);
   const [isImporting, setIsImporting] = React.useState(false);
-  const normalizedFormat = book.format?.toUpperCase() || '';
-  const effectiveMediaType = (bookAny.mediaType || bookAny.acquisitionMediaType || '') as string;
-  const normalizedMediaType = effectiveMediaType.toLowerCase();
   const hasSupportedBookFormat = normalizedFormat === 'PDF' || normalizedFormat === 'EPUB' || normalizedFormat === 'AUDIOBOOK';
   const hasSupportedBookMediaType =
     normalizedMediaType === 'application/pdf'
@@ -292,7 +367,7 @@ const BookDetailView: React.FC<BookDetailViewProps> = ({ book, onBack, source, c
           )}
           {source === 'library' ? (
             <button className="mt-2 px-4 py-2 rounded bg-sky-700 text-white font-bold hover:bg-sky-600" onClick={handleReadClick}>
-              {normalizedFormat === 'AUDIOBOOK' ? 'Listen' : 'Read Book'}
+              {isPreparingPlayback ? 'Refreshing Access...' : normalizedFormat === 'AUDIOBOOK' ? 'Listen' : 'Read Book'}
             </button>
           ) : (
             <button
@@ -313,6 +388,9 @@ const BookDetailView: React.FC<BookDetailViewProps> = ({ book, onBack, source, c
                 </button>
               </div>
             </div>
+          )}
+          {playbackNotice && source === 'library' && normalizedFormat === 'AUDIOBOOK' && (
+            <div className="theme-text-secondary mt-3 text-center text-sm">{playbackNotice}</div>
           )}
         </div>
         <div className="w-full max-w-xs mx-auto">
