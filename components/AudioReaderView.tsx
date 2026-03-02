@@ -1,7 +1,7 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 
-import type { BookRecord } from '../types';
-import { db, proxiedUrl } from '../services';
+import type { BookRecord, RequestAuthorization } from '../types';
+import { db, getCachedPatronAuthorizationForUrl, proxiedUrl } from '../services';
 import { parseAudiobookManifest } from '../services/audiobookManifest';
 import { getLastPositionForBook, saveLastPositionForBook } from '../services/readerUtils';
 
@@ -18,6 +18,12 @@ interface SavedAudioPosition {
   time: number;
 }
 
+const buildAuthorizationHeader = (auth: RequestAuthorization): string => (
+  auth.scheme === 'bearer'
+    ? `Bearer ${auth.token}`
+    : `Basic ${btoa(`${auth.username}:${auth.password}`)}`
+);
+
 const AudioReaderView: React.FC<AudioReaderViewProps> = ({ bookId: propBookId, onClose: propOnClose }) => {
   const bookId = propBookId ?? null;
   const onClose = propOnClose ?? (() => undefined);
@@ -26,6 +32,8 @@ const AudioReaderView: React.FC<AudioReaderViewProps> = ({ bookId: propBookId, o
   const [isLoading, setIsLoading] = useState(true);
   const [currentTrackIndex, setCurrentTrackIndex] = useState(0);
   const [resumeTime, setResumeTime] = useState(0);
+  const [trackSrc, setTrackSrc] = useState<string | null>(null);
+  const [trackError, setTrackError] = useState<string | null>(null);
   const audioRef = useRef<HTMLAudioElement | null>(null);
   const saveTickRef = useRef(0);
 
@@ -67,7 +75,7 @@ const AudioReaderView: React.FC<AudioReaderViewProps> = ({ bookId: propBookId, o
     if (!bookData) return { manifest: null, error: null as string | null };
     try {
       return {
-        manifest: parseAudiobookManifest(bookData.epubData, bookData.providerId),
+        manifest: parseAudiobookManifest(bookData.epubData, bookData.sourceUrl || bookData.providerId),
         error: null,
       };
     } catch (error) {
@@ -85,7 +93,6 @@ const AudioReaderView: React.FC<AudioReaderViewProps> = ({ bookId: propBookId, o
   }, [parsedManifest.error]);
 
   const currentTrack = manifest?.tracks[currentTrackIndex] || null;
-  const currentTrackSrc = currentTrack ? proxiedUrl(currentTrack.href) : null;
 
   useEffect(() => {
     if (!audioRef.current) return;
@@ -103,6 +110,58 @@ const AudioReaderView: React.FC<AudioReaderViewProps> = ({ bookId: propBookId, o
     audio.addEventListener('loadedmetadata', applyResumeTime, { once: true });
     return () => audio.removeEventListener('loadedmetadata', applyResumeTime);
   }, [currentTrackIndex, resumeTime]);
+
+  useEffect(() => {
+    let cancelled = false;
+    let objectUrl: string | null = null;
+
+    const loadTrack = async () => {
+      if (!currentTrack) {
+        setTrackSrc(null);
+        setTrackError(null);
+        return;
+      }
+
+      setTrackError(null);
+      setTrackSrc(null);
+
+      const requestUrl = proxiedUrl(currentTrack.href);
+      const auth = getCachedPatronAuthorizationForUrl(currentTrack.href)
+        || getCachedPatronAuthorizationForUrl(bookData?.sourceUrl || '');
+      const headers: Record<string, string> = {};
+      if (auth) {
+        headers.Authorization = buildAuthorizationHeader(auth);
+      }
+
+      try {
+        const response = await fetch(requestUrl, {
+          headers,
+          credentials: requestUrl === currentTrack.href ? 'include' : 'omit',
+        });
+        if (!response.ok) {
+          throw new Error(`Track request failed (${response.status}).`);
+        }
+        const blob = await response.blob();
+        objectUrl = URL.createObjectURL(blob);
+        if (!cancelled) {
+          setTrackSrc(objectUrl);
+        }
+      } catch (error) {
+        if (!cancelled) {
+          setTrackError(error instanceof Error ? error.message : 'Failed to load this track.');
+        }
+      }
+    };
+
+    void loadTrack();
+
+    return () => {
+      cancelled = true;
+      if (objectUrl) {
+        URL.revokeObjectURL(objectUrl);
+      }
+    };
+  }, [bookData?.sourceUrl, currentTrack]);
 
   const persistPosition = (time: number) => {
     if (!bookId) return;
@@ -164,7 +223,7 @@ const AudioReaderView: React.FC<AudioReaderViewProps> = ({ bookId: propBookId, o
               autoPlay
               preload="metadata"
               className="w-full"
-              src={currentTrackSrc || undefined}
+              src={trackSrc || undefined}
               onEnded={() => {
                 if (currentTrackIndex < manifest.tracks.length - 1) {
                   setResumeTime(0);
@@ -181,6 +240,9 @@ const AudioReaderView: React.FC<AudioReaderViewProps> = ({ bookId: propBookId, o
               }}
               onPause={(event) => persistPosition(event.currentTarget.currentTime)}
             />
+            {trackError && (
+              <p className="mt-3 text-sm text-amber-400">{trackError}</p>
+            )}
           </section>
 
           <aside className="theme-surface-elevated rounded-2xl p-5">

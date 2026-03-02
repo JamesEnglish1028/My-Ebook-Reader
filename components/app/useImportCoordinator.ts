@@ -33,6 +33,11 @@ const normalizePublisher = (publisher: CatalogBook['publisher'] | undefined): st
   return typeof publisher === 'string' ? publisher : publisher.name;
 };
 
+const isHttpUrl = (value: string | undefined | null): value is string => {
+  if (!value) return false;
+  return /^https?:\/\//i.test(value);
+};
+
 export const useImportCoordinator = ({ onCatalogImportSuccess }: UseImportCoordinatorOptions) => {
   const [importStatus, setImportStatus] = useState<ImportStatusState>(initialImportState);
   const [libraryRefreshFlag, setLibraryRefreshFlag] = useState(0);
@@ -74,6 +79,7 @@ export const useImportCoordinator = ({ onCatalogImportSuccess }: UseImportCoordi
           coverImage: finalCoverImage,
           epubData: bookData,
           format: 'AUDIOBOOK',
+          sourceUrl: catalogBookMeta?.downloadUrl || (isHttpUrl(providerId) ? providerId : undefined),
           providerName,
           providerId: finalProviderId,
           description: manifest.description,

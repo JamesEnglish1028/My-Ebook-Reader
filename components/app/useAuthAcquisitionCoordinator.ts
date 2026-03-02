@@ -288,6 +288,15 @@ export const useAuthAcquisitionCoordinator = ({
             subjects: book.subjects,
             coverImage: book.coverImage,
           }
+        : book.format && book.format.toUpperCase() === 'AUDIOBOOK'
+          ? {
+              summary: book.summary,
+              publisher: book.publisher,
+              publicationDate: book.publicationDate,
+              subjects: book.subjects,
+              coverImage: book.coverImage,
+              downloadUrl: book.downloadUrl,
+            }
         : undefined;
 
       const result = await processAndSaveBook(
@@ -381,6 +390,16 @@ export const useAuthAcquisitionCoordinator = ({
           credentialPrompt.pendingBook.providerId,
           credentialPrompt.pendingBook.format,
           credentialPrompt.pendingBook.coverImage,
+          credentialPrompt.pendingBook.format?.toUpperCase() === 'AUDIOBOOK'
+            ? {
+                summary: credentialPrompt.pendingBook.summary,
+                publisher: credentialPrompt.pendingBook.publisher,
+                publicationDate: credentialPrompt.pendingBook.publicationDate,
+                subjects: credentialPrompt.pendingBook.subjects,
+                coverImage: credentialPrompt.pendingBook.coverImage,
+                downloadUrl: credentialPrompt.pendingBook.downloadUrl,
+              }
+            : undefined,
         );
         if (!importResult.success && importResult.existingBook) {
           setImportStatus({
@@ -441,6 +460,16 @@ export const useAuthAcquisitionCoordinator = ({
         credentialPrompt.pendingBook.providerId,
         credentialPrompt.pendingBook.format,
         credentialPrompt.pendingBook.coverImage,
+        credentialPrompt.pendingBook.format?.toUpperCase() === 'AUDIOBOOK'
+          ? {
+              summary: credentialPrompt.pendingBook.summary,
+              publisher: credentialPrompt.pendingBook.publisher,
+              publicationDate: credentialPrompt.pendingBook.publicationDate,
+              subjects: credentialPrompt.pendingBook.subjects,
+              coverImage: credentialPrompt.pendingBook.coverImage,
+              downloadUrl: credentialPrompt.pendingBook.downloadUrl,
+            }
+          : undefined,
       );
       if (!importResult.success && importResult.existingBook) {
         setImportStatus({
