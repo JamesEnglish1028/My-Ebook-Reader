@@ -32,7 +32,7 @@ const initialImportState: ImportStatusState = {
 
 const normalizePublisher = (publisher: CatalogBook['publisher'] | undefined): string | undefined => {
   if (!publisher) return undefined;
-  return typeof publisher === 'string' ? publisher : publisher.name;
+  return publisher;
 };
 
 const getStoredProviderName = (

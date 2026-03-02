@@ -278,7 +278,7 @@ const getPrimaryActionNotice = (
 
 const BookDetailView: React.FC<BookDetailViewProps> = ({ book, onBack, source, catalogName, userCitationFormat = 'apa', onReadBook, onImportFromCatalog, importStatus, setImportStatus }) => {
   const bookAny = book as any;
-  const publisherText = typeof bookAny.publisher === 'string' ? bookAny.publisher : bookAny.publisher?.name;
+  const publisherText = typeof bookAny.publisher === 'string' ? bookAny.publisher : undefined;
   const publicationDateText = formatPublicationDate(bookAny.publicationDate);
   const descriptionText = (bookAny.description || bookAny.summary || '') as string;
   const descriptionHtml = React.useMemo(

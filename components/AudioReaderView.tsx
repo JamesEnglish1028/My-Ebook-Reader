@@ -62,6 +62,19 @@ const getResponseContentType = (response: Response): string => (
 
 const normalizeResourceHref = (href: string): string => href.split('#')[0];
 
+const getAudiobookAuthSourceUrl = (book: BookRecord | null): string => (
+  book?.fulfillmentUrl || book?.sourceUrl || ''
+);
+
+const parseSavedAudioPosition = (saved: string | null): SavedAudioPosition | null => {
+  if (!saved) return null;
+  try {
+    return JSON.parse(saved) as SavedAudioPosition;
+  } catch {
+    return null;
+  }
+};
+
 const AudioReaderView: React.FC<AudioReaderViewProps> = ({ bookId: propBookId, onClose: propOnClose }) => {
   const bookId = propBookId ?? null;
   const onClose = propOnClose ?? (() => undefined);
@@ -123,29 +136,24 @@ const AudioReaderView: React.FC<AudioReaderViewProps> = ({ bookId: propBookId, o
         }
       }
       parseManifestData(data.epubData, data.manifestUrl || data.sourceUrl || data.providerId || undefined);
-      const saved = getLastPositionForBook(bookId);
-      if (saved) {
-        try {
-          const parsed = JSON.parse(saved) as SavedAudioPosition;
-          let parsedTrackIndex = 0;
-          if (Number.isFinite(parsed.trackIndex)) setCurrentTrackIndex(parsed.trackIndex);
-          if (Number.isFinite(parsed.trackIndex)) parsedTrackIndex = parsed.trackIndex;
-          if (Number.isFinite(parsed.time)) setResumeTime(parsed.time);
-          if (parsed.trackTimes && typeof parsed.trackTimes === 'object') {
-            const nextTrackTimes = Object.entries(parsed.trackTimes).reduce<Record<number, number>>((acc, [key, value]) => {
-              const trackIndex = Number(key);
-              if (Number.isFinite(trackIndex) && Number.isFinite(value)) {
-                acc[trackIndex] = value;
-              }
-              return acc;
-            }, {});
-            setTrackTimes(nextTrackTimes);
-            if (!Number.isFinite(parsed.time) && Number.isFinite(nextTrackTimes[parsedTrackIndex])) {
-              setResumeTime(nextTrackTimes[parsedTrackIndex]);
+      const parsed = parseSavedAudioPosition(getLastPositionForBook(bookId));
+      if (parsed) {
+        let parsedTrackIndex = 0;
+        if (Number.isFinite(parsed.trackIndex)) setCurrentTrackIndex(parsed.trackIndex);
+        if (Number.isFinite(parsed.trackIndex)) parsedTrackIndex = parsed.trackIndex;
+        if (Number.isFinite(parsed.time)) setResumeTime(parsed.time);
+        if (parsed.trackTimes && typeof parsed.trackTimes === 'object') {
+          const nextTrackTimes = Object.entries(parsed.trackTimes).reduce<Record<number, number>>((acc, [key, value]) => {
+            const trackIndex = Number(key);
+            if (Number.isFinite(trackIndex) && Number.isFinite(value)) {
+              acc[trackIndex] = value;
             }
+            return acc;
+          }, {});
+          setTrackTimes(nextTrackTimes);
+          if (!Number.isFinite(parsed.time) && Number.isFinite(nextTrackTimes[parsedTrackIndex])) {
+            setResumeTime(nextTrackTimes[parsedTrackIndex]);
           }
-        } catch {
-          // ignore invalid saved state
         }
       }
       setIsLoading(false);
@@ -407,6 +415,60 @@ const AudioReaderView: React.FC<AudioReaderViewProps> = ({ bookId: propBookId, o
     };
   }, [getTrackProgress]);
 
+  const requestTrackResponse = React.useCallback(async (
+    href: string,
+    auth: RequestAuthorization | null,
+  ): Promise<Response> => {
+    const requestUrl = proxiedUrl(href);
+    const headers: Record<string, string> = {};
+    if (auth) {
+      headers.Authorization = buildAuthorizationHeader(auth);
+    }
+    return fetch(requestUrl, {
+      headers,
+      credentials: requestUrl === href ? 'include' : 'omit',
+    });
+  }, []);
+
+  const refreshTrackAuthorization = React.useCallback(async (
+    trackHref: string,
+    forceRefresh = false,
+  ): Promise<RequestAuthorization | null> => {
+    const sourceUrl = getAudiobookAuthSourceUrl(bookData);
+    if (!sourceUrl) return null;
+
+    const storedCredential = await findCredentialForUrl(sourceUrl);
+    if (!storedCredential) return null;
+    const authDocument = getCachedAuthDocumentForUrl(sourceUrl) || bookData?.authDocument || null;
+
+    if (forceRefresh) {
+      invalidatePatronAuthorizationForUrl(sourceUrl);
+      invalidatePatronAuthorizationForUrl(trackHref);
+    }
+
+    if (!authDocument) {
+      const basicAuth: RequestAuthorization = {
+        scheme: 'basic',
+        username: storedCredential.username,
+        password: storedCredential.password,
+      };
+      cachePatronAuthorizationForUrl(sourceUrl, basicAuth);
+      cachePatronAuthorizationForUrl(trackHref, basicAuth);
+      return basicAuth;
+    }
+
+    const freshAuth = await getAuthorizationForAuthDocument(
+      authDocument,
+      sourceUrl,
+      storedCredential.username,
+      storedCredential.password,
+      { forceRefresh },
+    );
+
+    cachePatronAuthorizationForUrl(trackHref, freshAuth);
+    return freshAuth;
+  }, [bookData]);
+
   useEffect(() => {
     if (!audioRef.current) return;
     audioRef.current.playbackRate = playbackRate;
@@ -429,53 +491,7 @@ const AudioReaderView: React.FC<AudioReaderViewProps> = ({ bookId: propBookId, o
       setCurrentTime(0);
       setDuration(0);
 
-      const sourceUrl = bookData?.fulfillmentUrl || bookData?.sourceUrl || '';
-
-      const refreshAuthorization = async (forceRefresh = false): Promise<RequestAuthorization | null> => {
-        if (!sourceUrl) return null;
-        const storedCredential = await findCredentialForUrl(sourceUrl);
-        if (!storedCredential) return null;
-        const authDocument = getCachedAuthDocumentForUrl(sourceUrl) || bookData?.authDocument || null;
-
-        if (forceRefresh) {
-          invalidatePatronAuthorizationForUrl(sourceUrl);
-          invalidatePatronAuthorizationForUrl(currentTrack.href);
-        }
-
-        if (!authDocument) {
-          const basicAuth: RequestAuthorization = {
-            scheme: 'basic',
-            username: storedCredential.username,
-            password: storedCredential.password,
-          };
-          cachePatronAuthorizationForUrl(sourceUrl, basicAuth);
-          cachePatronAuthorizationForUrl(currentTrack.href, basicAuth);
-          return basicAuth;
-        }
-
-        const freshAuth = await getAuthorizationForAuthDocument(
-          authDocument,
-          sourceUrl,
-          storedCredential.username,
-          storedCredential.password,
-          { forceRefresh },
-        );
-
-        cachePatronAuthorizationForUrl(currentTrack.href, freshAuth);
-        return freshAuth;
-      };
-
-      const requestTrack = async (href: string, auth: RequestAuthorization | null): Promise<Response> => {
-        const requestUrl = proxiedUrl(href);
-        const headers: Record<string, string> = {};
-        if (auth) {
-          headers.Authorization = buildAuthorizationHeader(auth);
-        }
-        return fetch(requestUrl, {
-          headers,
-          credentials: requestUrl === href ? 'include' : 'omit',
-        });
-      };
+      const sourceUrl = getAudiobookAuthSourceUrl(bookData);
 
       try {
         let auth = getCachedPatronAuthorizationForUrl(currentTrack.href)
@@ -483,12 +499,12 @@ const AudioReaderView: React.FC<AudioReaderViewProps> = ({ bookId: propBookId, o
         let activeTrackHref = currentTrack.href;
 
         if (!auth) {
-          auth = await refreshAuthorization();
+          auth = await refreshTrackAuthorization(currentTrack.href);
         }
 
-        let response = await requestTrack(activeTrackHref, auth);
+        let response = await requestTrackResponse(activeTrackHref, auth);
         if (response.status === 401) {
-          const refreshedAuth = await refreshAuthorization(true);
+          const refreshedAuth = await refreshTrackAuthorization(currentTrack.href, true);
           if (refreshedAuth) {
             auth = refreshedAuth;
             try {
@@ -502,7 +518,7 @@ const AudioReaderView: React.FC<AudioReaderViewProps> = ({ bookId: propBookId, o
             } catch {
               // Fall back to retrying the previous URL with fresh auth.
             }
-            response = await requestTrack(
+            response = await requestTrackResponse(
               activeTrackHref,
               getCachedPatronAuthorizationForUrl(activeTrackHref) || refreshedAuth,
             );
@@ -517,7 +533,7 @@ const AudioReaderView: React.FC<AudioReaderViewProps> = ({ bookId: propBookId, o
               const refreshedAuth = getCachedPatronAuthorizationForUrl(refreshedTrack.href)
                 || getCachedPatronAuthorizationForUrl(sourceUrl)
                 || auth;
-              response = await requestTrack(refreshedTrack.href, refreshedAuth);
+              response = await requestTrackResponse(refreshedTrack.href, refreshedAuth);
             }
           } catch {
             // Preserve the original response error below.
@@ -547,7 +563,7 @@ const AudioReaderView: React.FC<AudioReaderViewProps> = ({ bookId: propBookId, o
         URL.revokeObjectURL(objectUrl);
       }
     };
-  }, [bookData?.fulfillmentUrl, bookData?.sourceUrl, currentTrack, currentTrackIndex, refreshManifestFromSource]);
+  }, [bookData, currentTrack, currentTrackIndex, refreshManifestFromSource, refreshTrackAuthorization, requestTrackResponse]);
 
   const persistPosition = (time: number, nextTrackTimes?: Record<number, number>) => {
     if (!bookId) return;
@@ -604,7 +620,7 @@ const AudioReaderView: React.FC<AudioReaderViewProps> = ({ bookId: propBookId, o
   };
 
   if (isLoading) {
-    return <Spinner message="Loading audiobook..." />;
+    return <Spinner text="Loading audiobook..." />;
   }
 
   if (manifestError || !manifest || !bookData) {

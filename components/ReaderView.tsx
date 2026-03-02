@@ -31,6 +31,28 @@ type Book = ReturnType<Window['ePub']>;
 type Rendition = ReturnType<Book['renderTo']>;
 type Navigation = Awaited<ReturnType<Book['loaded']['navigation']['then']>>;
 
+const clearTimerRef = (ref: React.MutableRefObject<number | null>) => {
+  if (ref.current) {
+    clearTimeout(ref.current);
+    ref.current = null;
+  }
+};
+
+const canSafelyResizeRendition = (
+  rendition: Rendition | null,
+  viewer: HTMLDivElement | null,
+): rendition is Rendition => {
+  const activeRendition = rendition as any;
+  return Boolean(
+    activeRendition
+      && activeRendition.manager
+      && activeRendition.manager.stage
+      && typeof activeRendition.resize === 'function'
+      && viewer
+      && viewer.isConnected,
+  );
+};
+
 
 interface ReaderViewProps {
   bookId: number;
@@ -77,14 +99,9 @@ const ReaderView: React.FC<ReaderViewProps> = ({ bookId, onClose, animationData 
 
   useEffect(() => {
     if (!showZoomHud) return;
-    if (zoomHudTimerRef.current) clearTimeout(zoomHudTimerRef.current);
+    clearTimerRef(zoomHudTimerRef);
     zoomHudTimerRef.current = window.setTimeout(() => setShowZoomHud(false), 1200);
-    return () => {
-      if (zoomHudTimerRef.current) {
-        clearTimeout(zoomHudTimerRef.current);
-        zoomHudTimerRef.current = null;
-      }
-    };
+    return () => clearTimerRef(zoomHudTimerRef);
   }, [showZoomHud]);
 
   const [settings, setSettings] = useState<ReaderSettings>(getReaderSettings);
@@ -121,9 +138,7 @@ const ReaderView: React.FC<ReaderViewProps> = ({ bookId, onClose, animationData 
   );
 
   const clearControlsTimeout = useCallback(() => {
-    if (controlsTimeoutRef.current) {
-      clearTimeout(controlsTimeoutRef.current);
-    }
+    clearTimerRef(controlsTimeoutRef);
   }, []);
 
   const resetControlsTimeout = useCallback(() => {
@@ -678,23 +693,13 @@ const ReaderView: React.FC<ReaderViewProps> = ({ bookId, onClose, animationData 
       return;
     }
 
-    if (renditionResizeTimerRef.current) {
-      clearTimeout(renditionResizeTimerRef.current);
-      renditionResizeTimerRef.current = null;
-    }
+    clearTimerRef(renditionResizeTimerRef);
 
     renditionResizeTimerRef.current = window.setTimeout(() => {
       try {
-        const activeRendition = renditionRef.current as any;
         const viewer = viewerRef.current;
-        if (
-          activeRendition
-          && activeRendition.manager
-          && activeRendition.manager.stage
-          && typeof activeRendition.resize === 'function'
-          && viewer
-          && viewer.isConnected
-        ) {
+        const activeRendition = renditionRef.current;
+        if (canSafelyResizeRendition(activeRendition, viewer)) {
           activeRendition.resize();
         }
       } catch (e) {
@@ -703,12 +708,7 @@ const ReaderView: React.FC<ReaderViewProps> = ({ bookId, onClose, animationData 
       }
     }, 50);
 
-    return () => {
-      if (renditionResizeTimerRef.current) {
-        clearTimeout(renditionResizeTimerRef.current);
-        renditionResizeTimerRef.current = null;
-      }
-    };
+    return () => clearTimerRef(renditionResizeTimerRef);
   }, [controlsVisible, isLoading, loadError, rendition]);
 
   useEffect(() => {
