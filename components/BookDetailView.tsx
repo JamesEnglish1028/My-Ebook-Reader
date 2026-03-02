@@ -671,49 +671,55 @@ const BookDetailView: React.FC<BookDetailViewProps> = ({ book, onBack, source, c
           <h3 className="theme-text-primary mb-3 text-xl font-bold">Book Details</h3>
           <div className="theme-divider mb-5 border-t" />
           <div className="theme-surface-elevated rounded-lg p-6 md:p-8">
-          <AccessibilityBadges book={book as BookDetailMetadata} className="mb-5" />
-          <ul className="space-y-2 text-base">
-            <li>
-              <span className="theme-text-primary font-semibold">Catalog Provider:</span> <span className="theme-text-secondary">{bookAny.providerName || (source === 'catalog' ? catalogName : 'Imported locally')}</span>
-              {bookAny.providerId ? (
-                <div className="theme-text-muted mt-1 text-xs">
-                  Provider ID: {
-                    /^https?:\/\//.test(bookAny.providerId)
-                      ? <a href={bookAny.providerId} target="_blank" rel="noopener noreferrer" className="theme-accent-text theme-accent-text-emphasis-hover underline">{bookAny.providerId}</a>
-                      : bookAny.providerId
-                  }
-                </div>
-              ) : (
-                <div className="theme-text-muted mt-1 text-xs">Imported locally</div>
-              )}
-            </li>
-            {bookAny.distributor && (
-              <li><span className="theme-text-primary font-semibold">Distributor:</span> <span className="theme-text-secondary">{bookAny.distributor}</span></li>
-            )}
-            {publisherText && (
-              <li><span className="theme-text-primary font-semibold">Publisher:</span> <span className="theme-text-secondary">{publisherText}</span></li>
-            )}
-            {publicationDateText && (
-              <li><span className="theme-text-primary font-semibold">Published:</span> <span className="theme-text-secondary">{publicationDateText}</span></li>
-            )}
-            {bookAny.language && (
-              <li><span className="theme-text-primary font-semibold">Language:</span> <span className="theme-text-secondary">{bookAny.language}</span></li>
-            )}
-            {bookAny.categories && bookAny.categories.length > 0 && (
-              <li>
-                <span className="theme-text-primary font-semibold">Categories:</span>{' '}
-                <span className="theme-text-secondary">{bookAny.categories.map((cat: any) => cat.label || cat.term).join(', ')}</span>
-              </li>
-            )}
-            {(!bookAny.categories || bookAny.categories.length === 0) && book.subjects && book.subjects.length > 0 && (
-              <li>
-                <span className="theme-text-primary font-semibold">Subjects:</span>{' '}
-                <span className="theme-text-secondary">
-                  {book.subjects.map(s => typeof s === 'string' ? s : s.name).join(', ')}
-                </span>
-              </li>
-            )}
-          </ul>
+            <div className="grid gap-8 md:grid-cols-[minmax(0,1fr)_minmax(0,1fr)]">
+              <div>
+                <ul className="space-y-2 text-base">
+                  <li>
+                    <span className="theme-text-primary font-semibold">Catalog Provider:</span> <span className="theme-text-secondary">{bookAny.providerName || (source === 'catalog' ? catalogName : 'Imported locally')}</span>
+                    {bookAny.providerId ? (
+                      <div className="theme-text-muted mt-1 text-xs">
+                        Provider ID: {
+                          /^https?:\/\//.test(bookAny.providerId)
+                            ? <a href={bookAny.providerId} target="_blank" rel="noopener noreferrer" className="theme-accent-text theme-accent-text-emphasis-hover underline">{bookAny.providerId}</a>
+                            : bookAny.providerId
+                        }
+                      </div>
+                    ) : (
+                      <div className="theme-text-muted mt-1 text-xs">Imported locally</div>
+                    )}
+                  </li>
+                  {bookAny.distributor && (
+                    <li><span className="theme-text-primary font-semibold">Distributor:</span> <span className="theme-text-secondary">{bookAny.distributor}</span></li>
+                  )}
+                  {publisherText && (
+                    <li><span className="theme-text-primary font-semibold">Publisher:</span> <span className="theme-text-secondary">{publisherText}</span></li>
+                  )}
+                  {publicationDateText && (
+                    <li><span className="theme-text-primary font-semibold">Published:</span> <span className="theme-text-secondary">{publicationDateText}</span></li>
+                  )}
+                  {bookAny.language && (
+                    <li><span className="theme-text-primary font-semibold">Language:</span> <span className="theme-text-secondary">{bookAny.language}</span></li>
+                  )}
+                  {bookAny.categories && bookAny.categories.length > 0 && (
+                    <li>
+                      <span className="theme-text-primary font-semibold">Categories:</span>{' '}
+                      <span className="theme-text-secondary">{bookAny.categories.map((cat: any) => cat.label || cat.term).join(', ')}</span>
+                    </li>
+                  )}
+                  {(!bookAny.categories || bookAny.categories.length === 0) && book.subjects && book.subjects.length > 0 && (
+                    <li>
+                      <span className="theme-text-primary font-semibold">Subjects:</span>{' '}
+                      <span className="theme-text-secondary">
+                        {book.subjects.map(s => typeof s === 'string' ? s : s.name).join(', ')}
+                      </span>
+                    </li>
+                  )}
+                </ul>
+              </div>
+              <div>
+                <AccessibilityBadges book={book as BookDetailMetadata} />
+              </div>
+            </div>
           </div>
         </div>
         {hasRelatedWorksSection && (
