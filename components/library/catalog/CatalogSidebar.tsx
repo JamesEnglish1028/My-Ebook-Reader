@@ -35,6 +35,7 @@ const CatalogSidebar: React.FC<CatalogSidebarProps> = ({
 }) => {
   const [navigationOpen, setNavigationOpen] = useState(true);
   const [facetsOpen, setFacetsOpen] = useState(true);
+  const [facetSectionOpen, setFacetSectionOpen] = useState<Record<string, boolean>>({});
   const [navigationQuery, setNavigationQuery] = useState('');
   const [showExpandedNavigation, setShowExpandedNavigation] = useState(false);
   const [isNavigationModalOpen, setIsNavigationModalOpen] = useState(false);
@@ -52,8 +53,12 @@ const CatalogSidebar: React.FC<CatalogSidebarProps> = ({
   const EXPANDED_LIMIT = 24;
   const SEARCH_THRESHOLD = 12;
   const MODAL_THRESHOLD = 24;
+  const populatedFacetGroups = useMemo(
+    () => facetGroups.filter((group) => group.links.length > 0),
+    [facetGroups],
+  );
   const hasNavigation = navigationLinks.length > 0;
-  const hasFacets = facetGroups.some((group) => group.links.length > 0);
+  const hasFacets = populatedFacetGroups.length > 0;
   const showNavigationSearch = navigationLinks.length > SEARCH_THRESHOLD;
   const showNavigationModalTrigger = navigationLinks.length > MODAL_THRESHOLD;
 
@@ -82,6 +87,18 @@ const CatalogSidebar: React.FC<CatalogSidebarProps> = ({
     setIsNavigationModalOpen(false);
     setModalQuery('');
   }, [currentNavigationUrl, navigationLinks]);
+
+  useEffect(() => {
+    setFacetSectionOpen((existing) => (
+      populatedFacetGroups.reduce<Record<string, boolean>>((nextState, group, index) => {
+        const groupKey = `${group.title}-${index}`;
+        nextState[groupKey] = Object.prototype.hasOwnProperty.call(existing, groupKey)
+          ? existing[groupKey]
+          : group.links.length <= 6;
+        return nextState;
+      }, {})
+    ));
+  }, [populatedFacetGroups]);
 
   if (!hasNavigation && !hasFacets && !isLoading) {
     return null;
@@ -217,29 +234,56 @@ const CatalogSidebar: React.FC<CatalogSidebarProps> = ({
               </button>
               {facetsOpen && (
                 <div className="theme-surface space-y-3 p-2">
-                  {facetGroups.filter((group) => group.links.length > 0).map((group, groupIndex) => (
-                    <div key={`${group.title}-${groupIndex}`}>
-                      <p className="theme-text-muted px-1.5 pb-1 text-[11px] font-medium uppercase tracking-[0.14em]">{group.title}</p>
-                      <nav className="space-y-1.5">
-                        {group.links.map((link, index) => (
-                          <button
-                            key={`${link.url}-${index}`}
-                            onClick={() => onFacetSelect(link)}
-                            className={`flex w-full items-center justify-between gap-3 rounded-md border px-2.5 py-2 text-left text-sm transition-colors ${
-                              link.isActive
-                                ? 'border-emerald-500/40 bg-emerald-500/12 text-emerald-100'
-                                : 'theme-button-neutral border-transparent'
-                            }`}
-                          >
-                            <span className="truncate">{link.title}</span>
-                            {typeof link.count === 'number' && (
-                              <span className="theme-surface-elevated theme-text-muted rounded-full px-2 py-0.5 text-[11px]">{link.count}</span>
-                            )}
-                          </button>
-                        ))}
-                      </nav>
-                    </div>
-                  ))}
+                  {populatedFacetGroups.map((group, groupIndex) => {
+                    const groupKey = `${group.title}-${groupIndex}`;
+                    const isGroupOpen = facetSectionOpen[groupKey] ?? true;
+
+                    return (
+                      <div key={groupKey} className="theme-border overflow-hidden rounded-md border">
+                        <button
+                          onClick={() => setFacetSectionOpen((existing) => ({ ...existing, [groupKey]: !isGroupOpen }))}
+                          className="theme-surface-muted theme-hover-surface flex w-full items-center justify-between gap-3 px-2.5 py-2 text-left transition-colors"
+                          aria-expanded={isGroupOpen}
+                          aria-controls={`facet-group-${groupIndex}`}
+                        >
+                          <span className="theme-text-muted text-[11px] font-medium uppercase tracking-[0.14em]">{group.title}</span>
+                          <span className="flex items-center gap-2">
+                            <span className="theme-surface-elevated theme-text-muted rounded-full px-2 py-0.5 text-[11px]">
+                              {group.links.length}
+                            </span>
+                            <svg
+                              className={`theme-text-muted h-4 w-4 transition-transform ${isGroupOpen ? 'rotate-180' : ''}`}
+                              fill="none"
+                              stroke="currentColor"
+                              viewBox="0 0 24 24"
+                            >
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                            </svg>
+                          </span>
+                        </button>
+                        {isGroupOpen && (
+                          <nav id={`facet-group-${groupIndex}`} className="theme-surface space-y-1.5 p-2">
+                            {group.links.map((link, index) => (
+                              <button
+                                key={`${link.url}-${index}`}
+                                onClick={() => onFacetSelect(link)}
+                                className={`flex w-full items-center justify-between gap-3 rounded-md border px-2.5 py-2 text-left text-sm transition-colors ${
+                                  link.isActive
+                                    ? 'theme-selection-active'
+                                    : 'theme-button-neutral border-transparent'
+                                }`}
+                              >
+                                <span className="truncate">{link.title}</span>
+                                {typeof link.count === 'number' && (
+                                  <span className="theme-surface-elevated theme-text-muted rounded-full px-2 py-0.5 text-[11px]">{link.count}</span>
+                                )}
+                              </button>
+                            ))}
+                          </nav>
+                        )}
+                      </div>
+                    );
+                  })}
                 </div>
               )}
             </div>

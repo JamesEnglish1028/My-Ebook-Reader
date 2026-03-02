@@ -43,4 +43,32 @@ describe('CatalogSidebar', () => {
       expect.objectContaining({ title: 'Available now' }),
     );
   });
+
+  it('starts long facet groups collapsed and expands them on demand', () => {
+    render(
+      <CatalogSidebar
+        navigationLinks={[]}
+        facetGroups={[
+          {
+            title: 'Subject',
+            links: Array.from({ length: 7 }, (_, index) => ({
+              title: `Topic ${index + 1}`,
+              url: `https://example.org/feed?subject=${index + 1}`,
+              count: index + 1,
+            })),
+          },
+        ]}
+        onNavigationSelect={vi.fn()}
+        onFacetSelect={vi.fn()}
+      />,
+    );
+
+    expect(screen.getByRole('button', { name: /Subject/i })).toHaveAttribute('aria-expanded', 'false');
+    expect(screen.queryByRole('button', { name: /Topic 1/i })).not.toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole('button', { name: /Subject/i }));
+
+    expect(screen.getByRole('button', { name: /Subject/i })).toHaveAttribute('aria-expanded', 'true');
+    expect(screen.getByRole('button', { name: /Topic 1/i })).toBeInTheDocument();
+  });
 });
