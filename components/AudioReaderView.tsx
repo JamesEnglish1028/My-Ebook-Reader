@@ -1,7 +1,15 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 
 import type { BookRecord, RequestAuthorization } from '../types';
-import { db, getCachedPatronAuthorizationForUrl, proxiedUrl } from '../services';
+import {
+  cachePatronAuthorizationForUrl,
+  db,
+  findCredentialForUrl,
+  getAuthorizationForAuthDocument,
+  getCachedAuthDocumentForUrl,
+  getCachedPatronAuthorizationForUrl,
+  proxiedUrl,
+} from '../services';
 import { parseAudiobookManifest } from '../services/audiobookManifest';
 import { getLastPositionForBook, saveLastPositionForBook } from '../services/readerUtils';
 
@@ -53,6 +61,9 @@ const AudioReaderView: React.FC<AudioReaderViewProps> = ({ bookId: propBookId, o
   const [trackError, setTrackError] = useState<string | null>(null);
   const [isContentsOpen, setIsContentsOpen] = useState(false);
   const [playbackRate, setPlaybackRate] = useState(1);
+  const [isPlaying, setIsPlaying] = useState(false);
+  const [currentTime, setCurrentTime] = useState(0);
+  const [duration, setDuration] = useState(0);
   const audioRef = useRef<HTMLAudioElement | null>(null);
   const saveTickRef = useRef(0);
 
@@ -187,20 +198,58 @@ const AudioReaderView: React.FC<AudioReaderViewProps> = ({ bookId: propBookId, o
 
       setTrackError(null);
       setTrackSrc(null);
+      setIsPlaying(false);
+      setCurrentTime(0);
+      setDuration(0);
 
       const requestUrl = proxiedUrl(currentTrack.href);
-      const auth = getCachedPatronAuthorizationForUrl(currentTrack.href)
-        || getCachedPatronAuthorizationForUrl(bookData?.sourceUrl || '');
-      const headers: Record<string, string> = {};
-      if (auth) {
-        headers.Authorization = buildAuthorizationHeader(auth);
-      }
+      const sourceUrl = bookData?.sourceUrl || '';
 
-      try {
-        const response = await fetch(requestUrl, {
+      const refreshAuthorization = async (): Promise<RequestAuthorization | null> => {
+        if (!sourceUrl) return null;
+        const storedCredential = await findCredentialForUrl(sourceUrl);
+        if (!storedCredential) return null;
+        const authDocument = getCachedAuthDocumentForUrl(sourceUrl);
+        if (!authDocument) return null;
+
+        const freshAuth = await getAuthorizationForAuthDocument(
+          authDocument,
+          sourceUrl,
+          storedCredential.username,
+          storedCredential.password,
+        );
+
+        cachePatronAuthorizationForUrl(currentTrack.href, freshAuth);
+        return freshAuth;
+      };
+
+      const requestTrack = async (auth: RequestAuthorization | null): Promise<Response> => {
+        const headers: Record<string, string> = {};
+        if (auth) {
+          headers.Authorization = buildAuthorizationHeader(auth);
+        }
+        return fetch(requestUrl, {
           headers,
           credentials: requestUrl === currentTrack.href ? 'include' : 'omit',
         });
+      };
+
+      try {
+        let auth = getCachedPatronAuthorizationForUrl(currentTrack.href)
+          || getCachedPatronAuthorizationForUrl(sourceUrl);
+
+        if (!auth) {
+          auth = await refreshAuthorization();
+        }
+
+        let response = await requestTrack(auth);
+        if (response.status === 401) {
+          const refreshedAuth = await refreshAuthorization();
+          if (refreshedAuth) {
+            response = await requestTrack(refreshedAuth);
+          }
+        }
+
         if (!response.ok) {
           throw new Error(`Track request failed (${response.status}).`);
         }
@@ -240,7 +289,22 @@ const AudioReaderView: React.FC<AudioReaderViewProps> = ({ bookId: propBookId, o
     const duration = Number.isFinite(audio.duration) ? audio.duration : Number.POSITIVE_INFINITY;
     const nextTime = Math.max(0, Math.min(audio.currentTime + seconds, duration));
     audio.currentTime = nextTime;
+    setCurrentTime(nextTime);
     persistPosition(nextTime);
+  };
+
+  const togglePlayback = async () => {
+    const audio = audioRef.current;
+    if (!audio) return;
+    if (audio.paused) {
+      try {
+        await audio.play();
+      } catch {
+        // Ignore play interruption errors from browser autoplay policies.
+      }
+    } else {
+      audio.pause();
+    }
   };
 
   if (isLoading) {
@@ -295,45 +359,94 @@ const AudioReaderView: React.FC<AudioReaderViewProps> = ({ bookId: propBookId, o
           <div className="w-full">
             <p className="theme-text-secondary mb-2 text-sm uppercase tracking-[0.16em]">Now Playing</p>
             <h2 className="mb-1 text-xl font-semibold">{currentTrack?.title || 'Track'}</h2>
-            <div className="mb-4 mt-4 flex flex-wrap items-center justify-center gap-3">
-              <button
-                type="button"
-                onClick={() => seekBy(-15)}
-                className="rounded-full bg-slate-700 px-4 py-2 text-sm font-semibold text-white transition-colors hover:bg-slate-600"
-              >
-                Rewind 15s
-              </button>
-              <label className="theme-text-secondary flex items-center gap-2 text-sm font-semibold">
-                Speed
-                <select
-                  value={playbackRate}
-                  onChange={(event) => setPlaybackRate(Number(event.target.value))}
-                  className="theme-surface rounded-md border border-white/10 px-2 py-1 theme-text-primary"
+            <div className="mb-4 mt-4">
+              <div className="mb-3">
+                <input
+                  type="range"
+                  min={0}
+                  max={Number.isFinite(duration) && duration > 0 ? duration : 0}
+                  step={1}
+                  value={Math.min(currentTime, Number.isFinite(duration) && duration > 0 ? duration : 0)}
+                  onChange={(event) => {
+                    const nextTime = Number(event.target.value);
+                    const audio = audioRef.current;
+                    if (!audio || !Number.isFinite(nextTime)) return;
+                    audio.currentTime = nextTime;
+                    setCurrentTime(nextTime);
+                    persistPosition(nextTime);
+                  }}
+                  className="w-full accent-sky-600"
+                  aria-label="Playback position"
+                />
+                <div className="theme-text-secondary mt-2 flex items-center justify-between text-xs font-semibold">
+                  <span>{formatDuration(currentTime) || '0:00'}</span>
+                  <span>{formatDuration(duration) || '--:--'}</span>
+                </div>
+              </div>
+
+              <div className="mb-3 flex flex-wrap items-center justify-center gap-4">
+                <button
+                  type="button"
+                  onClick={() => seekBy(-15)}
+                  className="flex h-12 min-w-[4.5rem] items-center justify-center rounded-full bg-slate-700 px-4 text-lg font-bold text-white transition-colors hover:bg-slate-600"
+                  aria-label="Rewind 15 seconds"
                 >
+                  |&lt;&lt;
+                </button>
+                <button
+                  type="button"
+                  onClick={() => { void togglePlayback(); }}
+                  className="flex h-16 min-w-[5.5rem] items-center justify-center rounded-full bg-sky-700 px-6 text-3xl font-bold text-white transition-colors hover:bg-sky-600"
+                  aria-label={isPlaying ? 'Pause playback' : 'Play audiobook'}
+                >
+                  {isPlaying ? '||' : '>'}
+                </button>
+                <button
+                  type="button"
+                  onClick={() => seekBy(30)}
+                  className="flex h-12 min-w-[4.5rem] items-center justify-center rounded-full bg-slate-700 px-4 text-lg font-bold text-white transition-colors hover:bg-slate-600"
+                  aria-label="Fast forward 30 seconds"
+                >
+                  &gt;&gt;|
+                </button>
+              </div>
+
+              <div className="flex flex-wrap items-center justify-center gap-3">
+                <span className="theme-text-secondary text-sm font-semibold">Speed</span>
+                <div className="flex flex-wrap items-center justify-center gap-2">
                   {PLAYBACK_SPEEDS.map((speed) => (
-                    <option key={speed} value={speed}>
+                    <button
+                      key={speed}
+                      type="button"
+                      onClick={() => setPlaybackRate(speed)}
+                      className={`rounded-full px-3 py-1 text-sm font-semibold transition-colors ${
+                        playbackRate === speed
+                          ? 'bg-sky-700 text-white'
+                          : 'bg-slate-700 text-slate-200 hover:bg-slate-600'
+                      }`}
+                    >
                       {speed}x
-                    </option>
+                    </button>
                   ))}
-                </select>
-              </label>
-              <button
-                type="button"
-                onClick={() => seekBy(30)}
-                className="rounded-full bg-slate-700 px-4 py-2 text-sm font-semibold text-white transition-colors hover:bg-slate-600"
-              >
-                Forward 30s
-              </button>
+                </div>
+              </div>
             </div>
             <audio
               key={trackSrc || currentTrackIndex}
               ref={audioRef}
-              controls
               autoPlay
               preload="metadata"
-              className="w-full"
+              className="hidden"
               src={trackSrc || undefined}
+              onLoadedMetadata={(event) => {
+                const audio = event.currentTarget;
+                const nextDuration = Number.isFinite(audio.duration) ? audio.duration : 0;
+                setDuration(nextDuration);
+                setCurrentTime(audio.currentTime || 0);
+                audio.playbackRate = playbackRate;
+              }}
               onEnded={() => {
+                setIsPlaying(false);
                 if (currentTrackIndex < manifest.tracks.length - 1) {
                   setResumeTime(0);
                   setCurrentTrackIndex((index) => index + 1);
@@ -342,12 +455,17 @@ const AudioReaderView: React.FC<AudioReaderViewProps> = ({ bookId: propBookId, o
               onTimeUpdate={(event) => {
                 const currentTime = event.currentTarget.currentTime;
                 if (!Number.isFinite(currentTime)) return;
+                setCurrentTime(currentTime);
                 saveTickRef.current += 1;
                 if (saveTickRef.current % 10 === 0) {
                   persistPosition(currentTime);
                 }
               }}
-              onPause={(event) => persistPosition(event.currentTarget.currentTime)}
+              onPlay={() => setIsPlaying(true)}
+              onPause={(event) => {
+                setIsPlaying(false);
+                persistPosition(event.currentTarget.currentTime);
+              }}
             />
             {trackError && (
               <p className="mt-3 text-sm text-amber-400">{trackError}</p>
