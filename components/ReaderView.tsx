@@ -42,6 +42,7 @@ const ReaderView: React.FC<ReaderViewProps> = ({ bookId, onClose, animationData 
   const [bookData, setBookData] = useState<BookRecord | null>(null);
   const [rendition, setRendition] = useState<Rendition | null>(null);
   const [isLoading, setIsLoading] = useState(true);
+  const [loadError, setLoadError] = useState<string | null>(null);
   const [showSettings, setShowSettings] = useState(false);
   const [showNavPanel, setShowNavPanel] = useState(false);
   const [showSearch, setShowSearch] = useState(false);
@@ -425,6 +426,7 @@ const ReaderView: React.FC<ReaderViewProps> = ({ bookId, onClose, animationData 
     const initializeBook = async () => {
       try {
         setIsLoading(true);
+        setLoadError(null);
 
         const ePub = window.ePub;
         const bookInstance = ePub(bookData.epubData);
@@ -585,6 +587,8 @@ const ReaderView: React.FC<ReaderViewProps> = ({ bookId, onClose, animationData 
       } catch (error) {
         if (isMounted) {
           console.error('Error initializing EPUB:', error);
+          setLoadError(error instanceof Error ? error.message : 'Failed to open this EPUB.');
+          setIsLoading(false);
         }
       }
     };
@@ -679,8 +683,9 @@ const ReaderView: React.FC<ReaderViewProps> = ({ bookId, onClose, animationData 
       // Schedule a safe resize — check renditionRef.current at call time
       renditionResizeTimerRef.current = window.setTimeout(() => {
         try {
-          if (renditionRef.current && typeof renditionRef.current.resize === 'function') {
-            renditionRef.current.resize();
+          const activeRendition = renditionRef.current as any;
+          if (activeRendition && activeRendition.manager && typeof activeRendition.resize === 'function') {
+            activeRendition.resize();
           }
         } catch (e) {
           // Rendition may have been destroyed; swallow to avoid uncaught exceptions
@@ -1204,6 +1209,18 @@ const ReaderView: React.FC<ReaderViewProps> = ({ bookId, onClose, animationData 
           {isLoading && (
             <div className="theme-shell absolute inset-0 z-30 flex items-center justify-center">
               <Spinner text="Loading Book..." />
+            </div>
+          )}
+          {loadError && !isLoading && (
+            <div className="theme-shell absolute inset-0 z-30 flex flex-col items-center justify-center gap-4 px-6 text-center">
+              <p className="theme-text-secondary">{loadError}</p>
+              <button
+                type="button"
+                onClick={onClose}
+                className="theme-button-primary rounded px-4 py-2 font-semibold"
+              >
+                Back to Library
+              </button>
             </div>
           )}
           {/* Viewer receives epub.js rendered content; add subtle padding and max-width for readability */}
