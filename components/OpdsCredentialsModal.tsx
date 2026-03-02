@@ -83,17 +83,27 @@ const OpdsCredentialsModal: React.FC<Props> = ({
 
   if (!isOpen) return null;
 
+  const authMethods: any[] = Array.isArray(authDocument?.authentication) ? authDocument.authentication : [];
+  const primaryAuthMethod = authMethods[0] || null;
   const realmFromAuth = authDocument?.realm || authDocument?.title || null;
-  const description = authDocument?.description || authDocument?.instructions || null;
+  const description = authDocument?.description
+    || authDocument?.instructions
+    || primaryAuthMethod?.description
+    || null;
   const logo = authDocument?.logo || authDocument?.image || null;
-  const links: any[] = Array.isArray(authDocument?.links) ? authDocument.links : [];
+  const nestedLinks = authMethods.flatMap((method) => (Array.isArray(method?.links) ? method.links : []));
+  const links: any[] = [...(Array.isArray(authDocument?.links) ? authDocument.links : []), ...nestedLinks];
+  const authLoginLabel = primaryAuthMethod?.labels?.login;
+  const authPasswordLabel = primaryAuthMethod?.labels?.password;
+  const authLoginPlaceholder = primaryAuthMethod?.inputs?.login?.keyboard === 'Default' ? authLoginLabel : undefined;
+  const authPasswordPlaceholder = primaryAuthMethod?.inputs?.password?.keyboard === 'Default' ? authPasswordLabel : undefined;
   const resolvedDescription = descriptionOverride
     || description
     || `This catalog at ${host} requires credentials to access the requested content.`;
-  const resolvedUsernameLabel = usernameLabel || 'Username';
-  const resolvedPasswordLabel = passwordLabel || 'Password';
-  const resolvedUsernamePlaceholder = usernamePlaceholder || authDocument?.username_placeholder || 'Username';
-  const resolvedPasswordPlaceholder = passwordPlaceholder || authDocument?.password_placeholder || 'Password';
+  const resolvedUsernameLabel = usernameLabel || authLoginLabel || 'Username';
+  const resolvedPasswordLabel = passwordLabel || authPasswordLabel || 'Password';
+  const resolvedUsernamePlaceholder = usernamePlaceholder || authDocument?.username_placeholder || authLoginPlaceholder || 'Username';
+  const resolvedPasswordPlaceholder = passwordPlaceholder || authDocument?.password_placeholder || authPasswordPlaceholder || 'Password';
   const resolvedSaveLabel = saveLabel || 'Save credential for this host';
   return (
     <div className="theme-shell fixed inset-0 z-50 flex items-center justify-center bg-opacity-75 p-4">

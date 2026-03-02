@@ -84,7 +84,7 @@ export const useAuthAcquisitionCoordinator = ({
         if (resolveResult.success) {
           finalUrl = resolveResult.data;
         } else {
-          const errorResult = resolveResult as { success: false; error: string; status?: number };
+          const errorResult = resolveResult as { success: false; error: string; status?: number; authDocument?: any };
           if (errorResult.status === 401 || errorResult.status === 403) {
             setImportStatus({ isLoading: false, message: '', error: null });
             setCredentialPrompt({
@@ -93,7 +93,7 @@ export const useAuthAcquisitionCoordinator = ({
               pendingHref: book.downloadUrl,
               pendingBook: book,
               pendingCatalogName: catalogName,
-              authDocument: null,
+              authDocument: errorResult.authDocument || null,
             });
             return { success: false };
           }
