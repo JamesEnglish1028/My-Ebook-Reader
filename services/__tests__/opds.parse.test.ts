@@ -302,4 +302,22 @@ describe('OPDS1 parseOpds1Xml', () => {
       source: 'navigation',
     });
   });
+
+  it('captures feed-level authentication document links for proactive auth flows', () => {
+    const xml = `<?xml version="1.0" encoding="UTF-8"?>
+<feed xmlns="http://www.w3.org/2005/Atom">
+  <title>Palace Feed</title>
+  <link
+    rel="http://opds-spec.org/auth/document"
+    href="/authentication_document"
+    type="application/vnd.opds.authentication.v1.0+json"
+    title="Authentication Document"
+  />
+</feed>`;
+
+    const result = parseOpds1Xml(xml, 'https://demo.palaceproject.io/catalog');
+
+    expect(result.authDocumentUrl).toBe('https://demo.palaceproject.io/authentication_document');
+    expect(result.navLinks).toHaveLength(0);
+  });
 });

@@ -1,8 +1,11 @@
 import { useQuery } from '@tanstack/react-query';
 
 import { opdsParserService } from '../domain/catalog';
+import { fetchAndCacheAuthDocument, getCachedAuthDocumentForUrl } from '../services';
 import { logger } from '../services/logger';
 import type {
+  AuthDocument,
+  RequestAuthorization,
   CatalogBook,
   CatalogFacetGroup,
   CatalogNavigationLink,
@@ -23,6 +26,7 @@ interface CatalogContentResult {
   facetGroups: CatalogFacetGroup[];
   pagination: CatalogPagination;
   search: CatalogSearchMetadata | null;
+  authDocument: AuthDocument | null;
   error: string | null;
 }
 
@@ -50,7 +54,7 @@ export function useCatalogContent(
   baseUrl: string,
   opdsVersion: 'auto' | '1' | '2' = 'auto',
   enabled: boolean = true,
-  credentials?: { username: string; password: string } | null,
+  auth?: RequestAuthorization | null,
   authKey: string = '',
 ) {
   return useQuery({
@@ -63,13 +67,14 @@ export function useCatalogContent(
           facetGroups: [],
           pagination: {},
           search: null,
+          authDocument: null,
           error: 'No URL provided',
         };
       }
 
       logger.debug(`[useCatalogContent] Fetching: ${url}`);
 
-      const result = await opdsParserService.fetchCatalog(url, baseUrl, opdsVersion, credentials);
+      const result = await opdsParserService.fetchCatalog(url, baseUrl, opdsVersion, auth);
       if (!result.success) {
         return {
           books: [],
@@ -77,6 +82,7 @@ export function useCatalogContent(
           facetGroups: [],
           pagination: {},
           search: null,
+          authDocument: null,
           error: 'error' in result ? result.error : 'Failed to fetch catalog content',
         };
       }
@@ -94,12 +100,22 @@ export function useCatalogContent(
         );
       }
 
+      let authDocument = getCachedAuthDocumentForUrl(url);
+      if (!authDocument && result.data.authDocumentUrl) {
+        try {
+          authDocument = await fetchAndCacheAuthDocument(result.data.authDocumentUrl, url);
+        } catch (authError) {
+          logger.warn('[useCatalogContent] Failed to prefetch auth document', { url, authDocumentUrl: result.data.authDocumentUrl, authError });
+        }
+      }
+
       return {
         books: result.data.books,
         navigationLinks: finalNavigationLinks,
         facetGroups: result.data.facetGroups,
         pagination: result.data.pagination,
         search: result.data.search || null,
+        authDocument,
         error: null,
       };
     },

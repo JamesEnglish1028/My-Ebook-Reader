@@ -4,6 +4,9 @@ import type { Dispatch, SetStateAction } from 'react';
 import { opdsAcquisitionService } from '../../domain/catalog';
 import {
   findCredentialForUrl,
+  getAuthorizationForAuthDocument,
+  getCachedAuthDocumentForUrl,
+  getCachedPatronAuthorizationForUrl,
   logger,
   maybeProxyForCors,
   proxiedUrl,
@@ -16,6 +19,7 @@ import type {
   CatalogBook,
   CatalogRegistry,
   CredentialPrompt,
+  RequestAuthorization,
 } from '../../types';
 import type { ImportStatusState } from './useImportCoordinator';
 
@@ -52,48 +56,11 @@ const initialCredentialPrompt: CredentialPrompt = {
   authDocument: null,
 };
 
-const getBasicTokenAuthLink = (authDocument: any): string | null => {
-  const methods = Array.isArray(authDocument?.authentication) ? authDocument.authentication : [];
-  for (const method of methods) {
-    const type = String(method?.type || '').toLowerCase();
-    if (!type.includes('basic-token')) continue;
-    const links = Array.isArray(method?.links) ? method.links : [];
-    const authLink = links.find((link: any) => String(link?.rel || '').toLowerCase().includes('authenticate'));
-    if (authLink?.href) return String(authLink.href);
-  }
-  return null;
-};
-
-const extractTokenFromAuthResponse = (payload: unknown): string | null => {
-  if (!payload) return null;
-  if (typeof payload === 'string') {
-    const text = payload.trim();
-    return text.length > 0 ? text : null;
-  }
-  if (typeof payload !== 'object') return null;
-
-  const data = payload as Record<string, unknown>;
-  const directKeys = ['token', 'access_token', 'authorization_token', 'accessToken', 'auth_token'];
-  for (const key of directKeys) {
-    const value = data[key];
-    if (typeof value === 'string' && value.trim()) {
-      return value.trim();
-    }
-  }
-
-  const nestedToken = data.token;
-  if (nestedToken && typeof nestedToken === 'object') {
-    const nested = nestedToken as Record<string, unknown>;
-    for (const key of ['value', 'token', 'access_token']) {
-      const value = nested[key];
-      if (typeof value === 'string' && value.trim()) {
-        return value.trim();
-      }
-    }
-  }
-
-  return null;
-};
+const buildAuthorizationHeader = (auth: RequestAuthorization): string => (
+  auth.scheme === 'bearer'
+    ? `Bearer ${auth.token}`
+    : `Basic ${btoa(`${auth.username}:${auth.password}`)}`
+);
 
 export const useAuthAcquisitionCoordinator = ({
   processAndSaveBook,
@@ -104,56 +71,6 @@ export const useAuthAcquisitionCoordinator = ({
 }: UseAuthAcquisitionCoordinatorOptions) => {
   const [credentialPrompt, setCredentialPrompt] = useState<CredentialPrompt>(initialCredentialPrompt);
   const [showNetworkDebug, setShowNetworkDebug] = useState(false);
-
-  const exchangeBasicToken = useCallback(async (authDocument: any, username: string, password: string) => {
-    const authenticateHref = getBasicTokenAuthLink(authDocument);
-    if (!authenticateHref) {
-      return { username, password };
-    }
-
-    const proxyUrl = proxiedUrl(authenticateHref);
-    if (typeof proxyUrl === 'string' && proxyUrl.includes('corsproxy.io')) {
-      throw new Error('Authentication would use a public CORS proxy which may strip Authorization headers. Configure an owned proxy (VITE_OWN_PROXY_URL).');
-    }
-
-    const headers: Record<string, string> = {
-      Accept: 'application/json, application/vnd.opds.authentication.v1.0+json, text/plain;q=0.9, */*;q=0.5',
-      Authorization: `Basic ${btoa(`${username}:${password}`)}`,
-    };
-
-    let response = await fetch(proxyUrl, { method: 'POST', headers, credentials: 'omit' });
-    if (response.status === 405) {
-      response = await fetch(proxyUrl, { method: 'GET', headers, credentials: 'omit' });
-    }
-
-    const responseText = await response.text().catch(() => '');
-    if (!response.ok) {
-      let detailMessage: string | null = null;
-      try {
-        const parsed = JSON.parse(responseText);
-        detailMessage = typeof parsed?.detail === 'string' ? parsed.detail : null;
-      } catch {
-        detailMessage = null;
-      }
-      if (detailMessage) throw new Error(detailMessage);
-      throw new Error(`Authentication failed: ${response.status}`);
-    }
-
-    let token = extractTokenFromAuthResponse(responseText);
-    if (!token) {
-      try {
-        token = extractTokenFromAuthResponse(JSON.parse(responseText));
-      } catch {
-        token = extractTokenFromAuthResponse(responseText);
-      }
-    }
-
-    if (!token) {
-      throw new Error('Authentication succeeded, but no token was returned by the provider.');
-    }
-
-    return { username, password: token };
-  }, []);
 
   const handleImportFromCatalog = useCallback(async (book: CatalogBook, catalogName?: string): Promise<ImportResult> => {
     if (book.format && book.format.toUpperCase() !== 'EPUB' && book.format.toUpperCase() !== 'PDF') {
@@ -168,10 +85,34 @@ export const useAuthAcquisitionCoordinator = ({
 
       if (!book.isOpenAccess) {
         const cred = await findCredentialForUrl(book.downloadUrl);
+        const cachedAuthDocument = getCachedAuthDocumentForUrl(book.downloadUrl);
+        const cachedTokenAuth = getCachedPatronAuthorizationForUrl(book.downloadUrl);
+        let requestAuth: RequestAuthorization | null = cachedTokenAuth;
+        if (!cred && cachedAuthDocument) {
+          setImportStatus({ isLoading: false, message: '', error: null });
+          setCredentialPrompt({
+            isOpen: true,
+            host: new URL(book.downloadUrl).host,
+            pendingHref: book.downloadUrl,
+            pendingBook: book,
+            pendingCatalogName: catalogName,
+            authDocument: cachedAuthDocument,
+          });
+          return { success: false };
+        }
+        if (!requestAuth && cred) {
+          requestAuth = cachedAuthDocument
+            ? await getAuthorizationForAuthDocument(cachedAuthDocument, book.downloadUrl, cred.username, cred.password)
+            : {
+              scheme: 'basic',
+              username: cred.username,
+              password: cred.password,
+            };
+        }
         const resolveResult = await opdsAcquisitionService.resolve(
           book.downloadUrl,
-          'auto',
-          cred ? { username: cred.username, password: cred.password } : null,
+          (requestAuth && (requestAuth.scheme === 'bearer' || new URL(book.downloadUrl).hostname.toLowerCase().includes('palace'))) ? '1' : 'auto',
+          requestAuth,
         );
 
         if (resolveResult.success) {
@@ -195,9 +136,12 @@ export const useAuthAcquisitionCoordinator = ({
       }
 
       let proxyUrl = await maybeProxyForCors(finalUrl, book.isOpenAccess === true);
+      const cachedTokenAuth = getCachedPatronAuthorizationForUrl(book.downloadUrl);
       const storedCred = await findCredentialForUrl(book.downloadUrl);
       const downloadHeaders: Record<string, string> = {};
-      if (storedCred) {
+      if (cachedTokenAuth) {
+        downloadHeaders.Authorization = buildAuthorizationHeader(cachedTokenAuth);
+      } else if (storedCred) {
         downloadHeaders.Authorization = `Basic ${btoa(`${storedCred.username}:${storedCred.password}`)}`;
       }
 
@@ -277,13 +221,22 @@ export const useAuthAcquisitionCoordinator = ({
     try {
       const normalizedUsername = username.trim();
       const normalizedPassword = password.trim();
-      let authCredentials = { username: normalizedUsername, password: normalizedPassword };
+      let requestAuth: RequestAuthorization = {
+        scheme: 'basic',
+        username: normalizedUsername,
+        password: normalizedPassword,
+      };
+      const activeAuthDocument = credentialPrompt.authDocument || getCachedAuthDocumentForUrl(href);
 
-      if (credentialPrompt.authDocument) {
-        authCredentials = await exchangeBasicToken(credentialPrompt.authDocument, normalizedUsername, normalizedPassword);
+      if (activeAuthDocument) {
+        requestAuth = await getAuthorizationForAuthDocument(activeAuthDocument, href, normalizedUsername, normalizedPassword);
       }
 
-      const resolveResult = await opdsAcquisitionService.resolve(href, 'auto', authCredentials);
+      const resolveResult = await opdsAcquisitionService.resolve(
+        href,
+        requestAuth.scheme === 'bearer' || new URL(href).hostname.toLowerCase().includes('palace') ? '1' : 'auto',
+        requestAuth,
+      );
       if (resolveResult.success && credentialPrompt.pendingBook) {
         if (save && credentialPrompt.host) {
           saveOpdsCredential(credentialPrompt.host, normalizedUsername, normalizedPassword);
@@ -292,9 +245,7 @@ export const useAuthAcquisitionCoordinator = ({
         setImportStatus({ isLoading: true, message: `Downloading ${credentialPrompt.pendingBook.title}...`, error: null });
         const proxyUrl = await maybeProxyForCors(resolveResult.data);
         const downloadHeaders: Record<string, string> = {};
-        if (authCredentials.username && authCredentials.password) {
-          downloadHeaders.Authorization = `Basic ${btoa(`${authCredentials.username}:${authCredentials.password}`)}`;
-        }
+        downloadHeaders.Authorization = buildAuthorizationHeader(requestAuth);
         const response = await fetch(proxyUrl, {
           headers: downloadHeaders,
           credentials: proxyUrl === resolveResult.data ? 'include' : 'omit',

@@ -297,6 +297,17 @@ export interface AuthDocument {
   password_hint?: string;
 }
 
+export type RequestAuthorization =
+  | {
+    scheme: 'basic';
+    username: string;
+    password: string;
+  }
+  | {
+    scheme: 'bearer';
+    token: string;
+  };
+
 /**
  * Credential prompt state for UI
  */

@@ -1,7 +1,14 @@
 import React, { useEffect, useMemo, useState } from 'react';
 
 import { useCatalogContent, useResolvedCatalogSearch } from '../../../hooks';
-import { buildOpenSearchUrl, findCredentialForUrl, saveOpdsCredential } from '../../../services';
+import {
+  buildOpenSearchUrl,
+  findCredentialForUrl,
+  getAuthorizationForAuthDocument,
+  getCachedAuthDocumentForUrl,
+  getCachedPatronAuthorizationForUrl,
+  saveOpdsCredential,
+} from '../../../services';
 import {
   filterBooksByAudience,
   filterBooksByAvailability,
@@ -30,6 +37,7 @@ import type {
   PublicationMode,
   CatalogSearchMetadata,
   CatalogSearchTemplateParameter,
+  RequestAuthorization,
 } from '../../../types';
 import OpdsCredentialsModal from '../../OpdsCredentialsModal';
 import { Error as ErrorDisplay, Loading } from '../../shared';
@@ -112,8 +120,7 @@ type PendingLoansTarget =
   | { kind: 'facet'; link: CatalogFacetLink };
 
 interface SessionCredentialState {
-  username: string;
-  password: string;
+  auth: RequestAuthorization;
   version: number;
 }
 
@@ -151,8 +158,8 @@ const CatalogView: React.FC<CatalogViewProps> = ({
     : 'auto';
   const currentHost = getHostFromUrl(currentUrl);
   const currentSessionCredentials = currentHost ? sessionCredentialsByHost[currentHost] : undefined;
-  const currentAuthCredentials = currentSessionCredentials
-    ? { username: currentSessionCredentials.username, password: currentSessionCredentials.password }
+  const currentRequestAuth = currentSessionCredentials
+    ? currentSessionCredentials.auth
     : null;
   const currentAuthKey = currentHost && currentSessionCredentials
     ? `${currentHost}:${currentSessionCredentials.version}`
@@ -176,7 +183,7 @@ const CatalogView: React.FC<CatalogViewProps> = ({
     activeOpdsSource?.url || '',
     opdsVersion,
     !!activeOpdsSource,
-    currentAuthCredentials,
+    currentRequestAuth,
     currentAuthKey,
   );
 
@@ -396,14 +403,13 @@ const CatalogView: React.FC<CatalogViewProps> = ({
     setPageHistory([]);
   };
 
-  const primeSessionCredentials = (host: string, username: string, password: string) => {
+  const primeSessionAuthorization = (host: string, auth: RequestAuthorization) => {
     setSessionCredentialsByHost((prev) => {
       const prior = prev[host];
       return {
         ...prev,
         [host]: {
-          username,
-          password,
+          auth,
           version: (prior?.version || 0) + 1,
         },
       };
@@ -422,8 +428,32 @@ const CatalogView: React.FC<CatalogViewProps> = ({
     }
 
     const storedCredential = await findCredentialForUrl(target.link.url);
+    const activeAuthDocument = catalogData?.authDocument || getCachedAuthDocumentForUrl(target.link.url);
+    const cachedTokenAuth = getCachedPatronAuthorizationForUrl(target.link.url);
+    if (cachedTokenAuth) {
+      primeSessionAuthorization(host, cachedTokenAuth);
+      if (target.kind === 'navigation') {
+        applyNavigationSelect(target.link);
+      } else {
+        applyFacetSelect(target.link);
+      }
+      return;
+    }
     if (storedCredential) {
-      primeSessionCredentials(host, storedCredential.username, storedCredential.password);
+      let nextAuth: RequestAuthorization = {
+        scheme: 'basic',
+        username: storedCredential.username,
+        password: storedCredential.password,
+      };
+      if (activeAuthDocument) {
+        nextAuth = await getAuthorizationForAuthDocument(
+          activeAuthDocument,
+          target.link.url,
+          storedCredential.username,
+          storedCredential.password,
+        );
+      }
+      primeSessionAuthorization(host, nextAuth);
       if (target.kind === 'navigation') {
         applyNavigationSelect(target.link);
       } else {
@@ -541,6 +571,9 @@ const CatalogView: React.FC<CatalogViewProps> = ({
   const hasOriginalBooks = originalCatalogBooks.length > 0;
   const hasNavigationOnlyContent = !hasOriginalBooks && hasSidebarContent;
   const isEmptyFeed = !hasOriginalBooks && !hasSidebarContent;
+  const pendingLoansAuthDocument = pendingLoansTarget
+    ? (catalogData?.authDocument || getCachedAuthDocumentForUrl(pendingLoansTarget.link.url))
+    : null;
 
   return (
     <>
@@ -669,8 +702,9 @@ const CatalogView: React.FC<CatalogViewProps> = ({
       <OpdsCredentialsModal
         isOpen={!!pendingLoansTarget}
         host={pendingLoansTarget ? getHostFromUrl(pendingLoansTarget.link.url) : null}
+        authDocument={pendingLoansAuthDocument}
         onClose={() => setPendingLoansTarget(null)}
-        onSubmit={(username, password, save) => {
+        onSubmit={async (username, password, save) => {
           if (!pendingLoansTarget) return;
           const host = getHostFromUrl(pendingLoansTarget.link.url);
           if (!host) {
@@ -678,9 +712,28 @@ const CatalogView: React.FC<CatalogViewProps> = ({
             return;
           }
 
-          primeSessionCredentials(host, username, password);
+          const normalizedUsername = username.trim();
+          const normalizedPassword = password.trim();
+          if (!normalizedUsername || !normalizedPassword) {
+            return;
+          }
+
+          const nextAuth = pendingLoansAuthDocument
+            ? await getAuthorizationForAuthDocument(
+              pendingLoansAuthDocument,
+              pendingLoansTarget.link.url,
+              normalizedUsername,
+              normalizedPassword,
+            )
+            : {
+              scheme: 'basic' as const,
+              username: normalizedUsername,
+              password: normalizedPassword,
+            };
+
+          primeSessionAuthorization(host, nextAuth);
           if (save) {
-            saveOpdsCredential(host, username, password);
+            saveOpdsCredential(host, normalizedUsername, normalizedPassword);
           }
 
           const target = pendingLoansTarget;
@@ -691,11 +744,11 @@ const CatalogView: React.FC<CatalogViewProps> = ({
             applyFacetSelect(target.link);
           }
         }}
-        usernameLabel="Library Card / Barcode"
-        passwordLabel="PIN"
-        usernamePlaceholder="Library card or barcode"
-        passwordPlaceholder="PIN"
-        descriptionOverride={pendingLoansTarget
+        usernameLabel={!pendingLoansAuthDocument ? 'Library Card / Barcode' : undefined}
+        passwordLabel={!pendingLoansAuthDocument ? 'PIN' : undefined}
+        usernamePlaceholder={!pendingLoansAuthDocument ? 'Library card or barcode' : undefined}
+        passwordPlaceholder={!pendingLoansAuthDocument ? 'PIN' : undefined}
+        descriptionOverride={pendingLoansTarget && !pendingLoansAuthDocument
           ? `Enter your library card and PIN for ${getHostFromUrl(pendingLoansTarget.link.url)} to open your loans feed.`
           : undefined}
         saveLabel="Save credential for this Palace catalog"

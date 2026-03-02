@@ -11,6 +11,7 @@ import { fetchCatalogContent, parseOpds1Xml, resolveAcquisitionChainOpds1 } from
 import { parseOpds2Json, resolveAcquisitionChain as resolveOpds2 } from '../../services/opds2';
 
 import type {
+  RequestAuthorization,
   CatalogBook,
   CatalogFacetGroup,
   CatalogNavigationLink,
@@ -34,6 +35,7 @@ export interface ParsedCatalog {
   facetGroups: CatalogFacetGroup[];
   pagination: CatalogPagination;
   search?: CatalogSearchMetadata;
+  authDocumentUrl?: string;
 }
 
 /**
@@ -51,7 +53,7 @@ export class OPDSParserService {
     url: string,
     baseUrl: string,
     opdsVersion: OPDSVersion = 'auto',
-    credentials?: { username: string; password: string } | null,
+    auth?: RequestAuthorization | null,
   ): Promise<ParserResult<ParsedCatalog>> {
     try {
       const hostname = (() => {
@@ -71,7 +73,7 @@ export class OPDSParserService {
         hostname.endsWith('.thepalaceproject.org');
 
       const forcedVersion: OPDSVersion = isPalaceHost ? '1' : opdsVersion;
-      const result = await fetchCatalogContent(url, baseUrl, forcedVersion, credentials);
+      const result = await fetchCatalogContent(url, baseUrl, forcedVersion, auth);
 
       if (result.error) {
         return { success: false, error: result.error };
@@ -85,6 +87,7 @@ export class OPDSParserService {
           facetGroups: result.facetGroups || [],
           pagination: result.pagination,
           search: result.search,
+          authDocumentUrl: result.authDocumentUrl,
         },
       };
     } catch (error) {
@@ -120,6 +123,7 @@ export class OPDSParserService {
           facetGroups: result.facetGroups || [],
           pagination: result.pagination,
           search: result.search,
+          authDocumentUrl: (result as any).authDocumentUrl,
         },
       };
     } catch (error) {
@@ -160,6 +164,7 @@ export class OPDSParserService {
           facetGroups: result.facetGroups || [],
           pagination: result.pagination,
           search: result.search,
+          authDocumentUrl: (result as any).authDocumentUrl,
         },
       };
     } catch (error) {
@@ -286,7 +291,7 @@ export class OPDSAcquisitionService {
    */
   async resolveOPDS1(
     href: string,
-    credentials?: { username: string; password: string } | null,
+    credentials?: RequestAuthorization | null,
     maxRedirects = 5,
   ): Promise<ParserResult<string>> {
     try {
@@ -326,11 +331,11 @@ export class OPDSAcquisitionService {
   async resolve(
     href: string,
     version: OPDSVersion = 'auto',
-    credentials?: { username: string; password: string } | null,
+    credentials?: RequestAuthorization | null,
     maxRedirects = 5,
   ): Promise<ParserResult<string>> {
     if (version === '2') {
-      return this.resolveOPDS2(href, credentials, maxRedirects);
+      return this.resolveOPDS2(href, credentials as any, maxRedirects);
     } else if (version === '1') {
       return this.resolveOPDS1(href, credentials, maxRedirects);
     }
@@ -338,7 +343,7 @@ export class OPDSAcquisitionService {
     // Auto-detect: Try OPDS 2 first (more common), then fall back to OPDS 1
     logger.info('Auto-detecting OPDS version for acquisition', { href });
 
-    const opds2Result = await this.resolveOPDS2(href, credentials, maxRedirects);
+    const opds2Result = await this.resolveOPDS2(href, credentials as any, maxRedirects);
     if (opds2Result.success) {
       return opds2Result;
     }

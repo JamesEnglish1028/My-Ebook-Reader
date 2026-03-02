@@ -7,6 +7,7 @@ import {
   SettingsModal,
   ShortcutHelpModal,
 } from '..';
+import { getCachedAuthDocumentForUrl } from '../../services';
 import type { CredentialPrompt, DriveSnapshot } from '../../types';
 
 interface GlobalModalsProps {
@@ -79,6 +80,23 @@ export const GlobalModals: React.FC<GlobalModalsProps> = ({
   isShortcutHelpOpen,
   onCloseShortcutHelp,
 }) => {
+  const effectiveAuthDocument = credentialPrompt.authDocument
+    || (credentialPrompt.pendingHref ? getCachedAuthDocumentForUrl(credentialPrompt.pendingHref) : null);
+  const isPalaceCredentialPrompt = (() => {
+    const target = credentialPrompt.pendingHref || credentialPrompt.host || '';
+    try {
+      const host = target.includes('://') ? new URL(target).hostname : target;
+      const normalizedHost = host.toLowerCase();
+      return normalizedHost.endsWith('palace.io')
+        || normalizedHost.endsWith('palaceproject.io')
+        || normalizedHost.endsWith('thepalaceproject.org')
+        || normalizedHost.endsWith('.palace.io')
+        || normalizedHost.endsWith('.thepalaceproject.org');
+    } catch {
+      return false;
+    }
+  })();
+
   return (
     <>
       <SettingsModal
@@ -103,12 +121,20 @@ export const GlobalModals: React.FC<GlobalModalsProps> = ({
       <OpdsCredentialsModal
         isOpen={credentialPrompt.isOpen}
         host={credentialPrompt.host}
-        authDocument={credentialPrompt.authDocument}
+        authDocument={effectiveAuthDocument}
         onClose={onCloseCredentialPrompt}
         onSubmit={onCredentialSubmit}
         onOpenAuthLink={onOpenAuthLink}
         onRetry={onRetryAfterProviderLogin}
         probeUrl={credentialPrompt.pendingHref}
+        usernameLabel={isPalaceCredentialPrompt && !effectiveAuthDocument ? 'Library Card / Barcode' : undefined}
+        passwordLabel={isPalaceCredentialPrompt && !effectiveAuthDocument ? 'PIN' : undefined}
+        usernamePlaceholder={isPalaceCredentialPrompt && !effectiveAuthDocument ? 'Library card or barcode' : undefined}
+        passwordPlaceholder={isPalaceCredentialPrompt && !effectiveAuthDocument ? 'PIN' : undefined}
+        descriptionOverride={isPalaceCredentialPrompt && !effectiveAuthDocument
+          ? `Enter your library card and PIN for ${credentialPrompt.host} to continue.`
+          : undefined}
+        saveLabel={isPalaceCredentialPrompt ? 'Save credential for this Palace catalog' : undefined}
       />
 
       <NetworkDebugModal

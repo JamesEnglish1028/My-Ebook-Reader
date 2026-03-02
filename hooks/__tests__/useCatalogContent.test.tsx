@@ -38,5 +38,6 @@ describe('useCatalogContent', () => {
     expect(result.current.data?.books[0].title).toBe('Book 1');
     expect(result.current.data?.navigationLinks).toEqual([]);
     expect(result.current.data?.facetGroups).toEqual([]);
+    expect(result.current.data?.authDocument).toBeNull();
   });
 });

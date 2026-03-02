@@ -1,4 +1,4 @@
-import type { AudienceMode, AvailabilityMode, CatalogBook, CatalogFacetGroup, CatalogFacetLink, CatalogNavigationLink, CatalogPagination, CatalogSearchMetadata, CatalogWithCategories, CatalogWithCollections, CategorizationMode, Category, Collection, CollectionGroup, CollectionMode, DistributorMode, FictionMode, MediaMode, PublicationMode } from '../types';
+import type { AudienceMode, AvailabilityMode, CatalogBook, CatalogFacetGroup, CatalogFacetLink, CatalogNavigationLink, CatalogPagination, CatalogSearchMetadata, CatalogWithCategories, CatalogWithCollections, CategorizationMode, Category, Collection, CollectionGroup, CollectionMode, DistributorMode, FictionMode, MediaMode, PublicationMode, RequestAuthorization } from '../types';
 
 import { logger } from './logger';
 import { parseOpds2Json } from './opds2';
@@ -127,6 +127,15 @@ async function safeReadText(resp: Response): Promise<string> {
         } catch (_) { }
         return '';
     }
+}
+
+function applyAuthorizationHeader(headers: Record<string, string>, auth?: RequestAuthorization | null) {
+    if (!auth) return;
+    if (auth.scheme === 'bearer') {
+        headers.Authorization = `Bearer ${auth.token}`;
+        return;
+    }
+    headers.Authorization = `Basic ${btoa(`${auth.username}:${auth.password}`)}`;
 }
 
 // Helper to capture the first N bytes of a response for debugging (base64)
@@ -272,7 +281,7 @@ const isPalaceHost = (url: string): boolean => {
  * Handles audiobook detection via schema:additionalType attributes.
  * Supports Palace Project collection links and indirect acquisition chains.
  */
-export const parseOpds1Xml = (xmlText: string, baseUrl: string): { books: CatalogBook[], navLinks: CatalogNavigationLink[], facetGroups: CatalogFacetGroup[], pagination: CatalogPagination, search?: CatalogSearchMetadata } => {
+export const parseOpds1Xml = (xmlText: string, baseUrl: string): { books: CatalogBook[], navLinks: CatalogNavigationLink[], facetGroups: CatalogFacetGroup[], pagination: CatalogPagination, search?: CatalogSearchMetadata, authDocumentUrl?: string } => {
     const parser = new DOMParser();
     const xmlDoc = parser.parseFromString(xmlText, 'application/xml');
 
@@ -294,6 +303,7 @@ export const parseOpds1Xml = (xmlText: string, baseUrl: string): { books: Catalo
     const facetGroups: CatalogFacetGroup[] = [];
     const pagination: CatalogPagination = {};
     let search: CatalogSearchMetadata | undefined;
+    let authDocumentUrl: string | undefined;
     const navLinkKeys = new Set<string>();
     const bookIndexes = new Map<string, number>();
     const palaceFeed = isPalaceHost(baseUrl);
@@ -342,6 +352,7 @@ export const parseOpds1Xml = (xmlText: string, baseUrl: string): { books: Catalo
         if (href) {
             const fullUrl = new URL(href, baseUrl).href;
             const linkType = link.getAttribute('type') || undefined;
+            const normalizedType = (linkType || '').toLowerCase();
             // Be tolerant of rel variants and full URIs (e.g. rel="prev" or rel="http://opds-spec.org/rel/previous")
             if (rel.includes('next')) pagination.next = fullUrl;
             if (rel.includes('prev') || rel.includes('previous')) pagination.prev = fullUrl;
@@ -394,6 +405,14 @@ export const parseOpds1Xml = (xmlText: string, baseUrl: string): { books: Catalo
                 return;
             }
 
+            if (
+                rel.includes('authentication_document')
+                || normalizedType.includes('application/vnd.opds.authentication.v1.0+json')
+            ) {
+                authDocumentUrl ||= fullUrl;
+                return;
+            }
+
             if (rel.includes('start') || rel === 'up' || rel.endsWith('/up')) {
                 const fallbackTitle = rel.includes('start') ? 'Home' : 'Up';
                 addNavLink({
@@ -417,7 +436,6 @@ export const parseOpds1Xml = (xmlText: string, baseUrl: string): { books: Catalo
                 return;
             }
 
-            const normalizedType = (linkType || '').toLowerCase();
             if (normalizedType.includes('profile=opds-catalog') && (normalizedType.includes('kind=navigation') || normalizedType.includes('kind=acquisition'))) {
                 addNavLink({
                     title: link.getAttribute('title')?.trim() || fullUrl,
@@ -625,14 +643,14 @@ export const parseOpds1Xml = (xmlText: string, baseUrl: string): { books: Catalo
         if (!hasTitle && !hasLink) {
             throw new Error('The feed contains no entries.');
         }
-        return { books: [], navLinks, facetGroups, pagination, search };
+        return { books: [], navLinks, facetGroups, pagination, search, authDocumentUrl };
     }
     // Throw if <feed> has entries but no OPDS content
     if (rootNodeName && (rootNodeName.toLowerCase() === 'feed' || rootNodeName.endsWith(':feed')) && entries.length > 0 && books.length === 0 && navLinks.length === 0) {
         throw new Error('This appears to be a valid Atom feed, but it contains no recognizable OPDS book entries or navigation links. Please ensure the URL points to an OPDS catalog.');
     }
 
-    return { books, navLinks, facetGroups, pagination, search };
+    return { books, navLinks, facetGroups, pagination, search, authDocumentUrl };
 };
 
 const getProxy403Message = (url: string, headers: Headers, contentType: string, responseText: string): string => {
@@ -674,8 +692,8 @@ export const fetchCatalogContent = async (
     url: string,
     baseUrl: string,
     forcedVersion: 'auto' | '1' | '2' = 'auto',
-    credentials?: { username: string; password: string } | null,
-): Promise<{ books: CatalogBook[], navLinks: CatalogNavigationLink[], facetGroups: CatalogFacetGroup[], pagination: CatalogPagination, search?: CatalogSearchMetadata, error?: string }> => {
+    auth?: RequestAuthorization | null,
+): Promise<{ books: CatalogBook[], navLinks: CatalogNavigationLink[], facetGroups: CatalogFacetGroup[], pagination: CatalogPagination, search?: CatalogSearchMetadata, authDocumentUrl?: string, error?: string }> => {
     try {
         // Resolve relative links against the actual feed URL, not the catalog root.
         // For direct fetches that follow redirects, prefer the final response URL.
@@ -714,9 +732,7 @@ export const fetchCatalogContent = async (
         const requestHeaders: Record<string, string> = {
             'Accept': acceptHeader,
         };
-        if (credentials) {
-            requestHeaders.Authorization = `Basic ${btoa(`${credentials.username}:${credentials.password}`)}`;
-        }
+        applyAuthorizationHeader(requestHeaders, auth);
 
         const response = await fetch(fetchUrl, {
             method: 'GET',
@@ -809,7 +825,7 @@ export const fetchCatalogContent = async (
             const statusInfo = `${response.status}${response.statusText ? ` ${response.statusText}` : ''}`;
             let errorMessage = `The catalog server responded with an error (${statusInfo}). Please check the catalog URL.`;
             if (response.status === 401 || (response.status === 403 && isDirectFetch)) {
-                errorMessage = credentials
+                errorMessage = auth
                     ? `Could not access catalog (${statusInfo}). The provided catalog credentials were rejected. Please verify your barcode and PIN.`
                     : `Could not access catalog (${statusInfo}). This catalog requires authentication before it can be opened.`;
             }
@@ -909,7 +925,7 @@ export const fetchCatalogContent = async (
 };
 
 // OPDS1 acquisition resolver: POST/GET to borrow endpoints and parse XML
-export const resolveAcquisitionChainOpds1 = async (href: string, credentials?: { username: string; password: string } | null, maxRedirects = 5): Promise<string | null> => {
+export const resolveAcquisitionChainOpds1 = async (href: string, auth?: RequestAuthorization | null, maxRedirects = 5): Promise<string | null> => {
     let attempts = 0;
     // Known Palace-related media types that some feeds use for indirect acquisition
     const palaceTypes = ['application/adobe+epub', 'application/pdf+lcp', 'application/vnd.readium.license.status.v1.0+json'];
@@ -931,11 +947,11 @@ export const resolveAcquisitionChainOpds1 = async (href: string, credentials?: {
     } catch (e) {
         current = await maybeProxyForCors(href);
     }
-    // If the probe selected the public proxy and credentials are provided,
+    // If the probe selected the public proxy and auth is provided,
     // fail early with a helpful message so UI can prompt for setting an owned proxy.
     try {
         const usingPublicProxy = typeof current === 'string' && current.includes('corsproxy.io');
-        if (usingPublicProxy && credentials) {
+        if (usingPublicProxy && auth) {
             const err: any = new Error('Acquisition would use a public CORS proxy which may strip Authorization or block POST requests. Configure an owned proxy (VITE_OWN_PROXY_URL) to perform authenticated borrows.');
             err.proxyUsed = true;
             throw err;
@@ -946,11 +962,11 @@ export const resolveAcquisitionChainOpds1 = async (href: string, credentials?: {
 
     const makeHeaders = (withCreds = false) => {
         const h: Record<string, string> = { 'Accept': 'application/atom+xml, application/xml, text/xml, */*' };
-        if (withCreds && credentials) h['Authorization'] = `Basic ${btoa(`${credentials.username}:${credentials.password}`)}`;
+        if (withCreds) applyAuthorizationHeader(h, auth);
         return h;
     };
 
-    const preferGetWhenCreds = !!credentials;
+    const preferGetWhenCreds = !!auth;
 
     while (attempts < maxRedirects && current) {
         attempts++;
@@ -1067,7 +1083,7 @@ export const resolveAcquisitionChainOpds1 = async (href: string, credentials?: {
                 // Owned proxy exists — retry the request via the owned proxy with same auth headers
                 const makeHeadersForRetry = (withCreds = false) => {
                     const h: Record<string, string> = { 'Accept': 'application/atom+xml, application/xml, text/xml, */*' };
-                    if (withCreds && credentials) h['Authorization'] = `Basic ${btoa(`${credentials.username}:${credentials.password}`)}`;
+                    if (withCreds) applyAuthorizationHeader(h, auth);
                     return h;
                 };
 

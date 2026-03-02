@@ -40,6 +40,11 @@ export {
     migrateFromLocalStorage, saveCredential,
 } from './credentials';
 
+// Auth document cache
+export {
+    cacheAuthDocumentForUrl, fetchAndCacheAuthDocument, getAuthorizationForAuthDocument, getCachedAuthDocumentForUrl, getCachedPatronAuthorizationForUrl,
+} from './authDocuments';
+
 // Google Drive sync services
 export {
     downloadLibraryFromDrive, listDriveSnapshots, uploadLibraryToDrive,
