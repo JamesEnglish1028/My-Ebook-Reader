@@ -26,12 +26,21 @@ app.use(bodyParser.raw({ type: '*/*', limit: '200mb' }));
 // Basic rate limit. The default must be high enough for Palace lane previews,
 // which can trigger dozens of proxied image requests in a short burst.
 const rateLimitWindowMs = Number.parseInt(process.env.RATE_LIMIT_WINDOW_MS || '60000', 10);
-const rateLimitMax = Number.parseInt(process.env.RATE_LIMIT_MAX || '240', 10);
+const rateLimitMax = Number.parseInt(process.env.RATE_LIMIT_MAX || '1000', 10);
 app.use(rateLimit({
   windowMs: Number.isFinite(rateLimitWindowMs) ? rateLimitWindowMs : 60_000,
   max: Number.isFinite(rateLimitMax) ? rateLimitMax : 240,
   standardHeaders: true,
   legacyHeaders: false,
+  handler: (req, res) => {
+    const allowOrigin = req.headers.origin || process.env.ALLOW_ORIGIN || '*';
+    res.setHeader('Access-Control-Allow-Origin', allowOrigin);
+    res.setHeader('Access-Control-Allow-Credentials', 'true');
+    res.setHeader('Cross-Origin-Resource-Policy', 'cross-origin');
+    res.setHeader('Access-Control-Expose-Headers', 'Content-Type,X-MeBooks-Proxy-Error-Source,X-MeBooks-Upstream-Status');
+    setProxyDiagnosticHeaders(res, 'proxy', 429);
+    return res.status(429).json({ error: 'Too many proxied requests. Please retry shortly.' });
+  },
 }));
 
 const rawHosts = process.env.HOST_ALLOWLIST || 'opds.example,cdn.example';
