@@ -36,6 +36,7 @@ export interface ViewRendererProps {
     catalogName?: string;
     relatedSeriesBooks?: CatalogBook[];
   } | null;
+  onOpenRelatedCatalogFeed: (title: string, url: string) => void;
   onReturnToLibrary: () => void;
   onReadBook: (id: number, animationData: CoverAnimationData, format?: string) => void;
   onImportFromCatalog: (book: CatalogBook, catalogName?: string) => Promise<{ success: boolean; bookRecord?: BookRecord; existingBook?: BookRecord }>;
@@ -92,6 +93,7 @@ export const ViewRenderer: React.FC<ViewRendererProps> = (props) => {
     coverAnimationData,
     onCloseReader,
     detailViewData,
+    onOpenRelatedCatalogFeed,
     onReturnToLibrary,
     onImportFromCatalog,
     onAutoBackupToDrive,
@@ -211,6 +213,7 @@ export const ViewRenderer: React.FC<ViewRendererProps> = (props) => {
               detailViewData.catalogName,
               relatedSeriesBooks,
             )}
+            onOpenRelatedCatalogFeed={onOpenRelatedCatalogFeed}
             onBack={onReturnToLibrary}
             onReadBook={handleReadBook}
             onImportFromCatalog={onImportFromCatalog}

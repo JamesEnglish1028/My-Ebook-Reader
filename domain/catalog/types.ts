@@ -66,6 +66,9 @@ export interface CatalogBook {
   // OPDS 1 collections
   collections?: Collection[];
 
+  // OPDS related catalog feeds for the entry (e.g. Palace "Recommended Works")
+  relatedLinks?: CatalogRelatedLink[];
+
   // OPDS 2 series metadata (metadata.series or belongsTo.series)
   series?: Series[];
 
@@ -87,6 +90,13 @@ export interface Collection {
   title: string;
   href: string;
   description?: string;
+}
+
+export interface CatalogRelatedLink {
+  title: string;
+  url: string;
+  rel: string;
+  type?: string;
 }
 
 /**

@@ -304,6 +304,20 @@ const AppInner: React.FC = () => {
     setCurrentView('bookDetail');
   }, []);
 
+  const handleOpenRelatedCatalogFeed = useCallback((title: string, url: string) => {
+    setDetailViewData(null);
+    setCatalogNavPath((previousPath) => {
+      const basePath = previousPath.length > 0
+        ? previousPath
+        : (activeOpdsSource ? [{ name: activeOpdsSource.name, url: activeOpdsSource.url }] : []);
+      if (basePath[basePath.length - 1]?.url === url) {
+        return basePath;
+      }
+      return [...basePath, { name: title || 'Related Works', url }];
+    });
+    setCurrentView('library');
+  }, [activeOpdsSource, setCatalogNavPath]);
+
   const handleShowAbout = useCallback(() => {
     setCurrentView('about');
   }, []);
@@ -331,6 +345,7 @@ const AppInner: React.FC = () => {
             coverAnimationData={coverAnimationData}
             onCloseReader={handleCloseReader}
             detailViewData={detailViewData}
+            onOpenRelatedCatalogFeed={handleOpenRelatedCatalogFeed}
             onReturnToLibrary={handleReturnToLibrary}
             onReadBook={handleOpenBook}
             onImportFromCatalog={handleImportFromCatalog}

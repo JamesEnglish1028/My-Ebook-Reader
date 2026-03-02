@@ -657,6 +657,25 @@ export const parseOpds1Xml = (xmlText: string, baseUrl: string): { books: Catalo
                 return null;
             }).filter((category): category is Category => category !== null);
             const subjects = categories.map(cat => cat.label);
+            const relatedLinks = allLinks
+                .filter((candidate) => {
+                    const rel = (candidate.getAttribute('rel') || '').toLowerCase();
+                    const type = (candidate.getAttribute('type') || '').toLowerCase();
+                    return rel.includes('related')
+                        && !!candidate.getAttribute('href')
+                        && (
+                            type.includes('application/opds+json')
+                            || type.includes('profile=opds-catalog')
+                            || type.includes('kind=acquisition')
+                        );
+                })
+                .map((candidate) => ({
+                    title: (candidate.getAttribute('title') || '').trim() || 'Related Works',
+                    url: new URL(candidate.getAttribute('href') || '', baseUrl).href,
+                    rel: 'related',
+                    type: candidate.getAttribute('type') || undefined,
+                }))
+                .filter((link, index, collection) => collection.findIndex((candidate) => candidate.url === link.url) === index);
             if (downloadUrlHref) {
                 const downloadUrl = new URL(downloadUrlHref, baseUrl).href;
                 let finalMediaType = canonicalAudiobookMediaType || resolvedMediaType || mimeType;
@@ -673,6 +692,7 @@ export const parseOpds1Xml = (xmlText: string, baseUrl: string): { books: Catalo
                     subjects: subjects.length > 0 ? subjects : undefined,
                     contributors: authorNames.length > 1 ? authorNames.slice(1) : undefined,
                     categories: categories.length > 0 ? categories : undefined,
+                    relatedLinks: relatedLinks.length > 0 ? relatedLinks : undefined,
                     format,
                     acquisitionMediaType: finalMediaType || undefined,
                     isLcpProtected: isLcpProtected || undefined,

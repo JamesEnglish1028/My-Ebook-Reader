@@ -146,6 +146,14 @@ describe('Catalog vs Library BookDetailView Differences', () => {
       providerId: 'series-2',
       format: 'EPUB',
       acquisitionMediaType: 'application/epub+zip',
+      relatedLinks: [
+        {
+          title: 'Recommended Works',
+          url: 'https://example.com/related',
+          rel: 'related',
+          type: 'application/atom+xml;profile=opds-catalog;kind=acquisition',
+        },
+      ],
       series: [{ name: 'Great Saga', position: 2 }],
     } as any;
 
@@ -179,5 +187,6 @@ describe('Catalog vs Library BookDetailView Differences', () => {
 
     expect(screen.getByText('Series: Great Saga')).toBeInTheDocument();
     expect(screen.getByText('2 books')).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Recommended Works' })).toBeInTheDocument();
   });
 });

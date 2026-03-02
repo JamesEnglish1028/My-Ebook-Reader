@@ -301,6 +301,9 @@ const CatalogView: React.FC<CatalogViewProps> = ({
   const handleCatalogBookClick = (book: CatalogBook) => {
     if (currentRequestAuth?.scheme === 'bearer' && book.downloadUrl) {
       cachePatronAuthorizationForUrl(book.downloadUrl, currentRequestAuth);
+      book.relatedLinks?.forEach((link) => {
+        cachePatronAuthorizationForUrl(link.url, currentRequestAuth);
+      });
     }
     const primarySeriesName = book.series?.[0]?.name;
     const relatedSeriesBooks = primarySeriesName

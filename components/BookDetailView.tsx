@@ -20,6 +20,7 @@ export interface BookDetailViewProps {
   catalogName?: string;
   relatedSeriesBooks?: CatalogBook[];
   onShowRelatedCatalogBook?: (book: CatalogBook, relatedSeriesBooks?: CatalogBook[]) => void;
+  onOpenRelatedCatalogFeed?: (title: string, url: string) => void;
   onBack: () => void;
   onReadBook: (book: BookDetailMetadata) => void;
   onImportFromCatalog?: (book: CatalogBook | BookDetailMetadata, catalogName?: string) => Promise<{ success: boolean; bookRecord?: BookRecord; existingBook?: BookRecord }>;
@@ -280,7 +281,7 @@ const getPrimaryActionNotice = (
   return null;
 };
 
-const BookDetailView: React.FC<BookDetailViewProps> = ({ book, onBack, source, catalogName, relatedSeriesBooks, onShowRelatedCatalogBook, userCitationFormat = 'apa', onReadBook, onImportFromCatalog, importStatus, setImportStatus }) => {
+const BookDetailView: React.FC<BookDetailViewProps> = ({ book, onBack, source, catalogName, relatedSeriesBooks, onShowRelatedCatalogBook, onOpenRelatedCatalogFeed, userCitationFormat = 'apa', onReadBook, onImportFromCatalog, importStatus, setImportStatus }) => {
   const bookAny = book as any;
   const publisherText = typeof bookAny.publisher === 'string' ? bookAny.publisher : undefined;
   const publicationDateText = formatPublicationDate(bookAny.publicationDate);
@@ -320,12 +321,14 @@ const BookDetailView: React.FC<BookDetailViewProps> = ({ book, onBack, source, c
   const [localBookmarks, setLocalBookmarks] = React.useState<Bookmark[]>([]);
   const [localCitations, setLocalCitations] = React.useState<Citation[]>([]);
   const primarySeries = 'downloadUrl' in book && Array.isArray(book.series) ? book.series[0] : undefined;
+  const relatedCatalogLinks = 'downloadUrl' in book && Array.isArray(book.relatedLinks) ? book.relatedLinks : [];
   const seriesBooksForLane = source === 'catalog'
     && primarySeries
     && Array.isArray(relatedSeriesBooks)
     && relatedSeriesBooks.length > 1
       ? relatedSeriesBooks
       : null;
+  const hasRelatedWorksSection = relatedCatalogLinks.length > 0 || Boolean(primarySeries && seriesBooksForLane);
 
   React.useEffect(() => {
     if (bookAny.id) {
@@ -606,20 +609,6 @@ const BookDetailView: React.FC<BookDetailViewProps> = ({ book, onBack, source, c
               dangerouslySetInnerHTML={{ __html: descriptionHtml }}
             />
           )}
-          {primarySeries && seriesBooksForLane && (
-            <div className="mt-6">
-              <SeriesLane
-                series={primarySeries}
-                books={seriesBooksForLane}
-                onBookClick={(seriesBook) => {
-                  if (seriesBook.providerId === ('providerId' in book ? book.providerId : undefined)) {
-                    return;
-                  }
-                  onShowRelatedCatalogBook?.(seriesBook, seriesBooksForLane);
-                }}
-              />
-            </div>
-          )}
         </div>
         {/* Book Details Section (accessibility, provider) INSIDE container */}
         <div className="md:mb-4 md:mr-6 md:mt-4">
@@ -671,6 +660,46 @@ const BookDetailView: React.FC<BookDetailViewProps> = ({ book, onBack, source, c
           </ul>
           </div>
         </div>
+        {hasRelatedWorksSection && (
+          <div className="md:mb-4 md:mr-6 md:mt-6">
+            <h3 className="theme-text-primary mb-3 text-xl font-bold">Related Works</h3>
+            <div className="theme-divider mb-5 border-t" />
+            <div className="theme-surface-elevated space-y-6 rounded-lg p-6 md:p-8">
+              {relatedCatalogLinks.length > 0 && (
+                <div className="space-y-3">
+                  <h4 className="theme-text-primary text-sm font-semibold uppercase tracking-[0.14em]">Browse Related Feeds</h4>
+                  <div className="flex flex-wrap gap-2">
+                    {relatedCatalogLinks.map((link) => (
+                      <button
+                        key={link.url}
+                        type="button"
+                        onClick={() => onOpenRelatedCatalogFeed?.(link.title, link.url)}
+                        className="theme-button-neutral theme-hover-surface inline-flex items-center rounded-full border px-3 py-1.5 text-xs font-semibold transition-colors"
+                      >
+                        {link.title}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              )}
+              {primarySeries && seriesBooksForLane && (
+                <div className="space-y-3">
+                  <h4 className="theme-text-primary text-sm font-semibold uppercase tracking-[0.14em]">Same Series</h4>
+                  <SeriesLane
+                    series={primarySeries}
+                    books={seriesBooksForLane}
+                    onBookClick={(seriesBook) => {
+                      if (seriesBook.providerId === ('providerId' in book ? book.providerId : undefined)) {
+                        return;
+                      }
+                      onShowRelatedCatalogBook?.(seriesBook, seriesBooksForLane);
+                    }}
+                  />
+                </div>
+              )}
+            </div>
+          </div>
+        )}
       </div>
     </div>
   );

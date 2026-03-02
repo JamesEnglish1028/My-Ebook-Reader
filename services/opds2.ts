@@ -44,7 +44,7 @@ function normalizeRelValues(rel: unknown): string[] {
     .map((r) => normalizeRel(toLowerSafe(r)))
     .filter((r) => r.length > 0);
 }
-import type { CatalogBook, CatalogFacetGroup, CatalogFacetLink, CatalogNavigationLink, CatalogPagination, CatalogSearchMetadata, Series } from '../types';
+import type { CatalogBook, CatalogFacetGroup, CatalogFacetLink, CatalogNavigationLink, CatalogPagination, CatalogRelatedLink, CatalogSearchMetadata, Series } from '../types';
 import type { Opds2Link, Opds2NavigationGroup, Opds2Publication } from '../types/opds2';
 import { parseCatalogSearchTemplateParameters, resolveCatalogSearchTemplateUrl } from './opensearch';
 
@@ -75,6 +75,28 @@ function parseSeriesMetadata(metadata: any): Series[] | undefined {
   } catch {
     return undefined;
   }
+}
+
+function parseRelatedCatalogLinks(links: Opds2Link[], baseUrl: string): CatalogRelatedLink[] | undefined {
+  const relatedLinks = links
+    .filter((link) => {
+      if (!link?.href) return false;
+      const rels = normalizeRelValues(link.rel);
+      if (!rels.includes('related')) return false;
+      const type = String(link.type || '').toLowerCase();
+      return type.includes('application/opds+json')
+        || type.includes('profile=opds-catalog')
+        || type.includes('kind=acquisition');
+    })
+    .map((link) => ({
+      title: String(link.title || 'Related Works').trim() || 'Related Works',
+      url: new URL(String(link.href), baseUrl).href,
+      rel: 'related',
+      type: link.type,
+    }))
+    .filter((link, index, collection) => collection.findIndex((candidate) => candidate.url === link.url) === index);
+
+  return relatedLinks.length > 0 ? relatedLinks : undefined;
 }
 
 function isOpdsNavigationTarget(link: Partial<Opds2Link> | undefined): boolean {
@@ -889,6 +911,7 @@ function processOpds2Publication(pub: Opds2Publication, baseUrl: string): Catalo
     : undefined;
 
   const series = parseSeriesMetadata(metadata);
+  const relatedLinks = parseRelatedCatalogLinks(links, baseUrl);
 
   if (title && (downloadUrl || coverImage)) {
     return {
@@ -904,6 +927,7 @@ function processOpds2Publication(pub: Opds2Publication, baseUrl: string): Catalo
       contributors: contributorNames && contributorNames.length > 0 ? contributorNames : undefined,
       categories: categories || undefined,
       collections: collections.length > 0 ? collections : undefined,
+      relatedLinks,
       format: format || undefined,
       acquisitionType,
       mediaType: chosen && chosen.type ? String(chosen.type).toLowerCase().trim() : undefined,
