@@ -241,8 +241,11 @@ export class BookRepository {
         request.onsuccess = (event) => {
           const cursor = (event.target as IDBRequest<IDBCursorWithValue>).result;
           if (cursor) {
-            // Return all fields from the stored record for robust UI display
-            metadata.push({ ...cursor.value });
+            const value = cursor.value as BookRecord;
+            metadata.push({
+              ...value,
+              id: typeof value.id === 'number' ? value.id : Number(cursor.primaryKey),
+            });
             cursor.continue();
           } else {
             console.log('[BookRepository.findAllMetadata] Loaded metadata:', metadata);

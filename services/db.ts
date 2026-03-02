@@ -105,8 +105,11 @@ const getBooksMetadata = async (): Promise<BookMetadata[]> => {
     request.onsuccess = (event) => {
       const cursor = (event.target as IDBRequest<IDBCursorWithValue>).result;
       if (cursor) {
-        // Return all fields from the stored BookRecord for robust UI display
-        books.push({ ...cursor.value });
+        const value = cursor.value as BookRecord;
+        books.push({
+          ...value,
+          id: typeof value.id === 'number' ? value.id : Number(cursor.primaryKey),
+        });
         cursor.continue();
       } else {
         console.log('[db.getBooksMetadata] Loaded metadata:', books);
