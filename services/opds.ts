@@ -162,6 +162,15 @@ export const getFormatFromMimeType = (mimeType: string | undefined): string | un
     return undefined;
 };
 
+const isLcpMediaType = (mimeType: string | undefined): boolean => {
+    if (!mimeType) return false;
+    const clean = mimeType.split(';')[0].trim().toLowerCase();
+    return clean.includes('application/vnd.readium.lcp.license.v1.0+json')
+        || clean.includes('application/vnd.readium.license.status.v1.0+json')
+        || clean.includes('+lcp')
+        || clean.includes('readium.lcp');
+};
+
 const getResolvedIndirectMediaType = (element: Element | null): string | undefined => {
     if (!element) return undefined;
 
@@ -175,7 +184,7 @@ const getResolvedIndirectMediaType = (element: Element | null): string | undefin
         if (nestedResolved) return nestedResolved;
 
         const childType = child.getAttribute('type') || undefined;
-        if (getFormatFromMimeType(childType)) return childType;
+        if (isLcpMediaType(childType) || getFormatFromMimeType(childType)) return childType;
     }
 
     for (const child of children) {
@@ -184,6 +193,22 @@ const getResolvedIndirectMediaType = (element: Element | null): string | undefin
     }
 
     return undefined;
+};
+
+const hasLcpIndirectAcquisition = (element: Element | null): boolean => {
+    if (!element) return false;
+
+    for (const child of Array.from(element.children)) {
+        const local = (child.localName || child.nodeName || '').toLowerCase();
+        if (local === 'indirectacquisition') {
+            const childType = child.getAttribute('type') || undefined;
+            if (isLcpMediaType(childType)) return true;
+        }
+
+        if (hasLcpIndirectAcquisition(child)) return true;
+    }
+
+    return false;
 };
 
 const getDirectChildText = (parent: Element, localName: string): string | undefined => {
@@ -239,6 +264,7 @@ const mergeCatalogBooks = (existing: CatalogBook, incoming: CatalogBook): Catalo
     categories: mergeCategories(existing.categories, incoming.categories),
     format: existing.format || incoming.format,
     acquisitionMediaType: existing.acquisitionMediaType || incoming.acquisitionMediaType,
+    isLcpProtected: existing.isLcpProtected || incoming.isLcpProtected || undefined,
     collections: mergeCollections(existing.collections, incoming.collections),
     isOpenAccess: existing.isOpenAccess || incoming.isOpenAccess || undefined,
     availabilityStatus: existing.availabilityStatus || incoming.availabilityStatus,
@@ -457,15 +483,30 @@ export const parseOpds1Xml = (xmlText: string, baseUrl: string): { books: Catalo
         const isAudiobook = schemaType === 'http://bib.schema.org/Audiobook' || schemaType === 'http://schema.org/Audiobook';
 
         // Find acquisition links for downloadable books
-        const openAccessLink = allLinks.find(link => {
+        const acquisitionCandidates = allLinks.filter(link => {
+            const rel = link.getAttribute('rel') || '';
+            return rel.includes('opds-spec.org/acquisition');
+        });
+        const isOpenAccessAcquisition = (link: Element) => {
             const rel = link.getAttribute('rel') || '';
             return rel.includes('/open-access') || rel === 'http://opds-spec.org/acquisition/open-access';
-        });
-        const acquisitionLink = openAccessLink || allLinks.find(link => {
-            const rel = link.getAttribute('rel') || '';
-            const type = link.getAttribute('type') || '';
-            return rel.includes('opds-spec.org/acquisition') && (type.includes('epub+zip') || type.includes('pdf'));
-        }) || allLinks.find(link => (link.getAttribute('rel') || '').includes('opds-spec.org/acquisition'));
+        };
+        const isReadableAcquisition = (link: Element) => {
+            const type = (link.getAttribute('type') || '').toLowerCase();
+            const resolvedIndirectMediaType = getResolvedIndirectMediaType(link);
+            return Boolean(getFormatFromMimeType(type) || getFormatFromMimeType(resolvedIndirectMediaType));
+        };
+        const isLcpAcquisition = (link: Element) => {
+            const type = link.getAttribute('type') || undefined;
+            return isLcpMediaType(type) || hasLcpIndirectAcquisition(link);
+        };
+        const openAccessLink = acquisitionCandidates.find(link => isOpenAccessAcquisition(link) && !isLcpAcquisition(link))
+            || acquisitionCandidates.find(link => isOpenAccessAcquisition(link));
+        const acquisitionLink = openAccessLink
+            || acquisitionCandidates.find(link => isReadableAcquisition(link) && !isLcpAcquisition(link))
+            || acquisitionCandidates.find(link => isReadableAcquisition(link))
+            || acquisitionCandidates.find(link => !isLcpAcquisition(link))
+            || acquisitionCandidates[0];
         const isOpenAccess = !!openAccessLink;
 
         let distributor: string | undefined = undefined;
@@ -561,6 +602,7 @@ export const parseOpds1Xml = (xmlText: string, baseUrl: string): { books: Catalo
             const resolvedIndirectMediaType = getResolvedIndirectMediaType(acquisitionLink as Element);
             const resolvedMediaType = getFormatFromMimeType(mimeType) ? mimeType : resolvedIndirectMediaType;
             const canonicalAudiobookMediaType = isAudiobook ? 'http://bib.schema.org/Audiobook' : undefined;
+            const isLcpProtected = isLcpMediaType(mimeType) || hasLcpIndirectAcquisition(acquisitionLink as Element);
             let format = getFormatFromMimeType(resolvedMediaType || mimeType);
             if (isAudiobook) {
                 format = 'AUDIOBOOK';
@@ -601,6 +643,7 @@ export const parseOpds1Xml = (xmlText: string, baseUrl: string): { books: Catalo
                     categories: categories.length > 0 ? categories : undefined,
                     format,
                     acquisitionMediaType: finalMediaType || undefined,
+                    isLcpProtected: isLcpProtected || undefined,
                     collections: collections.length > 0 ? collections : undefined,
                     isOpenAccess: isOpenAccess || undefined,
                     availabilityStatus: availabilityStatus || undefined,

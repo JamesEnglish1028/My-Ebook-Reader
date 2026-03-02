@@ -90,4 +90,26 @@ describe('BookDetailView format badge and import button', () => {
       screen.queryByText(/Warning: This item may not be a valid book file/i),
     ).not.toBeInTheDocument();
   });
+
+  it('disables catalog import for LCP-protected titles', () => {
+    const book: CatalogBook = {
+      title: 'Locked EPUB Book',
+      author: 'Catalog Author',
+      coverImage: null,
+      downloadUrl: 'https://example.org/p/book.lcp',
+      summary: 'An LCP-protected EPUB book',
+      providerId: 'p4',
+      format: 'EPUB',
+      acquisitionMediaType: 'application/vnd.readium.lcp.license.v1.0+json',
+      isLcpProtected: true,
+    };
+
+    render(<BookDetailView {...baseProps} book={book} source="catalog" onImportFromCatalog={async () => ({ success: false })} />);
+
+    const button = screen.getByRole('button', { name: /Cannot Import: LCP Protected/i });
+    expect(button).toBeDisabled();
+    expect(
+      screen.getByText(/This title is protected with Readium LCP and cannot be imported by this application\./i),
+    ).toBeInTheDocument();
+  });
 });

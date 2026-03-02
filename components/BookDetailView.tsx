@@ -321,9 +321,18 @@ const BookDetailView: React.FC<BookDetailViewProps> = ({ book, onBack, source, c
     || normalizedMediaType === 'application/epub+zip'
     || normalizedMediaType === 'application/audiobook+json'
     || normalizedMediaType === 'application/webpub+json';
+  const isLcpProtected = Boolean(bookAny.isLcpProtected)
+    || normalizedMediaType.includes('readium.lcp')
+    || normalizedMediaType.includes('+lcp')
+    || normalizedMediaType.includes('license.status')
+    || (Array.isArray(bookAny.alternativeFormats) && bookAny.alternativeFormats.some((format: any) => {
+      const mediaType = String(format?.mediaType || '').toLowerCase();
+      return mediaType.includes('readium.lcp') || mediaType.includes('+lcp') || mediaType.includes('license.status');
+    }));
 
   // Only allow import if format or mediaType is PDF or EPUB
   const isImportable = (() => {
+    if (isLcpProtected) return false;
     return hasSupportedBookFormat || hasSupportedBookMediaType;
   })();
 
@@ -375,8 +384,19 @@ const BookDetailView: React.FC<BookDetailViewProps> = ({ book, onBack, source, c
               onClick={handleImportClick}
               disabled={isImporting || !isImportable}
             >
-              {isImporting ? 'Importing...' : isImportable ? 'Import to My Library' : 'Cannot Import: Unsupported format'}
+              {isImporting
+                ? 'Importing...'
+                : isImportable
+                  ? 'Import to My Library'
+                  : isLcpProtected
+                    ? 'Cannot Import: LCP Protected'
+                    : 'Cannot Import: Unsupported format'}
             </button>
+          )}
+          {source === 'catalog' && isLcpProtected && (
+            <div className="theme-text-warning mt-3 max-w-xs text-center text-sm">
+              This title is protected with Readium LCP and cannot be imported by this application.
+            </div>
           )}
           {showImportSuccess && (
             <div className="fixed inset-0 flex items-center justify-center z-50">
