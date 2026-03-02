@@ -98,4 +98,27 @@ describe('authDocuments bearer token expiry', () => {
     expect(second).toEqual({ scheme: 'bearer', token: 'second-token' });
     expect(fetchMock).toHaveBeenCalledTimes(2);
   });
+
+  it('falls back to basic auth when stored credentials exist but no auth document is cached', async () => {
+    vi.doMock('../credentials', () => ({
+      findCredential: vi.fn().mockResolvedValue({
+        host: 'example.com',
+        username: 'user',
+        password: 'pass',
+      }),
+    }));
+
+    const authDocuments = await import('../authDocuments');
+
+    const result = await authDocuments.ensureFreshPatronAuthorization('https://example.com/loan');
+
+    expect(result).toEqual({
+      authorization: {
+        scheme: 'basic',
+        username: 'user',
+        password: 'pass',
+      },
+      refreshed: true,
+    });
+  });
 });

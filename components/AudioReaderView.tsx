@@ -398,11 +398,21 @@ const AudioReaderView: React.FC<AudioReaderViewProps> = ({ bookId: propBookId, o
         const storedCredential = await findCredentialForUrl(sourceUrl);
         if (!storedCredential) return null;
         const authDocument = getCachedAuthDocumentForUrl(sourceUrl) || bookData?.authDocument || null;
-        if (!authDocument) return null;
 
         if (forceRefresh) {
           invalidatePatronAuthorizationForUrl(sourceUrl);
           invalidatePatronAuthorizationForUrl(currentTrack.href);
+        }
+
+        if (!authDocument) {
+          const basicAuth: RequestAuthorization = {
+            scheme: 'basic',
+            username: storedCredential.username,
+            password: storedCredential.password,
+          };
+          cachePatronAuthorizationForUrl(sourceUrl, basicAuth);
+          cachePatronAuthorizationForUrl(currentTrack.href, basicAuth);
+          return basicAuth;
         }
 
         const freshAuth = await getAuthorizationForAuthDocument(

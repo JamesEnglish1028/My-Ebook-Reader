@@ -105,10 +105,20 @@ export async function ensureFreshPatronAuthorization(
     return { authorization: existing, refreshed: false };
   }
 
-  const authDocument = authDocumentCache.get(host);
   const credential = await findCredential(host);
-  if (!authDocument || !credential) {
+  if (!credential) {
     return { authorization: getCachedPatronAuthorizationForUrl(url), refreshed: false };
+  }
+
+  const authDocument = authDocumentCache.get(host);
+  if (!authDocument) {
+    const basicAuth: RequestAuthorization = {
+      scheme: 'basic',
+      username: credential.username,
+      password: credential.password,
+    };
+    cachePatronAuthorizationForUrl(url, basicAuth);
+    return { authorization: basicAuth, refreshed: true };
   }
 
   const authorization = await getAuthorizationForAuthDocument(
