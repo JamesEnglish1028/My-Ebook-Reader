@@ -338,11 +338,17 @@ export const uploadLibraryToDrive = async (payload: SyncPayload, books: BookReco
     const appFolderId = await findOrCreateFolder(APP_FOLDER_NAME);
     localStorage.setItem('ebook-reader-drive-folder-id', appFolderId);
 
-    onProgress(`Uploading ${books.length} book files...`);
+    const booksToUpload = books.filter((book) => !book.contentExcludedFromSync);
+    const skippedBooks = books.length - booksToUpload.length;
+    onProgress(
+      skippedBooks > 0
+        ? `Uploading ${booksToUpload.length} book files (${skippedBooks} metadata-only protected title${skippedBooks === 1 ? '' : 's'} skipped)...`
+        : `Uploading ${booksToUpload.length} book files...`,
+    );
     const booksFolderId = await findOrCreateFolder(BOOKS_SUBFOLDER_NAME, appFolderId);
 
-    const bookFileUploads = books.map(async (book, index) => {
-      onProgress(`Uploading book ${index + 1}/${books.length}: ${book.title}`);
+    const bookFileUploads = booksToUpload.map(async (book, index) => {
+      onProgress(`Uploading book ${index + 1}/${booksToUpload.length}: ${book.title}`);
       const format = (book.format || 'epub').toLowerCase();
       const mimeType = format === 'pdf' ? 'application/pdf' : 'application/epub+zip';
       const fileName = `${book.id}.${format}`;
@@ -485,6 +491,14 @@ export const downloadLibraryFromDrive = async (
       const bookMeta = payload.library[i];
       if (!bookMeta.id) {
         logger.warn(`Book metadata for "${bookMeta.title}" is missing an ID, skipping download.`);
+        continue;
+      }
+
+      if (bookMeta.contentExcludedFromSync) {
+        booksWithData.push({
+          ...bookMeta,
+          epubData: new ArrayBuffer(0),
+        });
         continue;
       }
 

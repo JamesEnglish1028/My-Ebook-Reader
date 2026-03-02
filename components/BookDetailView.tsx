@@ -306,6 +306,9 @@ const BookDetailView: React.FC<BookDetailViewProps> = ({ book, onBack, source, c
   }, [prepareAudiobookPlayback]);
 
   const handleReadClick = async () => {
+    if (bookAny.contentExcludedFromSync) {
+      return;
+    }
     if (onReadBook && bookAny.id) {
       const ready = await prepareAudiobookPlayback(true);
       if (!ready) return;
@@ -316,6 +319,7 @@ const BookDetailView: React.FC<BookDetailViewProps> = ({ book, onBack, source, c
   const [showImportSuccess, setShowImportSuccess] = React.useState(false);
   const [isImporting, setIsImporting] = React.useState(false);
   const [isAlreadyInLibrary, setIsAlreadyInLibrary] = React.useState(false);
+  const isContentExcludedFromSync = Boolean(bookAny.contentExcludedFromSync);
   const hasSupportedBookFormat = normalizedFormat === 'PDF' || normalizedFormat === 'EPUB' || normalizedFormat === 'AUDIOBOOK';
   const hasSupportedBookMediaType =
     normalizedMediaType === 'application/pdf'
@@ -418,8 +422,18 @@ const BookDetailView: React.FC<BookDetailViewProps> = ({ book, onBack, source, c
             </div>
           )}
           {source === 'library' ? (
-            <button className="mt-2 px-4 py-2 rounded bg-sky-700 text-white font-bold hover:bg-sky-600" onClick={handleReadClick}>
-              {isPreparingPlayback ? 'Refreshing Access...' : normalizedFormat === 'AUDIOBOOK' ? 'Listen' : 'Read Book'}
+            <button
+              className="mt-2 px-4 py-2 rounded bg-sky-700 text-white font-bold hover:bg-sky-600 disabled:opacity-60 disabled:cursor-not-allowed"
+              onClick={handleReadClick}
+              disabled={isContentExcludedFromSync}
+            >
+              {isContentExcludedFromSync
+                ? 'Re-download to Read'
+                : isPreparingPlayback
+                  ? 'Refreshing Access...'
+                  : normalizedFormat === 'AUDIOBOOK'
+                    ? 'Listen'
+                    : 'Read Book'}
             </button>
           ) : (
             <button
@@ -441,6 +455,11 @@ const BookDetailView: React.FC<BookDetailViewProps> = ({ book, onBack, source, c
           {source === 'catalog' && isAlreadyInLibrary && (
             <div className="theme-text-secondary mt-3 max-w-xs text-center text-sm">
               This title is already in My Shelf.
+            </div>
+          )}
+          {source === 'library' && isContentExcludedFromSync && (
+            <div className="theme-text-warning mt-3 max-w-xs text-center text-sm">
+              This protected title was synced as a record only. Re-download it from its source to read it on this device.
             </div>
           )}
           {source === 'catalog' && drmBlockReason && (

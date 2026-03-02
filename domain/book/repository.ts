@@ -169,6 +169,7 @@ export class BookRepository {
         isbn: bookRecord.isbn,
         providerId: bookRecord.providerId,
         providerName: bookRecord.providerName,
+        contentExcludedFromSync: bookRecord.contentExcludedFromSync,
         distributor: bookRecord.distributor,
         description: bookRecord.description,
         subjects: bookRecord.subjects,

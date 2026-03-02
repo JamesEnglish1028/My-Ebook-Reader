@@ -334,6 +334,7 @@ export const useAuthAcquisitionCoordinator = ({
       if (book.format?.toUpperCase() === 'AUDIOBOOK') {
         cacheAudiobookTrackAuthorization(bookData, resolvedFulfill.resolvedUrl, resolvedFulfill.followUpAuth);
       }
+      const shouldExcludeContentFromSync = book.format?.toUpperCase() !== 'AUDIOBOOK' && !book.isOpenAccess;
       const catalogBookMeta = book.format && book.format.toUpperCase() === 'PDF'
         ? {
             summary: book.summary,
@@ -341,6 +342,7 @@ export const useAuthAcquisitionCoordinator = ({
             publicationDate: book.publicationDate,
             subjects: book.subjects,
             coverImage: book.coverImage,
+            contentExcludedFromSync: shouldExcludeContentFromSync || undefined,
           }
         : book.format && book.format.toUpperCase() === 'AUDIOBOOK'
           ? {
@@ -353,8 +355,11 @@ export const useAuthAcquisitionCoordinator = ({
               manifestUrl: resolvedFulfill.resolvedUrl || finalUrl,
               fulfillmentUrl: book.downloadUrl,
               authDocument: activeAuthDocument || undefined,
+              contentExcludedFromSync: shouldExcludeContentFromSync || undefined,
             }
-        : undefined;
+        : {
+            contentExcludedFromSync: shouldExcludeContentFromSync || undefined,
+          };
 
       const result = await processAndSaveBook(
         bookData,

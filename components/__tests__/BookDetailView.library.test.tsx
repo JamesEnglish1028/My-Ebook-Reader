@@ -35,4 +35,28 @@ describe('BookDetailView Library Book UI', () => {
     expect(screen.getByText('Distributor:')).toBeInTheDocument();
     expect(screen.getByText('OAPEN')).toBeInTheDocument();
   });
+
+  test('disables reading for metadata-only synced protected titles', () => {
+    const mockProps = {
+      book: {
+        ...libraryBook,
+        contentExcludedFromSync: true,
+      },
+      source: 'library' as const,
+      onBack: vi.fn(),
+      onReadBook: vi.fn(),
+      onImportFromCatalog: vi.fn(),
+      importStatus: defaultImportStatus,
+      setImportStatus: vi.fn(),
+      userCitationFormat: 'apa' as 'apa' | 'mla',
+    };
+
+    render(<BookDetailView {...mockProps} />);
+
+    const button = screen.getByRole('button', { name: /Re-download to Read/i });
+    expect(button).toBeDisabled();
+    expect(
+      screen.getByText(/This protected title was synced as a record only\./i),
+    ).toBeInTheDocument();
+  });
 });

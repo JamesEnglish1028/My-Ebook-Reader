@@ -22,6 +22,13 @@ interface ImportResult {
   existingBook?: BookRecord;
 }
 
+type PersistedImportMeta = Partial<CatalogBook> & {
+  manifestUrl?: string;
+  fulfillmentUrl?: string;
+  authDocument?: AuthDocument;
+  contentExcludedFromSync?: boolean;
+};
+
 const initialImportState: ImportStatusState = {
   isLoading: false,
   message: '',
@@ -63,7 +70,7 @@ export const useImportCoordinator = ({ onCatalogImportSuccess }: UseImportCoordi
     providerId?: string,
     format?: string,
     coverImageUrl?: string | null,
-    catalogBookMeta?: Partial<CatalogBook>,
+    catalogBookMeta?: PersistedImportMeta,
   ): Promise<ImportResult> => {
     let finalCoverImage: string | null = null;
     const storedProviderName = getStoredProviderName(source, providerName);
@@ -76,11 +83,7 @@ export const useImportCoordinator = ({ onCatalogImportSuccess }: UseImportCoordi
     if (effectiveFormat === 'AUDIOBOOK') {
       setImportStatus({ isLoading: true, message: 'Saving audiobook to library...', error: null });
       try {
-        const runtimeMeta = catalogBookMeta as (Partial<CatalogBook> & {
-          manifestUrl?: string;
-          fulfillmentUrl?: string;
-          authDocument?: AuthDocument;
-        }) | undefined;
+        const runtimeMeta = catalogBookMeta as PersistedImportMeta | undefined;
         const manifestBaseUrl = runtimeMeta?.manifestUrl || providerId || undefined;
         const manifest = parseAudiobookManifest(bookData, manifestBaseUrl);
         if (!finalCoverImage && manifest.coverImageUrl) {
@@ -104,6 +107,7 @@ export const useImportCoordinator = ({ onCatalogImportSuccess }: UseImportCoordi
           manifestUrl,
           fulfillmentUrl,
           authDocument: runtimeMeta?.authDocument,
+          contentExcludedFromSync: runtimeMeta?.contentExcludedFromSync,
           providerName: storedProviderName,
           providerId: finalProviderId,
           description: manifest.description,
@@ -187,6 +191,7 @@ export const useImportCoordinator = ({ onCatalogImportSuccess }: UseImportCoordi
           coverImage: (catalogMeta as { coverImage?: string | null }).coverImage || validCover,
           epubData: bookData,
           format: 'PDF',
+          contentExcludedFromSync: catalogBookMeta?.contentExcludedFromSync,
           providerName: storedProviderName,
           providerId: finalProviderId,
           description: (catalogMeta as Partial<CatalogBook>).summary,
@@ -255,6 +260,7 @@ export const useImportCoordinator = ({ onCatalogImportSuccess }: UseImportCoordi
         publicationDate: opfMetadata?.publicationDate as string | undefined,
         providerId: finalProviderId,
         providerName: storedProviderName,
+        contentExcludedFromSync: catalogBookMeta?.contentExcludedFromSync,
         description: opfMetadata?.description as string | undefined,
         subjects: opfMetadata?.subjects as BookRecord['subjects'] | undefined,
         format: 'EPUB',

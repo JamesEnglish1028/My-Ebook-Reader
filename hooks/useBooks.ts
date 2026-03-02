@@ -73,6 +73,7 @@ export function useBookMetadata(bookId: number | null) {
           isbn: book.isbn,
           providerId: book.providerId,
           providerName: book.providerName,
+          contentExcludedFromSync: book.contentExcludedFromSync,
           distributor: book.distributor,
           description: book.description,
           subjects: book.subjects,
