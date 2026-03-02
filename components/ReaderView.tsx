@@ -1174,31 +1174,31 @@ const ReaderView: React.FC<ReaderViewProps> = ({ bookId, onClose, animationData 
             <button onClick={onClose} className="theme-hover-surface rounded-full p-2 transition-colors" aria-label="Close Reader">
               <CloseIcon className="w-6 h-6" />
             </button>
-            <button onClick={() => setShowNavPanel(true)} className="theme-hover-surface relative rounded-full p-2 transition-colors" aria-label="Contents and Bookmarks">
+            <button onClick={() => setShowNavPanel(true)} className="theme-hover-surface theme-focus-ring relative rounded-full p-2 transition-colors focus:outline-none focus:ring-2" aria-label="Contents and Bookmarks">
               <ListIcon className="w-6 h-6" />
               {(bookmarks.length > 0 || citations.length > 0) && (
-                <span className="absolute top-1 right-1 block h-2 w-2 rounded-full bg-sky-400 ring-2 ring-slate-800" />
+                <span className="theme-progress-fill theme-ring-offset absolute top-1 right-1 block h-2 w-2 rounded-full ring-2" />
               )}
             </button>
           </div>
 
           {/* Right controls */}
           <div className="flex justify-end items-center gap-2 sm:order-3">
-            <button onClick={toggleSpeech} className="theme-hover-surface rounded-full p-2 transition-colors focus:outline-none focus:ring-2 focus:ring-sky-500" aria-label={speechState === 'playing' ? 'Pause Read Aloud' : 'Start Read Aloud'}>
-              {speechState === 'playing' ? <PauseIcon className="w-6 h-6 text-sky-400" /> : <PlayIcon className="w-6 h-6" />}
+            <button onClick={toggleSpeech} className="theme-hover-surface theme-focus-ring rounded-full p-2 transition-colors focus:outline-none focus:ring-2" aria-label={speechState === 'playing' ? 'Pause Read Aloud' : 'Start Read Aloud'}>
+              {speechState === 'playing' ? <PauseIcon className="theme-accent-text w-6 h-6" /> : <PlayIcon className="w-6 h-6" />}
             </button>
-            <button onClick={() => setShowSearch(true)} className="theme-hover-surface rounded-full p-2 transition-colors focus:outline-none focus:ring-2 focus:ring-sky-500" aria-label="Search in book">
+            <button onClick={() => setShowSearch(true)} className="theme-hover-surface theme-focus-ring rounded-full p-2 transition-colors focus:outline-none focus:ring-2" aria-label="Search in book">
               <SearchIcon className="w-6 h-6" />
             </button>
-            <button onClick={() => setShowCitationModal(true)} className="theme-hover-surface rounded-full p-2 transition-colors focus:outline-none focus:ring-2 focus:ring-sky-500" aria-label="Create citation for this page">
+            <button onClick={() => setShowCitationModal(true)} className="theme-hover-surface theme-focus-ring rounded-full p-2 transition-colors focus:outline-none focus:ring-2" aria-label="Create citation for this page">
               <AcademicCapIcon className="w-6 h-6" />
             </button>
-            <button onClick={toggleBookmark} className="theme-hover-surface rounded-full p-2 transition-colors focus:outline-none focus:ring-2 focus:ring-sky-500" aria-label={isCurrentPageBookmarked ? 'Remove bookmark from this page' : 'Add bookmark to this page'}>
+            <button onClick={toggleBookmark} className="theme-hover-surface theme-focus-ring rounded-full p-2 transition-colors focus:outline-none focus:ring-2" aria-label={isCurrentPageBookmarked ? 'Remove bookmark from this page' : 'Add bookmark to this page'}>
               <BookmarkIcon className="w-6 h-6" filled={isCurrentPageBookmarked} />
             </button>
-            <button onClick={() => setShowHelp(true)} className="theme-hover-surface rounded-full p-2 transition-colors focus:outline-none focus:ring-2 focus:ring-sky-500" aria-label="Keyboard help">?
+            <button onClick={() => setShowHelp(true)} className="theme-hover-surface theme-focus-ring rounded-full p-2 transition-colors focus:outline-none focus:ring-2" aria-label="Keyboard help">?
             </button>
-            <button onClick={() => setShowSettings(true)} className="theme-hover-surface rounded-full p-2 transition-colors focus:outline-none focus:ring-2 focus:ring-sky-500" aria-label="Settings">
+            <button onClick={() => setShowSettings(true)} className="theme-hover-surface theme-focus-ring rounded-full p-2 transition-colors focus:outline-none focus:ring-2" aria-label="Settings">
               <SettingsIcon className="w-6 h-6" />
             </button>
           </div>

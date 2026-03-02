@@ -28,10 +28,10 @@ const SearchResultExcerpt: React.FC<{ excerpt: string; query: string }> = ({ exc
         // Fallback for safety, query should always be in the excerpt. Highlight within original.
         const parts = excerpt.split(new RegExp(`(${query})`, 'gi'));
         return (
-            <span className="theme-text-secondary text-sm transition-colors group-hover:text-sky-300">
+            <span className="theme-text-secondary theme-accent-text-emphasis-hover text-sm transition-colors">
                 {parts.map((part, i) =>
                     part.toLowerCase() === queryLower ? (
-                        <strong key={i} className="text-sky-300 bg-sky-800/50 font-normal rounded">
+                        <strong key={i} className="theme-inline-highlight rounded px-0.5 font-normal">
                             {part}
                         </strong>
                     ) : (
@@ -82,11 +82,11 @@ const SearchResultExcerpt: React.FC<{ excerpt: string; query: string }> = ({ exc
     const parts = snippet.split(new RegExp(`(${query})`, 'gi'));
     
     return (
-        <span className="theme-text-secondary text-sm transition-colors group-hover:text-sky-300">
+        <span className="theme-text-secondary theme-accent-text-emphasis-hover text-sm transition-colors">
             {leadingEllipsis && '...'}
             {parts.map((part, i) =>
                 part.toLowerCase() === queryLower ? (
-                    <strong key={i} className="text-sky-300 bg-sky-800/50 font-normal rounded">
+                    <strong key={i} className="theme-inline-highlight rounded px-0.5 font-normal">
                         {part}
                     </strong>
                 ) : (
@@ -143,7 +143,7 @@ const SearchPanel: React.FC<SearchPanelProps> = ({
                     placeholder="Search in book..."
                     value={searchQuery}
                     onChange={(e) => onQueryChange(e.target.value)}
-                    className="theme-input w-full rounded-md py-2 pl-10 pr-3 text-sm focus:outline-none focus:ring-2 focus:ring-sky-500"
+                    className="theme-input theme-focus-ring w-full rounded-md py-2 pl-10 pr-3 text-sm focus:outline-none focus:ring-2"
                     aria-label="Search input"
                     autoFocus
                 />
@@ -161,7 +161,7 @@ const SearchPanel: React.FC<SearchPanelProps> = ({
                     <ul className="theme-divider divide-y">
                         {results.map((result, index) => (
                             <li key={index} className="group">
-                                <button onClick={() => onNavigate(result.cfi)} className="w-full text-left p-4 hover:bg-sky-500/10 transition-colors theme-hover-surface">
+                                <button onClick={() => onNavigate(result.cfi)} className="theme-hover-surface w-full p-4 text-left transition-colors">
                                     <SearchResultExcerpt excerpt={result.excerpt.trim()} query={searchQuery} />
                                 </button>
                             </li>

@@ -49,7 +49,7 @@ const CitationModal: React.FC<CitationModalProps> = ({ isOpen, onClose, onSave }
         onClick={(e) => e.stopPropagation()}
       >
         <div className="flex justify-between items-center mb-4">
-          <h2 className="text-xl font-bold text-sky-300">Create Citation</h2>
+          <h2 className="theme-accent-text-emphasis text-xl font-bold">Create Citation</h2>
           <button onClick={onClose} className="theme-hover-surface rounded-full p-2 transition-colors" aria-label="Close">
             <CloseIcon className="w-6 h-6" />
           </button>
@@ -73,7 +73,7 @@ const CitationModal: React.FC<CitationModalProps> = ({ isOpen, onClose, onSave }
                 setNote(e.target.value);
               }
             }}
-            className="theme-input w-full rounded-md p-2 text-sm focus:outline-none focus:ring-2 focus:ring-sky-500"
+            className="theme-input theme-focus-ring w-full rounded-md p-2 text-sm focus:outline-none focus:ring-2"
             placeholder="Add a brief note..."
           />
           <p className={`mt-1 text-right text-xs ${remainingChars < 10 ? 'theme-text-danger' : 'theme-text-muted'}`}>
@@ -90,7 +90,7 @@ const CitationModal: React.FC<CitationModalProps> = ({ isOpen, onClose, onSave }
           </button>
           <button
             onClick={handleSave}
-            className="py-2 px-6 rounded-md bg-sky-500 hover:bg-sky-600 transition-colors font-bold"
+            className="theme-button-primary rounded-md px-6 py-2 font-bold transition-colors"
           >
             Save Citation
           </button>

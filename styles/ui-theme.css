@@ -192,6 +192,11 @@ body {
   border-color: var(--accent-soft-border) !important;
 }
 
+.theme-inline-highlight {
+  background-color: var(--accent-soft-bg) !important;
+  color: var(--accent-text-emphasis) !important;
+}
+
 .theme-progress-track {
   background-color: color-mix(in srgb, var(--button-primary-bg) 18%, transparent) !important;
 }
@@ -215,6 +220,20 @@ body {
   background-color: var(--surface-elevated-bg) !important;
   color: var(--text-primary) !important;
   border-color: var(--border-color) !important;
+}
+
+.theme-selection-active {
+  background-color: var(--accent-soft-bg) !important;
+  border-color: var(--accent-soft-border) !important;
+  color: var(--accent-text-emphasis) !important;
+}
+
+.theme-selection-inactive {
+  border-color: var(--border-color) !important;
+}
+
+.theme-selection-inactive:hover {
+  border-color: var(--accent-soft-border) !important;
 }
 
 .theme-button-primary {

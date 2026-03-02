@@ -636,17 +636,17 @@ const PdfReaderView: React.FC<PdfReaderViewProps> = ({ bookId: propBookId, onClo
         </div>
         <div className="flex items-center gap-2">
           <div className="hidden sm:flex items-center gap-1">
-            <button onClick={() => setZoomPercent(z => Math.max(20, Math.round(z / 1.15)))} className="theme-hover-surface rounded p-2" aria-label="Zoom out">-</button>
+            <button onClick={() => setZoomPercent(z => Math.max(20, Math.round(z / 1.15)))} className="theme-hover-surface theme-focus-ring rounded p-2 focus:outline-none focus:ring-2" aria-label="Zoom out">-</button>
             <div className="theme-text-secondary px-2 text-sm">{zoomPercent}%</div>
-            <button onClick={() => setZoomPercent(z => Math.min(400, Math.round(z * 1.15)))} className="theme-hover-surface rounded p-2" aria-label="Zoom in">+</button>
-      <button onClick={() => setFitMode(m => m === 'page' ? 'width' : 'page')} className="theme-hover-surface rounded p-2" aria-label="Toggle fit mode">{fitMode === 'page' ? 'Fit Page' : 'Fit Width'}</button>
+            <button onClick={() => setZoomPercent(z => Math.min(400, Math.round(z * 1.15)))} className="theme-hover-surface theme-focus-ring rounded p-2 focus:outline-none focus:ring-2" aria-label="Zoom in">+</button>
+      <button onClick={() => setFitMode(m => m === 'page' ? 'width' : 'page')} className="theme-hover-surface theme-focus-ring rounded p-2 focus:outline-none focus:ring-2" aria-label="Toggle fit mode">{fitMode === 'page' ? 'Fit Page' : 'Fit Width'}</button>
       <button onClick={() => setShowCitationModal(true)} className="theme-hover-surface theme-focus-ring rounded-full p-2 transition-colors focus:outline-none focus:ring-2" aria-label="Create citation for this page">
         <AcademicCapIcon className="w-6 h-6" />
       </button>
       <button onClick={() => setShowBookmarkModal(true)} className="theme-hover-surface theme-focus-ring rounded-full p-2 transition-colors focus:outline-none focus:ring-2" aria-label="Add bookmark to this page">
         <BookmarkIcon className="w-6 h-6" />
       </button>
-      <button onClick={() => setShowHelp(s => !s)} className="theme-hover-surface rounded p-2" aria-label="Keyboard help">?</button>
+      <button onClick={() => setShowHelp(s => !s)} className="theme-hover-surface theme-focus-ring rounded p-2 focus:outline-none focus:ring-2" aria-label="Keyboard help">?</button>
           </div>
         </div>
       </header>

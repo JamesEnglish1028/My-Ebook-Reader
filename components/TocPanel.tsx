@@ -244,7 +244,7 @@ const TocPanel: React.FC<NavigationPanelProps> = ({
                                                 )}
                                                 <span className="theme-text-muted mt-2 block text-xs">{new Date(bookmark.createdAt).toLocaleString()}</span>
                                             </button>
-                                            <button onClick={() => onDeleteBookmark(bookmark.id)} className="p-2 rounded-full hover:bg-red-500/20 text-slate-500 hover:text-red-400 transition-colors flex-shrink-0" aria-label={`Delete bookmark: ${bookmark.label}`}>
+                                            <button onClick={() => onDeleteBookmark(bookmark.id)} className="theme-hover-surface theme-text-muted theme-text-danger-hover flex-shrink-0 rounded-full p-2 transition-colors" aria-label={`Delete bookmark: ${bookmark.label}`}>
                                                 <TrashIcon className="w-5 h-5" />
                                             </button>
                                         </li>
@@ -294,7 +294,7 @@ const TocPanel: React.FC<NavigationPanelProps> = ({
                                                         )}
                                                     </div>
                                                 </button>
-                                                <button onClick={() => onDeleteCitation(citation.id)} className="p-2 rounded-full hover:bg-red-500/20 text-slate-500 hover:text-red-400 transition-colors flex-shrink-0" aria-label={`Delete citation`}>
+                                                <button onClick={() => onDeleteCitation(citation.id)} className="theme-hover-surface theme-text-muted theme-text-danger-hover flex-shrink-0 rounded-full p-2 transition-colors" aria-label={`Delete citation`}>
                                                     <TrashIcon className="w-5 h-5" />
                                                 </button>
                                             </li>

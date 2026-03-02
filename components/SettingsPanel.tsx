@@ -62,7 +62,7 @@ const SettingsPanel: React.FC<SettingsPanelProps> = ({ isOpen, onClose, settings
 
           <div className="theme-surface rounded-md p-3 mb-4">
             <p className="theme-text-muted text-center text-xs">Current Voice</p>
-            <p className="font-semibold text-sky-300 truncate text-center" title={selectedVoice ? selectedVoice.name : 'System Default'}>
+            <p className="theme-accent-text truncate text-center font-semibold" title={selectedVoice ? selectedVoice.name : 'System Default'}>
               {selectedVoice ? selectedVoice.name : 'System Default'}
             </p>
           </div>
@@ -76,7 +76,7 @@ const SettingsPanel: React.FC<SettingsPanelProps> = ({ isOpen, onClose, settings
                   <li
                     key={voice.voiceURI}
                     className={`flex items-center justify-between p-2 text-sm transition-colors ${settings.readAloud.voiceURI === voice.voiceURI
-                        ? 'bg-sky-500/20 text-sky-300'
+                        ? 'theme-selection-active'
                         : 'theme-hover-surface'
                       }`}
                   >
@@ -89,7 +89,7 @@ const SettingsPanel: React.FC<SettingsPanelProps> = ({ isOpen, onClose, settings
                     </button>
                     <button
                       onClick={() => previewVoice(voice)}
-                      className="theme-hover-surface shrink-0 rounded-full p-2"
+                      className="theme-hover-surface theme-focus-ring shrink-0 rounded-full p-2 focus:outline-none focus:ring-2"
                       aria-label={`Preview voice ${voice.name}`}
                     >
                       <PlayIcon className="w-4 h-4" />
@@ -168,8 +168,8 @@ const SettingsPanel: React.FC<SettingsPanelProps> = ({ isOpen, onClose, settings
             <button
               onClick={() => setActiveTab('display')}
               className={`flex-1 flex items-center justify-center gap-2 py-3 px-4 text-sm font-medium border-b-2 transition-colors duration-200 ${activeTab === 'display'
-                  ? 'border-sky-400 text-sky-300'
-                  : 'theme-text-secondary border-transparent hover:text-sky-400 hover:border-slate-500'
+                  ? 'theme-accent-border theme-accent-text-emphasis'
+                  : 'theme-text-secondary border-transparent theme-accent-text-emphasis-hover theme-border-hover'
                 }`}
             >
               <BookIcon className="w-5 h-5" />
@@ -178,8 +178,8 @@ const SettingsPanel: React.FC<SettingsPanelProps> = ({ isOpen, onClose, settings
             <button
               onClick={() => setActiveTab('readAloud')}
               className={`flex-1 flex items-center justify-center gap-2 py-3 px-4 text-sm font-medium border-b-2 transition-colors duration-200 ${activeTab === 'readAloud'
-                  ? 'border-sky-400 text-sky-300'
-                  : 'theme-text-secondary border-transparent hover:text-sky-400 hover:border-slate-500'
+                  ? 'theme-accent-border theme-accent-text-emphasis'
+                  : 'theme-text-secondary border-transparent theme-accent-text-emphasis-hover theme-border-hover'
                 }`}
             >
               <SpeakerIcon className="w-5 h-5" />
@@ -221,14 +221,14 @@ const SettingsPanel: React.FC<SettingsPanelProps> = ({ isOpen, onClose, settings
                 <div className="grid grid-cols-2 gap-4">
                   <button
                     onClick={() => onSettingsChange({ theme: 'light' })}
-                    className={`p-4 rounded-lg border-2 transition-colors ${settings.theme === 'light' ? 'border-sky-500 bg-sky-500/20' : 'border-slate-600 hover:border-slate-500'}`}
+                    className={`rounded-lg border-2 p-4 transition-colors ${settings.theme === 'light' ? 'theme-selection-active' : 'theme-selection-inactive'}`}
                   >
                     <div className="w-full h-12 bg-white rounded" />
                     <p className="mt-2 text-center text-sm font-medium">Light</p>
                   </button>
                   <button
                     onClick={() => onSettingsChange({ theme: 'dark' })}
-                    className={`p-4 rounded-lg border-2 transition-colors ${settings.theme === 'dark' ? 'border-sky-500 bg-sky-500/20' : 'border-slate-600 hover:border-slate-500'}`}
+                    className={`rounded-lg border-2 p-4 transition-colors ${settings.theme === 'dark' ? 'theme-selection-active' : 'theme-selection-inactive'}`}
                   >
                     <div className="w-full h-12 bg-gray-900 rounded" />
                     <p className="mt-2 text-center text-sm font-medium">Dark</p>
@@ -246,7 +246,7 @@ const SettingsPanel: React.FC<SettingsPanelProps> = ({ isOpen, onClose, settings
                     <button
                       key={fontName}
                       onClick={() => onSettingsChange({ fontFamily: fontName })}
-                      className={`py-2 px-1 rounded-lg border-2 transition-colors text-center text-sm truncate ${settings.fontFamily === fontName ? 'border-sky-500 bg-sky-500/20' : 'border-slate-600 hover:border-slate-500'}`}
+                      className={`rounded-lg border-2 px-1 py-2 text-center text-sm truncate transition-colors ${settings.fontFamily === fontName ? 'theme-selection-active' : 'theme-selection-inactive'}`}
                     >
                       <span className={fontName === 'Serif' ? 'font-serif-custom' : fontName === 'Sans-Serif' ? 'font-sans-custom' : 'font-original'}>
                         {fontName}
@@ -264,14 +264,14 @@ const SettingsPanel: React.FC<SettingsPanelProps> = ({ isOpen, onClose, settings
                 <div className="grid grid-cols-2 gap-4">
                   <button
                     onClick={() => onSettingsChange({ flow: 'paginated' })}
-                    className={`p-4 rounded-lg border-2 transition-colors text-center ${settings.flow === 'paginated' ? 'border-sky-500 bg-sky-500/20' : 'border-slate-600 hover:border-slate-500'}`}
+                    className={`rounded-lg border-2 p-4 text-center transition-colors ${settings.flow === 'paginated' ? 'theme-selection-active' : 'theme-selection-inactive'}`}
                   >
                     <span className="block text-sm font-medium">Paginated</span>
                     <span className="theme-text-muted mt-1 block text-xs">Turn pages like a real book.</span>
                   </button>
                   <button
                     onClick={() => onSettingsChange({ flow: 'scrolled' })}
-                    className={`p-4 rounded-lg border-2 transition-colors text-center ${settings.flow === 'scrolled' ? 'border-sky-500 bg-sky-500/20' : 'border-slate-600 hover:border-slate-500'}`}
+                    className={`rounded-lg border-2 p-4 text-center transition-colors ${settings.flow === 'scrolled' ? 'theme-selection-active' : 'theme-selection-inactive'}`}
                   >
                     <span className="block text-sm font-medium">Scrolled</span>
                     <span className="theme-text-muted mt-1 block text-xs">Scroll like a webpage.</span>
@@ -289,7 +289,7 @@ const SettingsPanel: React.FC<SettingsPanelProps> = ({ isOpen, onClose, settings
                     <button
                       key={formatName}
                       onClick={() => onSettingsChange({ citationFormat: formatName.toLowerCase() as any })}
-                      className={`py-2 px-1 rounded-lg border-2 transition-colors text-center text-sm truncate ${settings.citationFormat === formatName.toLowerCase() ? 'border-sky-500 bg-sky-500/20' : 'border-slate-600 hover:border-slate-500'}`}
+                      className={`rounded-lg border-2 px-1 py-2 text-center text-sm truncate transition-colors ${settings.citationFormat === formatName.toLowerCase() ? 'theme-selection-active' : 'theme-selection-inactive'}`}
                     >
                       {formatName}
                     </button>
