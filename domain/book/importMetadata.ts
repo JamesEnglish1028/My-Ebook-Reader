@@ -1,5 +1,7 @@
 import type { AuthDocument, CatalogBook } from '../catalog/types';
 
+import type { BookRecord } from './types';
+
 const isHttpUrl = (value: string | undefined | null): value is string => {
   if (!value) return false;
   return /^https?:\/\//i.test(value);
@@ -70,5 +72,20 @@ export const resolveStoredImportSourceUrls = (
   return {
     manifestUrl: meta?.manifestUrl || meta?.downloadUrl || fallbackUrl,
     fulfillmentUrl: meta?.fulfillmentUrl || meta?.downloadUrl || fallbackUrl,
+  };
+};
+
+export const normalizeStoredBookSyncState = (book: BookRecord): BookRecord | null => {
+  const shouldRequireReauthorization = Boolean(book.restoredFromSync && book.contentExcludedFromSync);
+  const currentRequiresReauthorization = Boolean(book.requiresReauthorization);
+  const normalizedRequiresReauthorization = shouldRequireReauthorization ? true : undefined;
+
+  if (currentRequiresReauthorization === shouldRequireReauthorization && book.requiresReauthorization === normalizedRequiresReauthorization) {
+    return null;
+  }
+
+  return {
+    ...book,
+    requiresReauthorization: normalizedRequiresReauthorization,
   };
 };

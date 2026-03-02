@@ -9,6 +9,7 @@
 import { DB_INDEXES, DB_NAME, DB_VERSION, STORE_NAME } from '../../constants';
 import { logger } from '../../services/logger';
 
+import { normalizeStoredBookSyncState } from './importMetadata';
 import type { BookMetadata, BookRecord } from './types';
 
 /**
@@ -23,6 +24,7 @@ export type RepositoryResult<T> =
  */
 export class BookRepository {
   private dbInstance: IDBDatabase | null = null;
+  private syncStateNormalized = false;
 
   /**
    * Initialize IndexedDB connection
@@ -117,6 +119,7 @@ export class BookRepository {
    */
   async findById(id: number): Promise<RepositoryResult<BookRecord | null>> {
     try {
+      await this.normalizeLegacySyncState();
       const db = await this.init();
       const book = await new Promise<BookRecord | undefined>((resolve, reject) => {
         const transaction = db.transaction(STORE_NAME, 'readonly');
@@ -234,6 +237,7 @@ export class BookRepository {
    */
   async findAllMetadata(): Promise<RepositoryResult<BookMetadata[]>> {
     try {
+      await this.normalizeLegacySyncState();
       const db = await this.init();
       const books = await new Promise<BookMetadata[]>((resolve, reject) => {
         const transaction = db.transaction(STORE_NAME, 'readonly');
@@ -471,6 +475,38 @@ export class BookRepository {
     } catch (error) {
       const errorMessage = error instanceof Error ? error.message : 'Unknown error counting books';
       logger.error('BookRepository.count error:', errorMessage);
+      return { success: false, error: errorMessage };
+    }
+  }
+
+  async normalizeLegacySyncState(): Promise<RepositoryResult<number>> {
+    if (this.syncStateNormalized) {
+      return { success: true, data: 0 };
+    }
+
+    try {
+      const allBooksResult = await this.findAll();
+      if (!allBooksResult.success) {
+        return { success: false, error: allBooksResult.error };
+      }
+
+      let updatedCount = 0;
+      for (const book of allBooksResult.data) {
+        const normalized = normalizeStoredBookSyncState(book);
+        if (!normalized) continue;
+
+        const saveResult = await this.save(normalized);
+        if (!saveResult.success) {
+          return { success: false, error: saveResult.error };
+        }
+        updatedCount += 1;
+      }
+
+      this.syncStateNormalized = true;
+      return { success: true, data: updatedCount };
+    } catch (error) {
+      const errorMessage = error instanceof Error ? error.message : 'Unknown error normalizing sync state';
+      logger.error('BookRepository.normalizeLegacySyncState error:', errorMessage);
       return { success: false, error: errorMessage };
     }
   }
