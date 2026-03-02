@@ -9,6 +9,7 @@ import {
   getAuthorizationForAuthDocument,
   getCachedAuthDocumentForUrl,
   getCachedPatronAuthorizationForUrl,
+  invalidatePatronAuthorizationForUrl,
   proxiedUrl,
 } from '../services';
 import { parseAudiobookManifest } from '../services/audiobookManifest';
@@ -127,9 +128,19 @@ const AudioReaderView: React.FC<AudioReaderViewProps> = ({ bookId: propBookId, o
   const currentTrack = manifest?.tracks[currentTrackIndex] || null;
   const coverImage = bookData?.coverImage || manifest?.coverImageUrl || null;
 
-  const refreshManifestFromSource = React.useCallback(async (preferredAuth?: RequestAuthorization | null) => {
+  const refreshManifestFromSource = React.useCallback(async (
+    preferredAuth?: RequestAuthorization | null,
+    forceRefresh = false,
+  ) => {
     const fulfillmentUrl = bookData?.fulfillmentUrl || bookData?.sourceUrl;
     if (!fulfillmentUrl) return null;
+
+    if (forceRefresh) {
+      invalidatePatronAuthorizationForUrl(fulfillmentUrl);
+      if (bookData?.manifestUrl) {
+        invalidatePatronAuthorizationForUrl(bookData.manifestUrl);
+      }
+    }
 
     let auth = preferredAuth || getCachedPatronAuthorizationForUrl(fulfillmentUrl);
     if (!auth) {
@@ -294,18 +305,24 @@ const AudioReaderView: React.FC<AudioReaderViewProps> = ({ bookId: propBookId, o
 
       const sourceUrl = bookData?.fulfillmentUrl || bookData?.sourceUrl || '';
 
-      const refreshAuthorization = async (): Promise<RequestAuthorization | null> => {
+      const refreshAuthorization = async (forceRefresh = false): Promise<RequestAuthorization | null> => {
         if (!sourceUrl) return null;
         const storedCredential = await findCredentialForUrl(sourceUrl);
         if (!storedCredential) return null;
         const authDocument = getCachedAuthDocumentForUrl(sourceUrl);
         if (!authDocument) return null;
 
+        if (forceRefresh) {
+          invalidatePatronAuthorizationForUrl(sourceUrl);
+          invalidatePatronAuthorizationForUrl(currentTrack.href);
+        }
+
         const freshAuth = await getAuthorizationForAuthDocument(
           authDocument,
           sourceUrl,
           storedCredential.username,
           storedCredential.password,
+          { forceRefresh },
         );
 
         cachePatronAuthorizationForUrl(currentTrack.href, freshAuth);
@@ -335,11 +352,11 @@ const AudioReaderView: React.FC<AudioReaderViewProps> = ({ bookId: propBookId, o
 
         let response = await requestTrack(activeTrackHref, auth);
         if (response.status === 401) {
-          const refreshedAuth = await refreshAuthorization();
+          const refreshedAuth = await refreshAuthorization(true);
           if (refreshedAuth) {
             auth = refreshedAuth;
             try {
-              const refreshedManifest = await refreshManifestFromSource(refreshedAuth);
+              const refreshedManifest = await refreshManifestFromSource(refreshedAuth, true);
               const refreshedTrack = refreshedManifest?.tracks[currentTrackIndex];
               if (refreshedTrack?.href) {
                 activeTrackHref = refreshedTrack.href;
@@ -353,10 +370,12 @@ const AudioReaderView: React.FC<AudioReaderViewProps> = ({ bookId: propBookId, o
 
         if (!response.ok && (response.status === 401 || response.status === 403) && sourceUrl) {
           try {
-            const refreshedManifest = await refreshManifestFromSource(auth);
+            const refreshedManifest = await refreshManifestFromSource(null, true);
             const refreshedTrack = refreshedManifest?.tracks[currentTrackIndex];
             if (refreshedTrack?.href && refreshedTrack.href !== activeTrackHref) {
-              response = await requestTrack(refreshedTrack.href, auth);
+              const refreshedAuth = getCachedPatronAuthorizationForUrl(refreshedTrack.href)
+                || getCachedPatronAuthorizationForUrl(sourceUrl);
+              response = await requestTrack(refreshedTrack.href, refreshedAuth);
             }
           } catch {
             // Preserve the original response error below.

@@ -46,4 +46,56 @@ describe('authDocuments bearer token expiry', () => {
 
     expect(authDocuments.getCachedPatronAuthorizationForUrl('https://example.com/manifest.json')).toBeNull();
   });
+
+  it('forces a new bearer token request when forceRefresh is set', async () => {
+    const fetchMock = vi.fn()
+      .mockResolvedValueOnce({
+        ok: true,
+        status: 200,
+        text: async () => JSON.stringify({
+          accessToken: 'first-token',
+          tokenType: 'Bearer',
+          expiresIn: 3600,
+        }),
+      })
+      .mockResolvedValueOnce({
+        ok: true,
+        status: 200,
+        text: async () => JSON.stringify({
+          accessToken: 'second-token',
+          tokenType: 'Bearer',
+          expiresIn: 3600,
+        }),
+      });
+
+    vi.stubGlobal('fetch', fetchMock);
+
+    const authDocuments = await import('../authDocuments');
+    const authDocument = {
+      authentication: [
+        {
+          type: 'http://opds-spec.org/auth/basic-token',
+          links: [{ rel: 'authenticate', href: 'https://example.com/authenticate' }],
+        } as any,
+      ],
+    };
+
+    const first = await authDocuments.getAuthorizationForAuthDocument(
+      authDocument,
+      'https://example.com/manifest.json',
+      'user',
+      'pass',
+    );
+    const second = await authDocuments.getAuthorizationForAuthDocument(
+      authDocument,
+      'https://example.com/manifest.json',
+      'user',
+      'pass',
+      { forceRefresh: true },
+    );
+
+    expect(first).toEqual({ scheme: 'bearer', token: 'first-token' });
+    expect(second).toEqual({ scheme: 'bearer', token: 'second-token' });
+    expect(fetchMock).toHaveBeenCalledTimes(2);
+  });
 });

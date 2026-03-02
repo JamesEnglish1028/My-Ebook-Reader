@@ -68,6 +68,16 @@ export function cachePatronAuthorizationForUrl(url: string, auth: RequestAuthori
   }
 }
 
+export function invalidatePatronAuthorizationForUrl(url: string) {
+  const host = getHostFromUrl(url);
+  if (!host) return;
+  patronTokenCache.delete(host);
+  const existing = sessionAuthorizationCache.get(host);
+  if (existing?.scheme === 'bearer') {
+    sessionAuthorizationCache.delete(host);
+  }
+}
+
 export async function ensureFreshPatronAuthorization(
   url: string,
   minimumValidityMs = 60_000,
@@ -168,9 +178,14 @@ export async function getAuthorizationForAuthDocument(
   contextUrl: string,
   username: string,
   password: string,
+  options?: { forceRefresh?: boolean },
 ): Promise<RequestAuthorization> {
-  const cached = getCachedPatronAuthorizationForUrl(contextUrl);
-  if (cached?.scheme === 'bearer') return cached;
+  if (options?.forceRefresh) {
+    invalidatePatronAuthorizationForUrl(contextUrl);
+  } else {
+    const cached = getCachedPatronAuthorizationForUrl(contextUrl);
+    if (cached?.scheme === 'bearer') return cached;
+  }
 
   const authenticateHref = getBasicTokenAuthLink(authDocument);
   if (!authenticateHref) {
