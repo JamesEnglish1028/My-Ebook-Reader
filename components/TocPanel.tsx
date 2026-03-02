@@ -92,26 +92,26 @@ const TocListItem: React.FC<{ item: TocItem; onNavigate: (href: string) => void;
 
     const isTopLevel = level === 0;
     const typographyClasses = isTopLevel ? 'font-semibold theme-text-primary' : 'font-normal theme-text-secondary';
-    const hoverClasses = 'hover:bg-sky-500/10';
+    const hoverClasses = 'theme-accent-surface';
 
     return (
         <li>
             <div className={`flex items-center justify-between w-full py-2 pr-3 ${hoverClasses}`} data-level={level}>
                 <button
                     onClick={() => { if (item.href) onNavigate(item.href); }}
-                    className={`flex-1 text-left ${typographyClasses} group-hover:text-sky-300 transition-colors focus:outline-none`}
+                    className={`theme-accent-text-hover flex-1 text-left ${typographyClasses} transition-colors focus:outline-none`}
                     aria-label={`Go to ${item.label}`}
                 >
                     {item.label.trim()}
                 </button>
                 {hasSubitems && (
-                    <button
-                        onClick={() => setIsExpanded(!isExpanded)}
-                        aria-label={isExpanded ? `Collapse ${item.label}` : `Expand ${item.label}`}
-                        className="theme-hover-surface ml-2 rounded p-1"
-                    >
-                        <ChevronRightIcon className={`w-4 h-4 text-slate-500 transition-transform duration-200 flex-shrink-0 ${isExpanded ? 'rotate-90' : ''}`} />
-                    </button>
+                        <button
+                            onClick={() => setIsExpanded(!isExpanded)}
+                            aria-label={isExpanded ? `Collapse ${item.label}` : `Expand ${item.label}`}
+                            className="theme-hover-surface ml-2 rounded p-1"
+                        >
+                        <ChevronRightIcon className={`theme-text-muted w-4 h-4 transition-transform duration-200 flex-shrink-0 ${isExpanded ? 'rotate-90' : ''}`} />
+                        </button>
                 )}
             </div>
 
@@ -184,7 +184,7 @@ const TocPanel: React.FC<NavigationPanelProps> = ({
                         <button
                             onClick={() => setActiveTab('toc')}
                             className={`py-3 px-4 text-sm font-medium border-b-2 transition-colors duration-200 ${
-                                activeTab === 'toc' ? 'border-sky-400 text-sky-300' : 'theme-text-secondary border-transparent hover:text-sky-400 hover:border-slate-500'
+                                activeTab === 'toc' ? 'theme-accent-border theme-accent-text-emphasis' : 'theme-text-secondary theme-accent-text-hover border-transparent theme-border-hover'
                             }`}
                             aria-current={activeTab === 'toc' ? 'page' : undefined}
                         >
@@ -193,7 +193,7 @@ const TocPanel: React.FC<NavigationPanelProps> = ({
                         <button
                             onClick={() => setActiveTab('bookmarks')}
                             className={`py-3 px-4 text-sm font-medium border-b-2 transition-colors duration-200 ${
-                                activeTab === 'bookmarks' ? 'border-sky-400 text-sky-300' : 'theme-text-secondary border-transparent hover:text-sky-400 hover:border-slate-500'
+                                activeTab === 'bookmarks' ? 'theme-accent-border theme-accent-text-emphasis' : 'theme-text-secondary theme-accent-text-hover border-transparent theme-border-hover'
                             }`}
                             aria-current={activeTab === 'bookmarks' ? 'page' : undefined}
                         >
@@ -202,7 +202,7 @@ const TocPanel: React.FC<NavigationPanelProps> = ({
                         <button
                             onClick={() => setActiveTab('citations')}
                             className={`py-3 px-4 text-sm font-medium border-b-2 transition-colors duration-200 ${
-                                activeTab === 'citations' ? 'border-sky-400 text-sky-300' : 'theme-text-secondary border-transparent hover:text-sky-400 hover:border-slate-500'
+                                activeTab === 'citations' ? 'theme-accent-border theme-accent-text-emphasis' : 'theme-text-secondary theme-accent-text-hover border-transparent theme-border-hover'
                             }`}
                             aria-current={activeTab === 'citations' ? 'page' : undefined}
                         >
@@ -234,9 +234,9 @@ const TocPanel: React.FC<NavigationPanelProps> = ({
                                         <li key={bookmark.id} className="p-4 flex items-center justify-between group">
                                             <button onClick={() => onBookmarkNavigate(bookmark.cfi)} className="flex-grow text-left pr-4">
                                                 {bookmark.chapter && (
-                                                    <span className="block text-xs font-semibold text-sky-400 uppercase tracking-wider mb-1">{bookmark.chapter}</span>
+                                                    <span className="theme-accent-text block text-xs font-semibold uppercase tracking-wider mb-1">{bookmark.chapter}</span>
                                                 )}
-                                                <span className="theme-text-primary block text-sm font-semibold transition-colors group-hover:text-sky-300">{bookmark.label}</span>
+                                                <span className="theme-text-primary theme-accent-text-hover block text-sm font-semibold transition-colors">{bookmark.label}</span>
                                                 {bookmark.description && (
                                                     <blockquote className="theme-border mt-2 border-l-2 pl-3">
                                                         <p className="theme-text-secondary text-sm italic">{bookmark.description}</p>
@@ -260,7 +260,7 @@ const TocPanel: React.FC<NavigationPanelProps> = ({
                         <div>
                             {bookData && citations.length > 0 && (
                                 <div className="theme-divider border-b p-4">
-                                    <button onClick={handleExportCitations} className="w-full flex items-center justify-center gap-2 py-2 px-4 rounded-md bg-sky-500 hover:bg-sky-600 transition-colors font-semibold text-white text-sm">
+                                    <button onClick={handleExportCitations} className="theme-button-primary w-full flex items-center justify-center gap-2 py-2 px-4 rounded-md transition-colors font-semibold text-sm">
                                         <ExportIcon className="w-5 h-5" />
                                         <span>Export Citations (.ris)</span>
                                     </button>
@@ -275,11 +275,11 @@ const TocPanel: React.FC<NavigationPanelProps> = ({
                                             <li key={citation.id} className="p-4 flex items-center justify-between group">
                                                 <button onClick={() => onCitationNavigate(citation.cfi)} className="flex-grow text-left pr-4">
                                                     {citation.chapter && (
-                                                        <span className="block text-xs font-semibold text-sky-400 uppercase tracking-wider mb-1">{citation.chapter}</span>
+                                                        <span className="theme-accent-text block text-xs font-semibold uppercase tracking-wider mb-1">{citation.chapter}</span>
                                                     )}
-                                                    <p className="theme-text-primary text-sm transition-colors group-hover:text-sky-300">
+                                                    <p className="theme-text-primary theme-accent-text-hover text-sm transition-colors">
                                                         {citationParts.pre}
-                                                        <span className={`${citationParts.isItalic ? 'italic' : 'not-italic'} theme-text-secondary group-hover:text-sky-400`}>{citationParts.title}</span>
+                                                        <span className={`${citationParts.isItalic ? 'italic' : 'not-italic'} theme-text-secondary theme-accent-text-hover`}>{citationParts.title}</span>
                                                         {citationParts.post}
                                                     </p>
                                                     {citation.note && (

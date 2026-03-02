@@ -147,6 +147,22 @@ body {
   color: var(--accent-text-emphasis) !important;
 }
 
+.theme-accent-text-hover:hover {
+  color: var(--accent-text) !important;
+}
+
+.theme-accent-text-emphasis-hover:hover {
+  color: var(--accent-text-emphasis) !important;
+}
+
+.theme-accent-border {
+  border-color: var(--accent-soft-border) !important;
+}
+
+.theme-border-hover:hover {
+  border-color: var(--border-color) !important;
+}
+
 .theme-on-accent-text {
   color: var(--button-primary-fg) !important;
 }
