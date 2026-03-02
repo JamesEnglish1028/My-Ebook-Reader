@@ -4,6 +4,7 @@ import type { BookRecord, RequestAuthorization } from '../types';
 import {
   cachePatronAuthorizationForUrl,
   db,
+  ensureFreshPatronAuthorization,
   findCredentialForUrl,
   getAuthorizationForAuthDocument,
   getCachedAuthDocumentForUrl,
@@ -11,6 +12,7 @@ import {
   proxiedUrl,
 } from '../services';
 import { parseAudiobookManifest } from '../services/audiobookManifest';
+import type { ParsedAudiobookManifest } from '../services/audiobookManifest';
 import { getLastPositionForBook, saveLastPositionForBook } from '../services/readerUtils';
 
 import { BackwardStepIcon, CloseIcon, ForwardStepIcon, PauseIcon, PlayIcon } from './icons';
@@ -53,6 +55,7 @@ const AudioReaderView: React.FC<AudioReaderViewProps> = ({ bookId: propBookId, o
   const bookId = propBookId ?? null;
   const onClose = propOnClose ?? (() => undefined);
   const [bookData, setBookData] = useState<BookRecord | null>(null);
+  const [manifest, setManifest] = useState<ParsedAudiobookManifest | null>(null);
   const [manifestError, setManifestError] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [currentTrackIndex, setCurrentTrackIndex] = useState(0);
@@ -66,6 +69,19 @@ const AudioReaderView: React.FC<AudioReaderViewProps> = ({ bookId: propBookId, o
   const [duration, setDuration] = useState(0);
   const audioRef = useRef<HTMLAudioElement | null>(null);
   const saveTickRef = useRef(0);
+
+  const parseManifestData = React.useCallback((data: ArrayBuffer | string, baseUrl?: string): ParsedAudiobookManifest | null => {
+    try {
+      const parsed = parseAudiobookManifest(data, baseUrl);
+      setManifest(parsed);
+      setManifestError(null);
+      return parsed;
+    } catch (error) {
+      setManifest(null);
+      setManifestError(error instanceof Error ? error.message : 'Failed to parse audiobook manifest.');
+      return null;
+    }
+  }, []);
 
   useEffect(() => {
     const fetchBook = async () => {
@@ -86,6 +102,7 @@ const AudioReaderView: React.FC<AudioReaderViewProps> = ({ bookId: propBookId, o
         return;
       }
       setBookData(data);
+      parseManifestData(data.epubData, data.sourceUrl || data.providerId || undefined);
       const saved = getLastPositionForBook(bookId);
       if (saved) {
         try {
@@ -99,31 +116,53 @@ const AudioReaderView: React.FC<AudioReaderViewProps> = ({ bookId: propBookId, o
       setIsLoading(false);
     };
     void fetchBook();
-  }, [bookId]);
-
-  const parsedManifest = useMemo(() => {
-    if (!bookData) return { manifest: null, error: null as string | null };
-    try {
-      return {
-        manifest: parseAudiobookManifest(bookData.epubData, bookData.sourceUrl || bookData.providerId),
-        error: null,
-      };
-    } catch (error) {
-      return {
-        manifest: null,
-        error: error instanceof Error ? error.message : 'Failed to parse audiobook manifest.',
-      };
-    }
-  }, [bookData]);
-
-  const manifest = parsedManifest.manifest;
-
-  useEffect(() => {
-    setManifestError(parsedManifest.error);
-  }, [parsedManifest.error]);
+  }, [bookId, parseManifestData]);
 
   const currentTrack = manifest?.tracks[currentTrackIndex] || null;
   const coverImage = bookData?.coverImage || manifest?.coverImageUrl || null;
+
+  const refreshManifestFromSource = React.useCallback(async (preferredAuth?: RequestAuthorization | null) => {
+    if (!bookData?.sourceUrl) return null;
+
+    let auth = preferredAuth || getCachedPatronAuthorizationForUrl(bookData.sourceUrl);
+    if (!auth) {
+      const refreshed = await ensureFreshPatronAuthorization(bookData.sourceUrl, 0);
+      auth = refreshed.authorization;
+    }
+
+    const headers: Record<string, string> = {};
+    if (auth) {
+      headers.Authorization = buildAuthorizationHeader(auth);
+    }
+
+    const requestUrl = proxiedUrl(bookData.sourceUrl);
+    const response = await fetch(requestUrl, {
+      headers,
+      credentials: requestUrl === bookData.sourceUrl ? 'include' : 'omit',
+    });
+
+    if (!response.ok) {
+      throw new Error(`Manifest request failed (${response.status}).`);
+    }
+
+    const manifestBuffer = await response.arrayBuffer();
+    const parsed = parseManifestData(manifestBuffer, bookData.sourceUrl || bookData.providerId || undefined);
+    if (!parsed) {
+      throw new Error('Failed to parse refreshed audiobook manifest.');
+    }
+
+    setBookData((existing) => (
+      existing
+        ? {
+            ...existing,
+            epubData: manifestBuffer,
+          }
+        : existing
+    ));
+
+    return parsed;
+  }, [bookData, parseManifestData]);
+
   const chapterGroups = useMemo(() => {
     if (!manifest || manifest.toc.length === 0) return [];
 
@@ -202,7 +241,6 @@ const AudioReaderView: React.FC<AudioReaderViewProps> = ({ bookId: propBookId, o
       setCurrentTime(0);
       setDuration(0);
 
-      const requestUrl = proxiedUrl(currentTrack.href);
       const sourceUrl = bookData?.sourceUrl || '';
 
       const refreshAuthorization = async (): Promise<RequestAuthorization | null> => {
@@ -223,30 +261,54 @@ const AudioReaderView: React.FC<AudioReaderViewProps> = ({ bookId: propBookId, o
         return freshAuth;
       };
 
-      const requestTrack = async (auth: RequestAuthorization | null): Promise<Response> => {
+      const requestTrack = async (href: string, auth: RequestAuthorization | null): Promise<Response> => {
+        const requestUrl = proxiedUrl(href);
         const headers: Record<string, string> = {};
         if (auth) {
           headers.Authorization = buildAuthorizationHeader(auth);
         }
         return fetch(requestUrl, {
           headers,
-          credentials: requestUrl === currentTrack.href ? 'include' : 'omit',
+          credentials: requestUrl === href ? 'include' : 'omit',
         });
       };
 
       try {
         let auth = getCachedPatronAuthorizationForUrl(currentTrack.href)
           || getCachedPatronAuthorizationForUrl(sourceUrl);
+        let activeTrackHref = currentTrack.href;
 
         if (!auth) {
           auth = await refreshAuthorization();
         }
 
-        let response = await requestTrack(auth);
+        let response = await requestTrack(activeTrackHref, auth);
         if (response.status === 401) {
           const refreshedAuth = await refreshAuthorization();
           if (refreshedAuth) {
-            response = await requestTrack(refreshedAuth);
+            auth = refreshedAuth;
+            try {
+              const refreshedManifest = await refreshManifestFromSource(refreshedAuth);
+              const refreshedTrack = refreshedManifest?.tracks[currentTrackIndex];
+              if (refreshedTrack?.href) {
+                activeTrackHref = refreshedTrack.href;
+              }
+            } catch {
+              // Fall back to retrying the previous URL with fresh auth.
+            }
+            response = await requestTrack(activeTrackHref, refreshedAuth);
+          }
+        }
+
+        if (!response.ok && (response.status === 401 || response.status === 403) && sourceUrl) {
+          try {
+            const refreshedManifest = await refreshManifestFromSource(auth);
+            const refreshedTrack = refreshedManifest?.tracks[currentTrackIndex];
+            if (refreshedTrack?.href && refreshedTrack.href !== activeTrackHref) {
+              response = await requestTrack(refreshedTrack.href, auth);
+            }
+          } catch {
+            // Preserve the original response error below.
           }
         }
 
@@ -273,7 +335,7 @@ const AudioReaderView: React.FC<AudioReaderViewProps> = ({ bookId: propBookId, o
         URL.revokeObjectURL(objectUrl);
       }
     };
-  }, [bookData?.sourceUrl, currentTrack]);
+  }, [bookData?.sourceUrl, currentTrack, currentTrackIndex, refreshManifestFromSource]);
 
   const persistPosition = (time: number) => {
     if (!bookId) return;

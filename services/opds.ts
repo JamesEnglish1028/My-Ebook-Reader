@@ -560,6 +560,7 @@ export const parseOpds1Xml = (xmlText: string, baseUrl: string): { books: Catalo
             const mimeType = acquisitionLink?.getAttribute('type') || '';
             const resolvedIndirectMediaType = getResolvedIndirectMediaType(acquisitionLink as Element);
             const resolvedMediaType = getFormatFromMimeType(mimeType) ? mimeType : resolvedIndirectMediaType;
+            const canonicalAudiobookMediaType = isAudiobook ? 'http://bib.schema.org/Audiobook' : undefined;
             let format = getFormatFromMimeType(resolvedMediaType || mimeType);
             if (isAudiobook) {
                 format = 'AUDIOBOOK';
@@ -584,10 +585,7 @@ export const parseOpds1Xml = (xmlText: string, baseUrl: string): { books: Catalo
             const subjects = categories.map(cat => cat.label);
             if (downloadUrlHref) {
                 const downloadUrl = new URL(downloadUrlHref, baseUrl).href;
-                let finalMediaType = resolvedMediaType || mimeType;
-                if (!finalMediaType && isAudiobook) {
-                    finalMediaType = 'http://bib.schema.org/Audiobook';
-                }
+                let finalMediaType = canonicalAudiobookMediaType || resolvedMediaType || mimeType;
                 addOrMergeBook({
                     title,
                     author,

@@ -56,6 +56,10 @@ export function cachePatronAuthorizationForUrl(url: string, auth: RequestAuthori
   if (!host || !auth) return;
   sessionAuthorizationCache.set(host, auth);
   if (auth.scheme === 'bearer') {
+    const existingToken = patronTokenCache.get(host);
+    if (existingToken?.accessToken === auth.token && existingToken.expiresAt > Date.now()) {
+      return;
+    }
     cachePatronTokenForUrl(url, {
       accessToken: auth.token,
       tokenType: 'Bearer',
