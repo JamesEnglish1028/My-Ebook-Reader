@@ -60,10 +60,9 @@ function base64ToBytes(base64: string): Uint8Array {
 async function getOrCreateCryptoKey(db: IDBDatabase): Promise<CryptoKey | null> {
   if (!globalThis.crypto?.subtle) return null;
 
-  const tx = db.transaction(META_STORE_NAME, 'readwrite');
-  const metaStore = tx.objectStore(META_STORE_NAME);
-
   const existing = await new Promise<CryptoKey | undefined>((resolve, reject) => {
+    const readTx = db.transaction(META_STORE_NAME, 'readonly');
+    const metaStore = readTx.objectStore(META_STORE_NAME);
     const req = metaStore.get(KEY_RECORD_ID);
     req.onsuccess = () => resolve(req.result?.key as CryptoKey | undefined);
     req.onerror = () => reject(req.error);
@@ -78,14 +77,11 @@ async function getOrCreateCryptoKey(db: IDBDatabase): Promise<CryptoKey | null> 
   );
 
   await new Promise<void>((resolve, reject) => {
+    const writeTx = db.transaction(META_STORE_NAME, 'readwrite');
+    const metaStore = writeTx.objectStore(META_STORE_NAME);
     const putReq = metaStore.put({ id: KEY_RECORD_ID, key });
     putReq.onsuccess = () => resolve();
     putReq.onerror = () => reject(putReq.error);
-  });
-
-  await new Promise<void>((resolve, reject) => {
-    tx.oncomplete = () => resolve();
-    tx.onerror = () => reject(tx.error);
   });
 
   return key;
@@ -134,9 +130,6 @@ export async function saveCredential(host: string, username: string, password: s
   try {
     const db = await openDB();
     const key = await getOrCreateCryptoKey(db);
-    const tx = db.transaction(STORE_NAME, 'readwrite');
-    const store = tx.objectStore(STORE_NAME);
-
     let payload: CredRecord = { host, username, password };
     if (key) {
       const encrypted = await encryptSecret(key, password);
@@ -149,6 +142,8 @@ export async function saveCredential(host: string, username: string, password: s
       };
     }
 
+    const tx = db.transaction(STORE_NAME, 'readwrite');
+    const store = tx.objectStore(STORE_NAME);
     store.put(payload);
     return new Promise<void>((resolve, reject) => {
       tx.oncomplete = () => resolve();

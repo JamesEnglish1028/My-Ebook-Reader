@@ -41,6 +41,15 @@ export function getCachedPatronAuthorizationForUrl(url: string): RequestAuthoriz
   };
 }
 
+export function cachePatronAuthorizationForUrl(url: string, auth: RequestAuthorization | null | undefined) {
+  if (!auth || auth.scheme !== 'bearer') return;
+  cachePatronTokenForUrl(url, {
+    accessToken: auth.token,
+    tokenType: 'Bearer',
+    expiresIn: 3600,
+  });
+}
+
 function cachePatronTokenForUrl(
   url: string,
   token: { accessToken: string; tokenType: string; expiresIn?: number },

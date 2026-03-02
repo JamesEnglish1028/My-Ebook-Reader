@@ -71,6 +71,18 @@ export const useAuthAcquisitionCoordinator = ({
 }: UseAuthAcquisitionCoordinatorOptions) => {
   const [credentialPrompt, setCredentialPrompt] = useState<CredentialPrompt>(initialCredentialPrompt);
   const [showNetworkDebug, setShowNetworkDebug] = useState(false);
+  const isPalaceUrl = (url: string) => {
+    try {
+      const hostname = new URL(url).hostname.toLowerCase();
+      return hostname.endsWith('palace.io')
+        || hostname.endsWith('palaceproject.io')
+        || hostname.endsWith('thepalaceproject.org')
+        || hostname.endsWith('.palace.io')
+        || hostname.endsWith('.thepalaceproject.org');
+    } catch {
+      return false;
+    }
+  };
 
   const handleImportFromCatalog = useCallback(async (book: CatalogBook, catalogName?: string): Promise<ImportResult> => {
     if (book.format && book.format.toUpperCase() !== 'EPUB' && book.format.toUpperCase() !== 'PDF') {
@@ -111,7 +123,7 @@ export const useAuthAcquisitionCoordinator = ({
         }
         const resolveResult = await opdsAcquisitionService.resolve(
           book.downloadUrl,
-          (requestAuth && (requestAuth.scheme === 'bearer' || new URL(book.downloadUrl).hostname.toLowerCase().includes('palace'))) ? '1' : 'auto',
+          (isPalaceUrl(book.downloadUrl) || requestAuth?.scheme === 'bearer') ? '1' : 'auto',
           requestAuth,
         );
 
@@ -234,7 +246,7 @@ export const useAuthAcquisitionCoordinator = ({
 
       const resolveResult = await opdsAcquisitionService.resolve(
         href,
-        requestAuth.scheme === 'bearer' || new URL(href).hostname.toLowerCase().includes('palace') ? '1' : 'auto',
+        requestAuth.scheme === 'bearer' || isPalaceUrl(href) ? '1' : 'auto',
         requestAuth,
       );
       if (resolveResult.success && credentialPrompt.pendingBook) {

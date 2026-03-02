@@ -2,6 +2,7 @@ import React, { useEffect, useMemo, useState } from 'react';
 
 import { useCatalogContent, useResolvedCatalogSearch } from '../../../hooks';
 import {
+  cachePatronAuthorizationForUrl,
   buildOpenSearchUrl,
   findCredentialForUrl,
   getAuthorizationForAuthDocument,
@@ -158,11 +159,12 @@ const CatalogView: React.FC<CatalogViewProps> = ({
     : 'auto';
   const currentHost = getHostFromUrl(currentUrl);
   const currentSessionCredentials = currentHost ? sessionCredentialsByHost[currentHost] : undefined;
+  const cachedCurrentRequestAuth = currentUrl ? getCachedPatronAuthorizationForUrl(currentUrl) : null;
   const currentRequestAuth = currentSessionCredentials
     ? currentSessionCredentials.auth
-    : null;
-  const currentAuthKey = currentHost && currentSessionCredentials
-    ? `${currentHost}:${currentSessionCredentials.version}`
+    : cachedCurrentRequestAuth;
+  const currentAuthKey = currentHost && (currentSessionCredentials || cachedCurrentRequestAuth)
+    ? `${currentHost}:${currentSessionCredentials?.version || 'cached'}:${currentRequestAuth?.scheme || 'none'}`
     : '';
 
   useEffect(() => {
@@ -295,6 +297,9 @@ const CatalogView: React.FC<CatalogViewProps> = ({
   };
 
   const handleCatalogBookClick = (book: CatalogBook) => {
+    if (currentRequestAuth?.scheme === 'bearer' && book.downloadUrl) {
+      cachePatronAuthorizationForUrl(book.downloadUrl, currentRequestAuth);
+    }
     onShowBookDetail(book, 'catalog', activeOpdsSource.name);
   };
 

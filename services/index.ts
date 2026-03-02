@@ -42,7 +42,7 @@ export {
 
 // Auth document cache
 export {
-    cacheAuthDocumentForUrl, fetchAndCacheAuthDocument, getAuthorizationForAuthDocument, getCachedAuthDocumentForUrl, getCachedPatronAuthorizationForUrl,
+    cacheAuthDocumentForUrl, cachePatronAuthorizationForUrl, fetchAndCacheAuthDocument, getAuthorizationForAuthDocument, getCachedAuthDocumentForUrl, getCachedPatronAuthorizationForUrl,
 } from './authDocuments';
 
 // Google Drive sync services
