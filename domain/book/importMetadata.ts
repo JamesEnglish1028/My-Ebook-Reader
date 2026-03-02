@@ -24,11 +24,9 @@ export const buildCatalogImportMeta = (
   options: BuildCatalogImportMetaOptions = {},
 ): CatalogImportMeta => {
   const normalizedFormat = (book.format || '').toUpperCase();
-  const requiresReauthorization = !book.isOpenAccess;
-  const shouldExcludeContentFromSync = requiresReauthorization;
+  const shouldExcludeContentFromSync = !book.isOpenAccess;
   const baseMeta: CatalogImportMeta = {
     contentExcludedFromSync: shouldExcludeContentFromSync || undefined,
-    requiresReauthorization: requiresReauthorization || undefined,
   };
 
   if (normalizedFormat === 'PDF') {

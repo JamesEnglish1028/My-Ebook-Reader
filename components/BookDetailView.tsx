@@ -193,10 +193,10 @@ interface PrimaryActionNotice {
 const getLibraryPrimaryActionState = (
   normalizedFormat: string,
   isPreparingPlayback: boolean,
-  isContentExcludedFromSync: boolean,
+  isSyncedPlaceholder: boolean,
   requiresReauthorization: boolean,
 ): PrimaryActionState => {
-  if (isContentExcludedFromSync) {
+  if (isSyncedPlaceholder) {
     return {
       label: requiresReauthorization ? 'Reauthorize Access Required' : 'Re-download to Read',
       disabled: true,
@@ -276,7 +276,7 @@ const getPrimaryActionNotice = (
     };
   }
 
-  if (source === 'library' && isContentExcludedFromSync) {
+  if (source === 'library' && isContentExcludedFromSync && restoredFromSync) {
     return {
       tone: 'warning',
       message: 'This protected title was synced as a record only. Re-download it from its source to read it on this device.',
@@ -434,7 +434,7 @@ const BookDetailView: React.FC<BookDetailViewProps> = ({ book, onBack, source, c
   }, [prepareAudiobookPlayback]);
 
   const handleReadClick = async () => {
-    if (bookAny.contentExcludedFromSync) {
+    if (restoredFromSync && isContentExcludedFromSync) {
       return;
     }
     if (onReadBook && bookAny.id) {
@@ -451,6 +451,7 @@ const BookDetailView: React.FC<BookDetailViewProps> = ({ book, onBack, source, c
   const isContentExcludedFromSync = Boolean(bookAny.contentExcludedFromSync);
   const requiresReauthorization = Boolean(bookAny.requiresReauthorization);
   const restoredFromSync = Boolean(bookAny.restoredFromSync);
+  const isSyncedPlaceholder = restoredFromSync && isContentExcludedFromSync;
   const hasSupportedBookFormat = normalizedFormat === 'PDF' || normalizedFormat === 'EPUB' || normalizedFormat === 'AUDIOBOOK';
   const hasSupportedBookMediaType =
     normalizedMediaType === 'application/pdf'
@@ -484,7 +485,7 @@ const BookDetailView: React.FC<BookDetailViewProps> = ({ book, onBack, source, c
     return hasSupportedBookFormat || hasSupportedBookMediaType;
   })();
   const primaryAction = source === 'library'
-    ? getLibraryPrimaryActionState(normalizedFormat, isPreparingPlayback, isContentExcludedFromSync, requiresReauthorization)
+    ? getLibraryPrimaryActionState(normalizedFormat, isPreparingPlayback, isSyncedPlaceholder, requiresReauthorization)
     : getCatalogPrimaryActionState(isImporting, isAlreadyInLibrary, isImportable, drmBlockReason);
   const primaryActionNotice = getPrimaryActionNotice(
     source,
@@ -530,7 +531,7 @@ const BookDetailView: React.FC<BookDetailViewProps> = ({ book, onBack, source, c
     let cancelled = false;
 
     const checkCatalogCredential = async () => {
-      if (source !== 'library' || !requiresReauthorization) {
+      if (source !== 'library' || !isSyncedPlaceholder || !requiresReauthorization) {
         if (!cancelled) setHasCatalogCredential(null);
         return;
       }
@@ -558,7 +559,7 @@ const BookDetailView: React.FC<BookDetailViewProps> = ({ book, onBack, source, c
     return () => {
       cancelled = true;
     };
-  }, [bookAny.fulfillmentUrl, bookAny.manifestUrl, bookAny.sourceUrl, requiresReauthorization, source]);
+  }, [bookAny.fulfillmentUrl, bookAny.manifestUrl, bookAny.sourceUrl, isSyncedPlaceholder, requiresReauthorization, source]);
 
   const handleImportClick = async () => {
     if (isImporting || isAlreadyInLibrary) return;

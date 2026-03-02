@@ -62,4 +62,28 @@ describe('BookDetailView Library Book UI', () => {
       screen.getByText(/Sign in to My Local Library in Catalog or Loans, then restore access on this device\./i),
     ).toBeInTheDocument();
   });
+
+  test('keeps reading enabled for protected local copies that were imported on this device', () => {
+    const mockProps = {
+      book: {
+        ...libraryBook,
+        contentExcludedFromSync: true,
+        requiresReauthorization: false,
+        restoredFromSync: false,
+      },
+      source: 'library' as const,
+      onBack: vi.fn(),
+      onReadBook: vi.fn(),
+      onImportFromCatalog: vi.fn(),
+      importStatus: defaultImportStatus,
+      setImportStatus: vi.fn(),
+      userCitationFormat: 'apa' as 'apa' | 'mla',
+    };
+
+    render(<BookDetailView {...mockProps} />);
+
+    const button = screen.getByRole('button', { name: /Read Book/i });
+    expect(button).toBeEnabled();
+    expect(screen.queryByText(/Reauthorize Access Required/i)).not.toBeInTheDocument();
+  });
 });

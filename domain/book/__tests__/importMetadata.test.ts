@@ -3,7 +3,7 @@ import { describe, expect, it } from 'vitest';
 import { buildCatalogImportMeta } from '../importMetadata';
 
 describe('buildCatalogImportMeta', () => {
-  it('marks protected audiobooks as metadata-only and requiring reauthorization', () => {
+  it('marks protected audiobooks as metadata-only for sync without marking the live copy for reauthorization', () => {
     const meta = buildCatalogImportMeta({
       title: 'Loaned Audiobook',
       author: 'Author',
@@ -15,7 +15,7 @@ describe('buildCatalogImportMeta', () => {
     });
 
     expect(meta.contentExcludedFromSync).toBe(true);
-    expect(meta.requiresReauthorization).toBe(true);
+    expect(meta.requiresReauthorization).toBeUndefined();
   });
 
   it('does not mark open-access audiobooks for reauthorization', () => {
