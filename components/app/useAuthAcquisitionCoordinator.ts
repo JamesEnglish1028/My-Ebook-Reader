@@ -3,6 +3,7 @@ import type { Dispatch, SetStateAction } from 'react';
 
 import { opdsAcquisitionService } from '../../domain/catalog';
 import {
+  cachePatronAuthorizationForUrl,
   findCredentialForUrl,
   getAuthorizationForAuthDocument,
   getCachedAuthDocumentForUrl,
@@ -102,6 +103,12 @@ const resolveLibrarySimplifiedBearerTokenDocument = async (
   }
 
   const resolvedLocation = new URL(location, response.url || fallbackUrl).href;
+  if (String(tokenType).toLowerCase() === 'bearer') {
+    cachePatronAuthorizationForUrl(resolvedLocation, {
+      scheme: 'bearer',
+      token: accessToken,
+    });
+  }
   const nextUrl = proxiedUrl(resolvedLocation);
   if (typeof nextUrl === 'string' && nextUrl.includes('corsproxy.io')) {
     throw new Error('Import failed. The follow-up download would use a public CORS proxy which may strip authorization headers. Configure an owned proxy (VITE_OWN_PROXY_URL).');
