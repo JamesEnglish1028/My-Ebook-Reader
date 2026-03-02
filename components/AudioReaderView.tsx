@@ -217,7 +217,7 @@ const AudioReaderView: React.FC<AudioReaderViewProps> = ({ bookId: propBookId, o
             )}
 
             <audio
-              key={currentTrackSrc || currentTrackIndex}
+              key={trackSrc || currentTrackIndex}
               ref={audioRef}
               controls
               autoPlay
