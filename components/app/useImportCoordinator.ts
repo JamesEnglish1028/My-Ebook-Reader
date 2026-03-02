@@ -67,19 +67,32 @@ export const useImportCoordinator = ({ onCatalogImportSuccess }: UseImportCoordi
     if (effectiveFormat === 'AUDIOBOOK') {
       setImportStatus({ isLoading: true, message: 'Saving audiobook to library...', error: null });
       try {
-        const manifest = parseAudiobookManifest(bookData, providerId || undefined);
+        const runtimeMeta = catalogBookMeta as (Partial<CatalogBook> & {
+          manifestUrl?: string;
+          fulfillmentUrl?: string;
+        }) | undefined;
+        const manifestBaseUrl = runtimeMeta?.manifestUrl || providerId || undefined;
+        const manifest = parseAudiobookManifest(bookData, manifestBaseUrl);
         if (!finalCoverImage && manifest.coverImageUrl) {
           finalCoverImage = await imageUrlToBase64(manifest.coverImageUrl);
         }
 
         const finalProviderId = providerId || fileName;
+        const manifestUrl = runtimeMeta?.manifestUrl
+          || runtimeMeta?.downloadUrl
+          || (isHttpUrl(providerId) ? providerId : undefined);
+        const fulfillmentUrl = runtimeMeta?.fulfillmentUrl
+          || runtimeMeta?.downloadUrl
+          || (isHttpUrl(providerId) ? providerId : undefined);
         const newBook: BookRecord = {
           title: manifest.title || fileName,
           author: manifest.author || authorName || 'Unknown Author',
           coverImage: finalCoverImage,
           epubData: bookData,
           format: 'AUDIOBOOK',
-          sourceUrl: catalogBookMeta?.downloadUrl || (isHttpUrl(providerId) ? providerId : undefined),
+          sourceUrl: manifestUrl,
+          manifestUrl,
+          fulfillmentUrl,
           providerName,
           providerId: finalProviderId,
           description: manifest.description,

@@ -336,7 +336,9 @@ export const useAuthAcquisitionCoordinator = ({
               publicationDate: book.publicationDate,
               subjects: book.subjects,
               coverImage: book.coverImage,
-              downloadUrl: resolvedFulfill.resolvedUrl || book.downloadUrl,
+              downloadUrl: resolvedFulfill.resolvedUrl || finalUrl,
+              manifestUrl: resolvedFulfill.resolvedUrl || finalUrl,
+              fulfillmentUrl: book.downloadUrl,
             }
         : undefined;
 

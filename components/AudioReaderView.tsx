@@ -49,6 +49,12 @@ const buildAuthorizationHeader = (auth: RequestAuthorization): string => (
     : `Basic ${btoa(`${auth.username}:${auth.password}`)}`
 );
 
+const getResponseContentType = (response: Response): string => (
+  response.headers && typeof response.headers.get === 'function'
+    ? (response.headers.get('Content-Type') || '')
+    : ''
+);
+
 const normalizeResourceHref = (href: string): string => href.split('#')[0];
 
 const AudioReaderView: React.FC<AudioReaderViewProps> = ({ bookId: propBookId, onClose: propOnClose }) => {
@@ -102,7 +108,7 @@ const AudioReaderView: React.FC<AudioReaderViewProps> = ({ bookId: propBookId, o
         return;
       }
       setBookData(data);
-      parseManifestData(data.epubData, data.sourceUrl || data.providerId || undefined);
+      parseManifestData(data.epubData, data.manifestUrl || data.sourceUrl || data.providerId || undefined);
       const saved = getLastPositionForBook(bookId);
       if (saved) {
         try {
@@ -122,11 +128,12 @@ const AudioReaderView: React.FC<AudioReaderViewProps> = ({ bookId: propBookId, o
   const coverImage = bookData?.coverImage || manifest?.coverImageUrl || null;
 
   const refreshManifestFromSource = React.useCallback(async (preferredAuth?: RequestAuthorization | null) => {
-    if (!bookData?.sourceUrl) return null;
+    const fulfillmentUrl = bookData?.fulfillmentUrl || bookData?.sourceUrl;
+    if (!fulfillmentUrl) return null;
 
-    let auth = preferredAuth || getCachedPatronAuthorizationForUrl(bookData.sourceUrl);
+    let auth = preferredAuth || getCachedPatronAuthorizationForUrl(fulfillmentUrl);
     if (!auth) {
-      const refreshed = await ensureFreshPatronAuthorization(bookData.sourceUrl, 0);
+      const refreshed = await ensureFreshPatronAuthorization(fulfillmentUrl, 0);
       auth = refreshed.authorization;
     }
 
@@ -135,18 +142,60 @@ const AudioReaderView: React.FC<AudioReaderViewProps> = ({ bookId: propBookId, o
       headers.Authorization = buildAuthorizationHeader(auth);
     }
 
-    const requestUrl = proxiedUrl(bookData.sourceUrl);
-    const response = await fetch(requestUrl, {
+    const requestUrl = proxiedUrl(fulfillmentUrl);
+    let response = await fetch(requestUrl, {
       headers,
-      credentials: requestUrl === bookData.sourceUrl ? 'include' : 'omit',
+      credentials: requestUrl === fulfillmentUrl ? 'include' : 'omit',
     });
 
     if (!response.ok) {
       throw new Error(`Manifest request failed (${response.status}).`);
     }
 
-    const manifestBuffer = await response.arrayBuffer();
-    const parsed = parseManifestData(manifestBuffer, bookData.sourceUrl || bookData.providerId || undefined);
+    let manifestUrl = bookData.manifestUrl || bookData.sourceUrl || fulfillmentUrl;
+    let manifestBuffer: ArrayBuffer;
+    const responseContentType = getResponseContentType(response).toLowerCase();
+
+    if (responseContentType.includes('application/vnd.librarysimplified.bearer-token+json')) {
+      const payload = await response.json().catch(() => null as any);
+      const accessToken = typeof payload?.access_token === 'string'
+        ? payload.access_token
+        : typeof payload?.accessToken === 'string'
+          ? payload.accessToken
+          : null;
+      const tokenType = typeof payload?.token_type === 'string'
+        ? payload.token_type
+        : typeof payload?.tokenType === 'string'
+          ? payload.tokenType
+          : 'Bearer';
+      const location = typeof payload?.location === 'string' ? payload.location : null;
+
+      if (!accessToken || !location) {
+        throw new Error('Manifest refresh returned an incomplete bearer-token document.');
+      }
+
+      manifestUrl = new URL(location, response.url || fulfillmentUrl).href;
+      const manifestAuth: RequestAuthorization | null = String(tokenType).toLowerCase() === 'bearer'
+        ? { scheme: 'bearer', token: accessToken }
+        : null;
+
+      if (manifestAuth) {
+        cachePatronAuthorizationForUrl(manifestUrl, manifestAuth);
+      }
+
+      const manifestRequestUrl = proxiedUrl(manifestUrl);
+      response = await fetch(manifestRequestUrl, {
+        headers: manifestAuth ? { Authorization: `${tokenType} ${accessToken}` } : {},
+        credentials: manifestRequestUrl === manifestUrl ? 'include' : 'omit',
+      });
+
+      if (!response.ok) {
+        throw new Error(`Manifest request failed (${response.status}).`);
+      }
+    }
+
+    manifestBuffer = await response.arrayBuffer();
+    const parsed = parseManifestData(manifestBuffer, manifestUrl || bookData.providerId || undefined);
     if (!parsed) {
       throw new Error('Failed to parse refreshed audiobook manifest.');
     }
@@ -156,6 +205,8 @@ const AudioReaderView: React.FC<AudioReaderViewProps> = ({ bookId: propBookId, o
         ? {
             ...existing,
             epubData: manifestBuffer,
+            sourceUrl: manifestUrl,
+            manifestUrl,
           }
         : existing
     ));
@@ -241,7 +292,7 @@ const AudioReaderView: React.FC<AudioReaderViewProps> = ({ bookId: propBookId, o
       setCurrentTime(0);
       setDuration(0);
 
-      const sourceUrl = bookData?.sourceUrl || '';
+      const sourceUrl = bookData?.fulfillmentUrl || bookData?.sourceUrl || '';
 
       const refreshAuthorization = async (): Promise<RequestAuthorization | null> => {
         if (!sourceUrl) return null;
@@ -335,7 +386,7 @@ const AudioReaderView: React.FC<AudioReaderViewProps> = ({ bookId: propBookId, o
         URL.revokeObjectURL(objectUrl);
       }
     };
-  }, [bookData?.sourceUrl, currentTrack, currentTrackIndex, refreshManifestFromSource]);
+  }, [bookData?.fulfillmentUrl, bookData?.sourceUrl, currentTrack, currentTrackIndex, refreshManifestFromSource]);
 
   const persistPosition = (time: number) => {
     if (!bookId) return;

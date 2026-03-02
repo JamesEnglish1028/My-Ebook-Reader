@@ -235,7 +235,7 @@ const BookDetailView: React.FC<BookDetailViewProps> = ({ book, onBack, source, c
   const normalizedMediaType = effectiveMediaType.toLowerCase();
   const [isPreparingPlayback, setIsPreparingPlayback] = React.useState(false);
   const [playbackNotice, setPlaybackNotice] = React.useState<string | null>(null);
-  const audiobookSourceUrl = (bookAny.sourceUrl || bookAny.providerId || '') as string;
+  const audiobookSourceUrl = (bookAny.fulfillmentUrl || bookAny.sourceUrl || bookAny.providerId || '') as string;
 
   const prepareAudiobookPlayback = React.useCallback(async (announceOnlyWhenRefreshing: boolean) => {
     if (source !== 'library' || normalizedFormat !== 'AUDIOBOOK' || !audiobookSourceUrl) {

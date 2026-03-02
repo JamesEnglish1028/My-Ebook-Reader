@@ -20,6 +20,8 @@ export interface BookMetadata {
   author: string;
   coverImage: string | null; // Base64 encoded image
   sourceUrl?: string;
+  manifestUrl?: string;
+  fulfillmentUrl?: string;
   publisher?: string;
   publicationDate?: string;
   isbn?: string; // Kept for backwards compatibility
@@ -60,6 +62,8 @@ export interface BookRecord {
   coverImage: string | null;
   epubData: ArrayBuffer; // The actual book content
   sourceUrl?: string;
+  manifestUrl?: string;
+  fulfillmentUrl?: string;
   publisher?: string;
   publicationDate?: string;
   isbn?: string;
