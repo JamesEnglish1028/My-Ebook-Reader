@@ -88,7 +88,7 @@ export const useAuthAcquisitionCoordinator = ({
         const cachedAuthDocument = getCachedAuthDocumentForUrl(book.downloadUrl);
         const cachedTokenAuth = getCachedPatronAuthorizationForUrl(book.downloadUrl);
         let requestAuth: RequestAuthorization | null = cachedTokenAuth;
-        if (!cred && cachedAuthDocument) {
+        if (!requestAuth && !cred && cachedAuthDocument) {
           setImportStatus({ isLoading: false, message: '', error: null });
           setCredentialPrompt({
             isOpen: true,
