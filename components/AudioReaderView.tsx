@@ -45,6 +45,8 @@ const formatDuration = (seconds: number | undefined): string | null => {
   return `${minutes}:${String(remainingSeconds).padStart(2, '0')}`;
 };
 
+const clampProgress = (value: number): number => Math.max(0, Math.min(1, value));
+
 const buildAuthorizationHeader = (auth: RequestAuthorization): string => (
   auth.scheme === 'bearer'
     ? `Bearer ${auth.token}`
@@ -267,9 +269,88 @@ const AudioReaderView: React.FC<AudioReaderViewProps> = ({ bookId: propBookId, o
         tocIndex: group.tocIndex,
         duration,
         tracks,
+        startTrackIndex: group.startIndex,
+        endTrackIndex: endExclusive - 1,
       };
     });
   }, [manifest]);
+
+  const getTrackProgress = React.useCallback((trackIndex: number, trackDuration?: number) => {
+    if (trackIndex < currentTrackIndex) {
+      return {
+        state: 'completed' as const,
+        listenedSeconds: trackDuration || 0,
+        progress: trackDuration ? 1 : null,
+      };
+    }
+
+    if (trackIndex > currentTrackIndex) {
+      return {
+        state: 'not-started' as const,
+        listenedSeconds: 0,
+        progress: 0,
+      };
+    }
+
+    if (!currentTime || currentTime <= 0) {
+      return {
+        state: 'not-started' as const,
+        listenedSeconds: 0,
+        progress: 0,
+      };
+    }
+
+    return {
+      state: 'in-progress' as const,
+      listenedSeconds: currentTime,
+      progress: trackDuration && trackDuration > 0 ? clampProgress(currentTime / trackDuration) : null,
+    };
+  }, [currentTime, currentTrackIndex]);
+
+  const getGroupProgress = React.useCallback((
+    startTrackIndex: number,
+    endTrackIndex: number,
+    tracks: { track: { duration?: number } }[],
+    totalDuration: number,
+  ) => {
+    if (currentTrackIndex < startTrackIndex) {
+      return {
+        state: 'not-started' as const,
+        listenedSeconds: 0,
+        progress: 0,
+      };
+    }
+
+    if (currentTrackIndex > endTrackIndex) {
+      return {
+        state: 'completed' as const,
+        listenedSeconds: totalDuration || 0,
+        progress: totalDuration > 0 ? 1 : null,
+      };
+    }
+
+    let listenedSeconds = 0;
+    for (let index = startTrackIndex; index < currentTrackIndex; index += 1) {
+      const relativeIndex = index - startTrackIndex;
+      listenedSeconds += tracks[relativeIndex]?.track.duration || 0;
+    }
+
+    listenedSeconds += Math.max(0, currentTime);
+
+    if (listenedSeconds <= 0) {
+      return {
+        state: 'not-started' as const,
+        listenedSeconds: 0,
+        progress: 0,
+      };
+    }
+
+    return {
+      state: 'in-progress' as const,
+      listenedSeconds,
+      progress: totalDuration > 0 ? clampProgress(listenedSeconds / totalDuration) : null,
+    };
+  }, [currentTime, currentTrackIndex]);
 
   useEffect(() => {
     if (!audioRef.current) return;
@@ -633,65 +714,111 @@ const AudioReaderView: React.FC<AudioReaderViewProps> = ({ bookId: propBookId, o
           {isContentsOpen && (
             <div className="mt-4">
               {chapterGroups.length > 0 ? (
-                <div className="max-h-[55vh] space-y-4 overflow-y-auto">
-                  {chapterGroups.map((group, groupIndex) => (
-                    <div key={`${group.title}-${group.tocIndex}-${groupIndex}`} className="rounded-xl border border-white/10 p-3">
-                      <div className="mb-2">
-                        <p className="theme-text-primary text-sm font-semibold">{group.title}</p>
-                        <p className="theme-text-muted text-xs">
-                          Chapter {groupIndex + 1}
+                <div className="max-h-[55vh] space-y-2 overflow-y-auto">
+                  {chapterGroups.map((group, groupIndex) => {
+                    const progress = getGroupProgress(
+                      group.startTrackIndex,
+                      group.endTrackIndex,
+                      group.tracks,
+                      group.duration,
+                    );
+                    const isActive = currentTrackIndex >= group.startTrackIndex && currentTrackIndex <= group.endTrackIndex;
+
+                    return (
+                      <button
+                        key={`${group.title}-${group.tocIndex}-${groupIndex}`}
+                        type="button"
+                        onClick={() => {
+                          setResumeTime(0);
+                          setCurrentTrackIndex(group.startTrackIndex);
+                        }}
+                        className={`w-full rounded-xl border px-3 py-3 text-left text-sm transition-colors ${
+                          isActive
+                            ? 'border-sky-600 bg-sky-700 text-white'
+                            : 'border-white/10 theme-hover-surface theme-text-secondary'
+                        }`}
+                      >
+                        <span className="block font-medium">{group.title}</span>
+                        <span className="theme-text-muted text-xs">
+                          {group.startTrackIndex === group.endTrackIndex
+                            ? `Track ${group.startTrackIndex + 1}`
+                            : `Tracks ${group.startTrackIndex + 1}-${group.endTrackIndex + 1}`}
                           {formatDuration(group.duration) ? ` · ${formatDuration(group.duration)}` : ''}
-                        </p>
-                      </div>
-                      <div className="space-y-2">
-                        {group.tracks.map(({ track, trackIndex }) => (
-                          <button
-                            key={`${track.href}-${trackIndex}`}
-                            type="button"
-                            onClick={() => {
-                              setResumeTime(0);
-                              setCurrentTrackIndex(trackIndex);
-                            }}
-                            className={`w-full rounded-lg px-3 py-2 text-left text-sm transition-colors ${
-                              trackIndex === currentTrackIndex
-                                ? 'bg-sky-700 text-white'
-                                : 'theme-hover-surface theme-text-secondary'
-                            }`}
-                          >
-                            <span className="block font-medium">{track.title}</span>
-                            <span className="theme-text-muted text-xs">
-                              Track {trackIndex + 1}
-                              {formatDuration(track.duration) ? ` · ${formatDuration(track.duration)}` : ''}
+                        </span>
+                        <div className="mt-2 flex items-center gap-2">
+                          <span className="theme-text-muted min-w-20 text-[11px] font-semibold uppercase tracking-[0.08em]">
+                            {progress.state === 'completed'
+                              ? 'Finished'
+                              : progress.state === 'in-progress'
+                                ? 'In Progress'
+                                : 'Not Started'}
+                          </span>
+                          {typeof progress.progress === 'number' && (
+                            <div className="h-1.5 flex-1 overflow-hidden rounded-full bg-black/20">
+                              <div
+                                className="h-full rounded-full bg-sky-400"
+                                style={{ width: `${Math.round(progress.progress * 100)}%` }}
+                              />
+                            </div>
+                          )}
+                          {progress.state !== 'not-started' && (
+                            <span className="theme-text-muted text-[11px] font-semibold">
+                              {formatDuration(progress.listenedSeconds) || '0:00'}
                             </span>
-                          </button>
-                        ))}
-                      </div>
-                    </div>
-                  ))}
+                          )}
+                        </div>
+                      </button>
+                    );
+                  })}
                 </div>
               ) : (
                 <div className="max-h-[55vh] space-y-2 overflow-y-auto">
-                  {manifest.tracks.map((track, index) => (
-                    <button
-                      key={`${track.href}-${index}`}
-                      type="button"
-                      onClick={() => {
-                        setResumeTime(0);
-                        setCurrentTrackIndex(index);
-                      }}
-                      className={`w-full rounded-lg px-3 py-2 text-left text-sm transition-colors ${
-                        index === currentTrackIndex
-                          ? 'bg-sky-700 text-white'
-                          : 'theme-hover-surface theme-text-secondary'
-                      }`}
-                    >
-                      <span className="block font-medium">{track.title}</span>
-                      <span className="theme-text-muted text-xs">
-                        Track {index + 1}
-                        {formatDuration(track.duration) ? ` · ${formatDuration(track.duration)}` : ''}
-                      </span>
-                    </button>
-                  ))}
+                  {manifest.tracks.map((track, index) => {
+                    const progress = getTrackProgress(index, track.duration);
+                    return (
+                      <button
+                        key={`${track.href}-${index}`}
+                        type="button"
+                        onClick={() => {
+                          setResumeTime(0);
+                          setCurrentTrackIndex(index);
+                        }}
+                        className={`w-full rounded-lg px-3 py-2 text-left text-sm transition-colors ${
+                          index === currentTrackIndex
+                            ? 'bg-sky-700 text-white'
+                            : 'theme-hover-surface theme-text-secondary'
+                        }`}
+                      >
+                        <span className="block font-medium">{track.title}</span>
+                        <span className="theme-text-muted text-xs">
+                          Track {index + 1}
+                          {formatDuration(track.duration) ? ` · ${formatDuration(track.duration)}` : ''}
+                        </span>
+                        <div className="mt-2 flex items-center gap-2">
+                          <span className="theme-text-muted min-w-20 text-[11px] font-semibold uppercase tracking-[0.08em]">
+                            {progress.state === 'completed'
+                              ? 'Finished'
+                              : progress.state === 'in-progress'
+                                ? 'In Progress'
+                                : 'Not Started'}
+                          </span>
+                          {typeof progress.progress === 'number' && (
+                            <div className="h-1.5 flex-1 overflow-hidden rounded-full bg-black/20">
+                              <div
+                                className="h-full rounded-full bg-sky-400"
+                                style={{ width: `${Math.round(progress.progress * 100)}%` }}
+                              />
+                            </div>
+                          )}
+                          {progress.state !== 'not-started' && (
+                            <span className="theme-text-muted text-[11px] font-semibold">
+                              {formatDuration(progress.listenedSeconds) || '0:00'}
+                            </span>
+                          )}
+                        </div>
+                      </button>
+                    );
+                  })}
                 </div>
               )}
             </div>
