@@ -2,7 +2,6 @@ import React, { useCallback, useEffect, useRef, useState } from 'react';
 
 import { useQueryClient } from '@tanstack/react-query';
 
-import { mebooksBook } from '../../assets';
 import { useAuth } from '../../contexts/AuthContext';
 import { bookKeys, useCatalogs, useUiTheme } from '../../hooks';
 import { db, logger } from '../../services';
@@ -348,7 +347,9 @@ const LibraryView: React.FC<LibraryViewProps> = ({
       <header className="flex flex-col md:flex-row md:justify-between md:items-center mb-6 gap-4">
         {/* Title with source dropdown */}
         <div className="flex items-center gap-4">
-          <img src={mebooksBook} alt="MeBooks Logo" className="w-10 h-10 flex-shrink-0" />
+          <div className="theme-accent-surface theme-accent-text-emphasis flex h-10 min-w-10 items-center justify-center rounded-2xl border px-3 text-xs font-bold uppercase tracking-[0.24em]">
+            Library
+          </div>
           <div ref={dropdownRef} className="relative">
             <button
               onClick={() => setIsCatalogDropdownOpen(prev => !prev)}
