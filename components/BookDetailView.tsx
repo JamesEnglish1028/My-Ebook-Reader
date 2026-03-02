@@ -134,7 +134,7 @@ const BookAnnotationsAside: React.FC<{
         <h3 className="theme-text-primary mb-2 flex items-center justify-between text-lg font-semibold">
           Citations
           <button
-            className="ml-2 px-3 py-1 rounded bg-sky-700 text-white text-xs font-bold hover:bg-sky-600"
+            className="theme-button-primary ml-2 rounded px-3 py-1 text-xs font-bold"
             onClick={() => {
               const ris = citations.map(c => `${c.note || ''} [${c.chapter || ''}${c.pageNumber ? ', p.' + c.pageNumber : ''}]`).join('\n');
               downloadTextFile(`${libraryBook.title || 'citations'}.ris`, ris);
@@ -532,7 +532,7 @@ const BookDetailView: React.FC<BookDetailViewProps> = ({ book, onBack, source, c
             </div>
           )}
           <button
-            className="mt-2 px-4 py-2 rounded bg-sky-700 text-white font-bold hover:bg-sky-600 disabled:opacity-60 disabled:cursor-not-allowed"
+            className="theme-button-primary mt-2 rounded px-4 py-2 font-bold disabled:cursor-not-allowed disabled:opacity-60"
             onClick={source === 'library' ? handleReadClick : handleImportClick}
             disabled={primaryAction.disabled}
           >
@@ -548,7 +548,7 @@ const BookDetailView: React.FC<BookDetailViewProps> = ({ book, onBack, source, c
               <div className="theme-surface-elevated theme-border theme-text-primary flex flex-col items-center rounded-lg border p-8 shadow-2xl">
                 <h2 className="theme-text-primary mb-4 text-2xl font-bold">Import Successful!</h2>
                 <p className="theme-text-secondary mb-6">The book has been imported to your library.</p>
-                <button className="px-4 py-2 rounded bg-sky-700 text-white font-bold hover:bg-sky-600" onClick={() => setShowImportSuccess(false)}>
+                <button className="theme-button-primary rounded px-4 py-2 font-bold" onClick={() => setShowImportSuccess(false)}>
                   Close
                 </button>
               </div>

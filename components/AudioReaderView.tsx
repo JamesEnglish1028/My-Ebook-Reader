@@ -630,7 +630,7 @@ const AudioReaderView: React.FC<AudioReaderViewProps> = ({ bookId: propBookId, o
         <button
           type="button"
           onClick={onClose}
-          className="rounded bg-sky-700 px-4 py-2 font-semibold text-white hover:bg-sky-600"
+          className="theme-button-primary rounded px-4 py-2 font-semibold"
         >
           Back to Library
         </button>
@@ -645,7 +645,7 @@ const AudioReaderView: React.FC<AudioReaderViewProps> = ({ bookId: propBookId, o
           <button
             type="button"
             onClick={onClose}
-            className="inline-flex items-center gap-2 rounded bg-slate-700 px-3 py-2 text-sm font-semibold text-white hover:bg-slate-600"
+            className="theme-button-secondary inline-flex items-center gap-2 rounded px-3 py-2 text-sm font-semibold"
           >
             <CloseIcon className="h-4 w-4" />
             Close
@@ -701,7 +701,7 @@ const AudioReaderView: React.FC<AudioReaderViewProps> = ({ bookId: propBookId, o
                 <button
                   type="button"
                   onClick={() => seekBy(-15)}
-                  className="flex h-12 w-12 items-center justify-center rounded-full bg-slate-700 text-white transition-colors hover:bg-slate-600"
+                  className="theme-button-secondary flex h-12 w-12 items-center justify-center rounded-full transition-colors"
                   aria-label="Rewind 15 seconds"
                 >
                   <BackwardStepIcon className="h-6 w-6" />
@@ -709,7 +709,7 @@ const AudioReaderView: React.FC<AudioReaderViewProps> = ({ bookId: propBookId, o
                 <button
                   type="button"
                   onClick={() => { void togglePlayback(); }}
-                  className="flex h-16 w-16 items-center justify-center rounded-full bg-sky-700 text-white transition-colors hover:bg-sky-600"
+                  className="theme-button-primary flex h-16 w-16 items-center justify-center rounded-full transition-colors"
                   aria-label={isPlaying ? 'Pause playback' : 'Play audiobook'}
                 >
                   {isPlaying ? <PauseIcon className="h-8 w-8" /> : <PlayIcon className="h-8 w-8" />}
@@ -717,7 +717,7 @@ const AudioReaderView: React.FC<AudioReaderViewProps> = ({ bookId: propBookId, o
                 <button
                   type="button"
                   onClick={() => seekBy(30)}
-                  className="flex h-12 w-12 items-center justify-center rounded-full bg-slate-700 text-white transition-colors hover:bg-slate-600"
+                  className="theme-button-secondary flex h-12 w-12 items-center justify-center rounded-full transition-colors"
                   aria-label="Fast forward 30 seconds"
                 >
                   <ForwardStepIcon className="h-6 w-6" />
@@ -734,8 +734,8 @@ const AudioReaderView: React.FC<AudioReaderViewProps> = ({ bookId: propBookId, o
                       onClick={() => setPlaybackRate(speed)}
                       className={`rounded-full px-3 py-1 text-sm font-semibold transition-colors ${
                         playbackRate === speed
-                          ? 'bg-sky-700 text-white'
-                          : 'bg-slate-700 text-slate-200 hover:bg-slate-600'
+                          ? 'theme-button-primary'
+                          : 'theme-button-secondary'
                       }`}
                     >
                       {speed}x

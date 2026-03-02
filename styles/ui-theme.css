@@ -45,6 +45,11 @@
   --button-primary-fg: #f8fafc;
   --button-primary-disabled-bg: rgba(51, 65, 85, 0.9);
   --button-primary-disabled-fg: #94a3b8;
+  --button-secondary-bg: #334155;
+  --button-secondary-hover-bg: #475569;
+  --button-secondary-fg: #f8fafc;
+  --button-secondary-disabled-bg: rgba(51, 65, 85, 0.7);
+  --button-secondary-disabled-fg: #94a3b8;
   --slider-track: rgba(100, 116, 139, 0.75);
 }
 
@@ -90,6 +95,11 @@
   --button-primary-fg: #eff6ff;
   --button-primary-disabled-bg: rgba(226, 232, 240, 0.95);
   --button-primary-disabled-fg: #64748b;
+  --button-secondary-bg: #cbd5e1;
+  --button-secondary-hover-bg: #94a3b8;
+  --button-secondary-fg: #0f172a;
+  --button-secondary-disabled-bg: rgba(226, 232, 240, 0.95);
+  --button-secondary-disabled-fg: #64748b;
   --slider-track: rgba(148, 163, 184, 0.9);
 }
 
@@ -205,6 +215,20 @@ body {
 .theme-button-primary:disabled {
   background-color: var(--button-primary-disabled-bg) !important;
   color: var(--button-primary-disabled-fg) !important;
+}
+
+.theme-button-secondary {
+  background-color: var(--button-secondary-bg) !important;
+  color: var(--button-secondary-fg) !important;
+}
+
+.theme-button-secondary:hover {
+  background-color: var(--button-secondary-hover-bg) !important;
+}
+
+.theme-button-secondary:disabled {
+  background-color: var(--button-secondary-disabled-bg) !important;
+  color: var(--button-secondary-disabled-fg) !important;
 }
 
 .theme-ring-offset {
