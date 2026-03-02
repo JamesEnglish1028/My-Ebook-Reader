@@ -27,6 +27,7 @@ export interface BookDetailViewProps {
 }
 
 import { LeftArrowIcon } from './icons';
+import AccessibilityBadges from './library/shared/AccessibilityBadges';
 import BookBadges from './library/shared/BookBadges';
 import { db, ensureFreshPatronAuthorization } from '../services';
 
@@ -601,6 +602,7 @@ const BookDetailView: React.FC<BookDetailViewProps> = ({ book, onBack, source, c
           <h3 className="theme-text-primary mb-3 text-xl font-bold">Book Details</h3>
           <div className="theme-divider mb-5 border-t" />
           <div className="theme-surface-elevated rounded-lg p-6 md:p-8">
+          <AccessibilityBadges book={book as BookDetailMetadata} className="mb-5" />
           <ul className="space-y-2 text-base">
             <li>
               <span className="theme-text-primary font-semibold">Catalog Provider:</span> <span className="theme-text-secondary">{bookAny.providerName || (source === 'catalog' ? catalogName : 'Imported locally')}</span>
@@ -618,10 +620,6 @@ const BookDetailView: React.FC<BookDetailViewProps> = ({ book, onBack, source, c
             </li>
             {bookAny.distributor && (
               <li><span className="theme-text-primary font-semibold">Distributor:</span> <span className="theme-text-secondary">{bookAny.distributor}</span></li>
-            )}
-            {bookAny.accessibilitySummary && <li><span className="theme-text-primary font-semibold">Accessibility:</span> <span className="theme-text-secondary">{bookAny.accessibilitySummary}</span></li>}
-            {bookAny.accessibilityFeatures && bookAny.accessibilityFeatures.length > 0 && (
-              <li><span className="theme-text-primary font-semibold">Features:</span> <span className="theme-text-secondary">{bookAny.accessibilityFeatures.join(', ')}</span></li>
             )}
             {publisherText && (
               <li><span className="theme-text-primary font-semibold">Publisher:</span> <span className="theme-text-secondary">{publisherText}</span></li>

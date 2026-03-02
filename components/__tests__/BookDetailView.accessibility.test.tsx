@@ -1,7 +1,7 @@
 
 // @vitest-environment jsdom
 import '@testing-library/jest-dom';
-import { render } from '@testing-library/react';
+import { render, screen } from '@testing-library/react';
 import { describe, expect, it } from 'vitest';
 
 import BookDetailView from '../BookDetailView';
@@ -37,17 +37,21 @@ describe('BookDetailView accessibility rendering', () => {
       importStatus: { isLoading: false, message: '', error: null },
       setImportStatus: () => {},
     };
-    const { getByText } = render(<BookDetailView {...props} />);
-    expect(getByText(/Accessibility:/)).toBeInTheDocument();
-    expect(getByText('Summary')).toBeInTheDocument();
-    expect(getByText(/Features:/)).toBeInTheDocument();
-    expect(getByText('altText, displayTransformability')).toBeInTheDocument();
-    expect(getByText('Access Modes')).toBeInTheDocument();
-    expect(getByText('textual')).toBeInTheDocument();
-    expect(getByText('Accessibility Hazards')).toBeInTheDocument();
-    expect(getByText('none')).toBeInTheDocument();
-    expect(getByText('Accessibility Notes')).toBeInTheDocument();
-    expect(getByText('Accessibility Summary')).toBeInTheDocument();
-    expect(getByText('Feedback')).toBeInTheDocument();
+    render(<BookDetailView {...props} />);
+
+    expect(screen.getByRole('heading', { name: 'Accessibility' })).toBeInTheDocument();
+    expect(screen.getAllByText('Summary').length).toBeGreaterThan(0);
+    expect(screen.getByText('Alternative Text')).toBeInTheDocument();
+    expect(screen.getByText('Display Transformability')).toBeInTheDocument();
+    expect(screen.getByText('Access Modes')).toBeInTheDocument();
+    expect(screen.getAllByText('Text').length).toBeGreaterThan(0);
+    expect(screen.getByText('Hazards')).toBeInTheDocument();
+    expect(screen.getByText('No Known Hazards')).toBeInTheDocument();
+    expect(screen.getByText('Standards')).toBeInTheDocument();
+    expect(screen.getByText('WCAG 2.2 AA')).toBeInTheDocument();
+    expect(screen.getByText('Certification')).toBeInTheDocument();
+    expect(screen.getByText('Certified')).toBeInTheDocument();
+    expect(screen.getByText('Notes')).toBeInTheDocument();
+    expect(screen.getByText('Feedback')).toBeInTheDocument();
   });
 });
