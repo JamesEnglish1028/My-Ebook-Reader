@@ -34,6 +34,7 @@ const AudioReaderView: React.FC<AudioReaderViewProps> = ({ bookId: propBookId, o
   const [resumeTime, setResumeTime] = useState(0);
   const [trackSrc, setTrackSrc] = useState<string | null>(null);
   const [trackError, setTrackError] = useState<string | null>(null);
+  const [isContentsOpen, setIsContentsOpen] = useState(false);
   const audioRef = useRef<HTMLAudioElement | null>(null);
   const saveTickRef = useRef(0);
 
@@ -93,6 +94,7 @@ const AudioReaderView: React.FC<AudioReaderViewProps> = ({ bookId: propBookId, o
   }, [parsedManifest.error]);
 
   const currentTrack = manifest?.tracks[currentTrackIndex] || null;
+  const coverImage = bookData?.coverImage || manifest?.coverImageUrl || null;
 
   useEffect(() => {
     if (!audioRef.current) return;
@@ -192,7 +194,7 @@ const AudioReaderView: React.FC<AudioReaderViewProps> = ({ bookId: propBookId, o
 
   return (
     <div className="min-h-screen theme-shell theme-text-primary px-4 py-6 md:px-8">
-      <div className="mx-auto flex w-full max-w-5xl flex-col gap-6">
+      <div className="mx-auto flex w-full max-w-3xl flex-col gap-6">
         <div className="flex items-center justify-between gap-4">
           <button
             type="button"
@@ -208,14 +210,21 @@ const AudioReaderView: React.FC<AudioReaderViewProps> = ({ bookId: propBookId, o
           </div>
         </div>
 
-        <div className="grid gap-6 lg:grid-cols-[minmax(0,2fr)_minmax(18rem,1fr)]">
-          <section className="theme-surface-elevated rounded-2xl p-5">
+        <section className="theme-surface-elevated mx-auto flex w-full max-w-2xl flex-col items-center rounded-3xl p-6 text-center shadow-xl">
+          {coverImage ? (
+            <img
+              src={coverImage}
+              alt={manifest.title}
+              className="mb-6 aspect-square w-full max-w-xs rounded-2xl object-cover shadow-2xl"
+            />
+          ) : (
+            <div className="theme-surface mx-auto mb-6 flex aspect-square w-full max-w-xs items-center justify-center rounded-2xl p-6 text-center">
+              <span className="text-lg font-semibold">{manifest.title}</span>
+            </div>
+          )}
+          <div className="w-full">
             <p className="theme-text-secondary mb-2 text-sm uppercase tracking-[0.16em]">Now Playing</p>
             <h2 className="mb-1 text-xl font-semibold">{currentTrack?.title || 'Track'}</h2>
-            {manifest.description && (
-              <p className="theme-text-secondary mb-4 text-sm">{manifest.description}</p>
-            )}
-
             <audio
               key={trackSrc || currentTrackIndex}
               ref={audioRef}
@@ -243,44 +252,80 @@ const AudioReaderView: React.FC<AudioReaderViewProps> = ({ bookId: propBookId, o
             {trackError && (
               <p className="mt-3 text-sm text-amber-400">{trackError}</p>
             )}
-          </section>
+          </div>
+        </section>
 
-          <aside className="theme-surface-elevated rounded-2xl p-5">
-            <p className="theme-text-secondary mb-3 text-sm uppercase tracking-[0.16em]">Tracks</p>
-            <div className="max-h-[60vh] space-y-2 overflow-y-auto">
-              {manifest.tracks.map((track, index) => (
-                <button
-                  key={`${track.href}-${index}`}
-                  type="button"
-                  onClick={() => {
-                    setResumeTime(0);
-                    setCurrentTrackIndex(index);
-                  }}
-                  className={`w-full rounded-lg px-3 py-2 text-left text-sm transition-colors ${
-                    index === currentTrackIndex
-                      ? 'bg-sky-700 text-white'
-                      : 'theme-hover-surface theme-text-secondary'
-                  }`}
-                >
-                  <span className="block font-medium">{track.title}</span>
-                  <span className="theme-text-muted text-xs">{index + 1} of {manifest.tracks.length}</span>
-                </button>
-              ))}
-            </div>
-            {manifest.toc.length > 0 && (
-              <>
-                <p className="theme-text-secondary mt-5 mb-3 text-sm uppercase tracking-[0.16em]">Contents</p>
-                <div className="space-y-1">
-                  {manifest.toc.map((item) => (
-                    <div key={`${item.href}-${item.title}`} className="theme-text-secondary text-sm">
-                      {item.title}
-                    </div>
+        <section className="theme-surface-elevated mx-auto w-full max-w-2xl rounded-2xl p-5">
+          <button
+            type="button"
+            onClick={() => setIsContentsOpen((open) => !open)}
+            className="flex w-full items-center justify-between rounded-xl px-1 py-1 text-left"
+            aria-expanded={isContentsOpen}
+          >
+            <span>
+              <span className="theme-text-secondary block text-sm uppercase tracking-[0.16em]">Contents</span>
+              <span className="theme-text-primary text-sm font-semibold">
+                {manifest.toc.length > 0 ? `${manifest.toc.length} chapters` : `${manifest.tracks.length} tracks`}
+              </span>
+            </span>
+            <span className="theme-text-secondary text-sm font-semibold">
+              {isContentsOpen ? 'Hide' : 'Show'}
+            </span>
+          </button>
+
+          {isContentsOpen && (
+            <div className="mt-4 grid gap-5 md:grid-cols-2">
+              <div>
+                <p className="theme-text-secondary mb-3 text-sm uppercase tracking-[0.16em]">Tracks</p>
+                <div className="max-h-[50vh] space-y-2 overflow-y-auto">
+                  {manifest.tracks.map((track, index) => (
+                    <button
+                      key={`${track.href}-${index}`}
+                      type="button"
+                      onClick={() => {
+                        setResumeTime(0);
+                        setCurrentTrackIndex(index);
+                      }}
+                      className={`w-full rounded-lg px-3 py-2 text-left text-sm transition-colors ${
+                        index === currentTrackIndex
+                          ? 'bg-sky-700 text-white'
+                          : 'theme-hover-surface theme-text-secondary'
+                      }`}
+                    >
+                      <span className="block font-medium">{track.title}</span>
+                      <span className="theme-text-muted text-xs">{index + 1} of {manifest.tracks.length}</span>
+                    </button>
                   ))}
                 </div>
-              </>
-            )}
-          </aside>
-        </div>
+              </div>
+
+              {manifest.toc.length > 0 && (
+                <div>
+                  <p className="theme-text-secondary mb-3 text-sm uppercase tracking-[0.16em]">Table of Contents</p>
+                  <div className="max-h-[50vh] space-y-2 overflow-y-auto">
+                    {manifest.toc.map((item, index) => (
+                      <button
+                        key={`${item.href}-${item.title}`}
+                        type="button"
+                        onClick={() => {
+                          const matchedIndex = manifest.tracks.findIndex((track) => track.href === item.href);
+                          if (matchedIndex >= 0) {
+                            setResumeTime(0);
+                            setCurrentTrackIndex(matchedIndex);
+                          }
+                        }}
+                        className="theme-hover-surface theme-text-secondary w-full rounded-lg px-3 py-2 text-left text-sm transition-colors"
+                      >
+                        <span className="block font-medium">{item.title}</span>
+                        <span className="theme-text-muted text-xs">Section {index + 1}</span>
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              )}
+            </div>
+          )}
+        </section>
       </div>
     </div>
   );
