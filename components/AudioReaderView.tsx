@@ -13,7 +13,7 @@ import {
 import { parseAudiobookManifest } from '../services/audiobookManifest';
 import { getLastPositionForBook, saveLastPositionForBook } from '../services/readerUtils';
 
-import { CloseIcon } from './icons';
+import { BackwardStepIcon, CloseIcon, ForwardStepIcon, PauseIcon, PlayIcon } from './icons';
 import Spinner from './Spinner';
 
 interface AudioReaderViewProps {
@@ -388,26 +388,26 @@ const AudioReaderView: React.FC<AudioReaderViewProps> = ({ bookId: propBookId, o
                 <button
                   type="button"
                   onClick={() => seekBy(-15)}
-                  className="flex h-12 min-w-[4.5rem] items-center justify-center rounded-full bg-slate-700 px-4 text-lg font-bold text-white transition-colors hover:bg-slate-600"
+                  className="flex h-12 w-12 items-center justify-center rounded-full bg-slate-700 text-white transition-colors hover:bg-slate-600"
                   aria-label="Rewind 15 seconds"
                 >
-                  |&lt;&lt;
+                  <BackwardStepIcon className="h-6 w-6" />
                 </button>
                 <button
                   type="button"
                   onClick={() => { void togglePlayback(); }}
-                  className="flex h-16 min-w-[5.5rem] items-center justify-center rounded-full bg-sky-700 px-6 text-3xl font-bold text-white transition-colors hover:bg-sky-600"
+                  className="flex h-16 w-16 items-center justify-center rounded-full bg-sky-700 text-white transition-colors hover:bg-sky-600"
                   aria-label={isPlaying ? 'Pause playback' : 'Play audiobook'}
                 >
-                  {isPlaying ? '||' : '>'}
+                  {isPlaying ? <PauseIcon className="h-8 w-8" /> : <PlayIcon className="h-8 w-8" />}
                 </button>
                 <button
                   type="button"
                   onClick={() => seekBy(30)}
-                  className="flex h-12 min-w-[4.5rem] items-center justify-center rounded-full bg-slate-700 px-4 text-lg font-bold text-white transition-colors hover:bg-slate-600"
+                  className="flex h-12 w-12 items-center justify-center rounded-full bg-slate-700 text-white transition-colors hover:bg-slate-600"
                   aria-label="Fast forward 30 seconds"
                 >
-                  &gt;&gt;|
+                  <ForwardStepIcon className="h-6 w-6" />
                 </button>
               </div>
 

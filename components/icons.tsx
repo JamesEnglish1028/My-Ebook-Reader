@@ -92,6 +92,20 @@ export const PauseIcon: React.FC<{ className?: string }> = ({ className }) => (
     </svg>
 );
 
+export const BackwardStepIcon: React.FC<{ className?: string }> = ({ className }) => (
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" className={className}>
+    <path d="M7 5.5a1 1 0 011 1V17.5a1 1 0 11-2 0V6.5a1 1 0 011-1z" />
+    <path d="M18.2 6.24a1 1 0 011.55.83v9.86a1 1 0 01-1.55.83l-7.4-4.93a1 1 0 010-1.66l7.4-4.93z" />
+  </svg>
+);
+
+export const ForwardStepIcon: React.FC<{ className?: string }> = ({ className }) => (
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" className={className}>
+    <path d="M17 5.5a1 1 0 011 1V17.5a1 1 0 11-2 0V6.5a1 1 0 011-1z" />
+    <path d="M5.8 6.24a1 1 0 00-1.55.83v9.86a1 1 0 001.55.83l7.4-4.93a1 1 0 000-1.66L5.8 6.24z" />
+  </svg>
+);
+
 export const StopIcon: React.FC<{ className?: string }> = ({ className }) => (
     <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className={className}>
         <path strokeLinecap="round" strokeLinejoin="round" d="M5.25 7.5A2.25 2.25 0 017.5 5.25h9a2.25 2.25 0 012.25 2.25v9a2.25 2.25 0 01-2.25 2.25h-9a2.25 2.25 0 01-2.25-2.25v-9z" />
