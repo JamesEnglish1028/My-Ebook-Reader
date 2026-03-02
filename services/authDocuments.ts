@@ -4,6 +4,7 @@ import { logger } from './logger';
 import { proxiedUrl } from './utils';
 
 const authDocumentCache = new Map<string, AuthDocument>();
+const sessionAuthorizationCache = new Map<string, RequestAuthorization>();
 const patronTokenCache = new Map<string, { accessToken: string; tokenType: string; expiresAt: number }>();
 
 function getHostFromUrl(url: string): string | null {
@@ -30,24 +31,36 @@ export function getCachedPatronAuthorizationForUrl(url: string): RequestAuthoriz
   const host = getHostFromUrl(url);
   if (!host) return null;
   const token = patronTokenCache.get(host);
-  if (!token) return null;
-  if (token.expiresAt <= Date.now()) {
-    patronTokenCache.delete(host);
-    return null;
+  if (token) {
+    if (token.expiresAt <= Date.now()) {
+      patronTokenCache.delete(host);
+      const existing = sessionAuthorizationCache.get(host);
+      if (existing?.scheme === 'bearer') {
+        sessionAuthorizationCache.delete(host);
+      }
+    } else {
+      const auth: RequestAuthorization = {
+        scheme: 'bearer',
+        token: token.accessToken,
+      };
+      sessionAuthorizationCache.set(host, auth);
+      return auth;
+    }
   }
-  return {
-    scheme: 'bearer',
-    token: token.accessToken,
-  };
+  return sessionAuthorizationCache.get(host) || null;
 }
 
 export function cachePatronAuthorizationForUrl(url: string, auth: RequestAuthorization | null | undefined) {
-  if (!auth || auth.scheme !== 'bearer') return;
-  cachePatronTokenForUrl(url, {
-    accessToken: auth.token,
-    tokenType: 'Bearer',
-    expiresIn: 3600,
-  });
+  const host = getHostFromUrl(url);
+  if (!host || !auth) return;
+  sessionAuthorizationCache.set(host, auth);
+  if (auth.scheme === 'bearer') {
+    cachePatronTokenForUrl(url, {
+      accessToken: auth.token,
+      tokenType: 'Bearer',
+      expiresIn: 3600,
+    });
+  }
 }
 
 function cachePatronTokenForUrl(
@@ -106,15 +119,17 @@ export async function getAuthorizationForAuthDocument(
   password: string,
 ): Promise<RequestAuthorization> {
   const cached = getCachedPatronAuthorizationForUrl(contextUrl);
-  if (cached) return cached;
+  if (cached?.scheme === 'bearer') return cached;
 
   const authenticateHref = getBasicTokenAuthLink(authDocument);
   if (!authenticateHref) {
-    return {
+    const basicAuth: RequestAuthorization = {
       scheme: 'basic',
       username,
       password,
     };
+    cachePatronAuthorizationForUrl(contextUrl, basicAuth);
+    return basicAuth;
   }
 
   const proxyUrl = proxiedUrl(authenticateHref);
@@ -165,8 +180,11 @@ export async function getAuthorizationForAuthDocument(
     expiresIn: Number.isFinite(expiresIn) ? expiresIn : 3600,
   });
 
-  return {
+  const bearerAuth: RequestAuthorization = {
     scheme: 'bearer',
     token: accessToken,
   };
+  cachePatronAuthorizationForUrl(authenticateHref, bearerAuth);
+  cachePatronAuthorizationForUrl(contextUrl, bearerAuth);
+  return bearerAuth;
 }

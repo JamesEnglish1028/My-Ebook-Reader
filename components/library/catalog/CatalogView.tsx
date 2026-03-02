@@ -409,6 +409,7 @@ const CatalogView: React.FC<CatalogViewProps> = ({
   };
 
   const primeSessionAuthorization = (host: string, auth: RequestAuthorization) => {
+    cachePatronAuthorizationForUrl(`https://${host}/`, auth);
     setSessionCredentialsByHost((prev) => {
       const prior = prev[host];
       return {

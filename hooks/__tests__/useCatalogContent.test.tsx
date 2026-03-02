@@ -73,4 +73,37 @@ describe('useCatalogContent', () => {
       );
     });
   });
+
+  it('reuses cached basic session auth when the catalog view remounts without explicit session auth', async () => {
+    const queryClient = new QueryClient();
+    const wrapper = ({ children }: { children: React.ReactNode }) => (
+      <QueryClientProvider client={queryClient}>{children}</QueryClientProvider>
+    );
+    vi.spyOn(services, 'getCachedPatronAuthorizationForUrl').mockReturnValue({
+      scheme: 'basic',
+      username: 'barcode',
+      password: 'pin',
+    });
+
+    renderHook(
+      () => useCatalogContent(
+        'https://minotaur.dev.palaceproject.io/minotaur-test-library/loans/',
+        'https://minotaur.dev.palaceproject.io/minotaur-test-library/',
+        '1',
+        true,
+        null,
+        '',
+      ),
+      { wrapper },
+    );
+
+    await waitFor(() => {
+      expect(opdsParserService.fetchCatalog).toHaveBeenCalledWith(
+        'https://minotaur.dev.palaceproject.io/minotaur-test-library/loans/',
+        'https://minotaur.dev.palaceproject.io/minotaur-test-library/',
+        '1',
+        { scheme: 'basic', username: 'barcode', password: 'pin' },
+      );
+    });
+  });
 });
