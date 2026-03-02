@@ -1,7 +1,6 @@
 import React from 'react';
 
 import type { CatalogBook, SeriesInfo } from '../../../types';
-import BookCard from '../shared/BookCard';
 
 interface SeriesLaneProps {
   series: SeriesInfo;
@@ -58,28 +57,59 @@ const SeriesLane: React.FC<SeriesLaneProps> = ({
           </a>
         )}
 
-        {/* Books Grid */}
-        <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-4">
+        {/* Compact horizontal list */}
+        <div className="flex gap-3 overflow-x-auto pb-2 pr-1">
           {sortedBooks.map((book) => {
             const seriesInfo = book.series?.find(s => s.name === series.name);
             const position = seriesInfo?.position;
 
             return (
-              <div key={`${book.providerId || book.title}-${position ?? 'na'}`} className="relative">
-                {/* Book Card */}
-                <BookCard
-                  book={book}
-                  onClick={onBookClick}
-                  className="h-full"
-                />
-
-                {/* Series Position Badge */}
-                {position !== undefined && (
-                  <div className="theme-accent-badge absolute right-1 top-1 flex h-6 w-6 items-center justify-center rounded-full border text-xs font-bold shadow-lg">
-                    {position}
+              <button
+                key={`${book.providerId || book.title}-${position ?? 'na'}`}
+                type="button"
+                onClick={() => onBookClick(book)}
+                className="theme-surface-elevated theme-border theme-hover-surface flex min-w-[220px] flex-shrink-0 items-center gap-3 rounded-xl border p-2.5 text-left transition-colors"
+              >
+                <div className="theme-surface-muted flex h-16 w-11 flex-shrink-0 items-center justify-center overflow-hidden rounded-md">
+                  {book.coverImage ? (
+                    <img
+                      src={book.coverImage}
+                      alt={book.title}
+                      className="h-full w-full object-cover"
+                      loading="lazy"
+                    />
+                  ) : (
+                    <span className="theme-text-muted px-1 text-center text-[10px] font-semibold">
+                      {book.format || 'Book'}
+                    </span>
+                  )}
+                </div>
+                <div className="min-w-0 flex-1">
+                  <div className="flex items-start justify-between gap-2">
+                    <div className="min-w-0">
+                      <p className="theme-text-primary truncate text-sm font-semibold">{book.title}</p>
+                      <p className="theme-text-secondary truncate text-xs">{book.author}</p>
+                    </div>
+                    {position !== undefined && (
+                      <span className="theme-accent-badge inline-flex h-6 min-w-6 flex-shrink-0 items-center justify-center rounded-full border px-1.5 text-[10px] font-bold">
+                        {position}
+                      </span>
+                    )}
                   </div>
-                )}
-              </div>
+                  <div className="mt-2 flex flex-wrap gap-1.5">
+                    {book.format && (
+                      <span className="theme-surface-muted theme-text-secondary inline-flex items-center rounded-full border px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide">
+                        {book.format}
+                      </span>
+                    )}
+                    {seriesInfo?.volume && (
+                      <span className="theme-info inline-flex items-center rounded-full border px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide">
+                        Vol. {seriesInfo.volume}
+                      </span>
+                    )}
+                  </div>
+                </div>
+              </button>
             );
           })}
         </div>
