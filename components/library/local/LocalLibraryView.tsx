@@ -3,6 +3,7 @@ import React, { useCallback, useState } from 'react';
 import { useBooks, useDeleteBook } from '../../../hooks';
 import type { BookMetadata, CoverAnimationData } from '../../../types';
 import DeleteConfirmationModal from '../../DeleteConfirmationModal';
+import { AdjustmentsVerticalIcon } from '../../icons';
 import { Error as ErrorDisplay, Loading } from '../../shared';
 import { BookGrid, EmptyState } from '../shared';
 
@@ -35,6 +36,7 @@ const LocalLibraryView: React.FC<LocalLibraryViewProps> = ({
   const [bookToDelete, setBookToDelete] = useState<BookMetadata | null>(null);
   const [selectedFormat, setSelectedFormat] = useState('all');
   const [selectedProvider, setSelectedProvider] = useState('all');
+  const [isFiltersOpen, setIsFiltersOpen] = useState(false);
 
   // Fetch books using React Query
   const { data: books = [], isLoading, error, refetch } = useBooks();
@@ -68,6 +70,10 @@ const LocalLibraryView: React.FC<LocalLibraryViewProps> = ({
   const providerOptions = React.useMemo(() => (
     Array.from(new Set(books.map((book) => getProviderLabel(book)))).sort((a, b) => a.localeCompare(b))
   ), [books, getProviderLabel]);
+  const showFormatFilter = formatOptions.length > 1;
+  const showProviderFilter = providerOptions.length > 1;
+  const hasFilterControl = showFormatFilter || showProviderFilter;
+  const activeFilterCount = Number(selectedFormat !== 'all') + Number(selectedProvider !== 'all');
 
   React.useEffect(() => {
     if (selectedFormat !== 'all' && !formatOptions.includes(selectedFormat)) {
@@ -139,43 +145,97 @@ const LocalLibraryView: React.FC<LocalLibraryViewProps> = ({
     <>
       {books.length > 0 ? (
         <>
-          <section className="theme-surface theme-border mb-5 rounded-xl border p-3">
-            <div className="flex flex-col gap-3 md:flex-row md:items-end">
-              <label className="flex min-w-[12rem] flex-col gap-1 text-sm">
-                <span className="theme-text-secondary font-medium">Format</span>
-                <select
-                  className="theme-input rounded-md border px-3 py-2"
-                  value={selectedFormat}
-                  onChange={(event) => setSelectedFormat(event.target.value)}
+          {hasFilterControl && (
+            <section className="mb-5">
+              <div className="mb-3 flex items-center justify-between">
+                <div className="theme-text-muted text-sm">
+                  Showing {filteredBooks.length} of {books.length} books
+                </div>
+                <button
+                  type="button"
+                  onClick={() => setIsFiltersOpen((prev) => !prev)}
+                  className={`theme-button-neutral theme-hover-surface inline-flex items-center gap-1.5 rounded-lg border px-2.5 py-1.5 text-xs font-medium transition-colors ${
+                    isFiltersOpen ? 'theme-nav-link-active' : ''
+                  }`}
+                  aria-label={isFiltersOpen ? 'Hide filters' : 'Open filters'}
+                  title={activeFilterCount > 0 ? `${activeFilterCount} active filters` : 'Filters'}
                 >
-                  <option value="all">All Formats</option>
-                  {formatOptions.map((formatValue) => (
-                    <option key={formatValue} value={formatValue}>
-                      {getFormatLabel(formatValue)}
-                    </option>
-                  ))}
-                </select>
-              </label>
-              <label className="flex min-w-[14rem] flex-col gap-1 text-sm">
-                <span className="theme-text-secondary font-medium">Provider</span>
-                <select
-                  className="theme-input rounded-md border px-3 py-2"
-                  value={selectedProvider}
-                  onChange={(event) => setSelectedProvider(event.target.value)}
-                >
-                  <option value="all">All Providers</option>
-                  {providerOptions.map((provider) => (
-                    <option key={provider} value={provider}>
-                      {provider}
-                    </option>
-                  ))}
-                </select>
-              </label>
-              <div className="theme-text-muted text-sm md:ml-auto">
-                Showing {filteredBooks.length} of {books.length} books
+                  <AdjustmentsVerticalIcon className="h-4 w-4" />
+                  <span>{activeFilterCount > 0 ? `Filters (${activeFilterCount})` : 'Filters'}</span>
+                </button>
               </div>
-            </div>
-          </section>
+
+              {isFiltersOpen && (
+                <div className="theme-surface theme-border rounded-xl border p-3">
+                  <div className="mb-3 flex items-center justify-between">
+                    <h3 className="theme-text-secondary text-xs font-semibold uppercase tracking-[0.18em]">Filters</h3>
+                    <span className="theme-text-muted text-[11px]">
+                      {activeFilterCount > 0 ? `${activeFilterCount} active` : 'Local only'}
+                    </span>
+                  </div>
+                  <div className="flex flex-wrap items-start gap-3">
+                    {showFormatFilter && (
+                      <div className="flex flex-wrap items-center gap-2">
+                        <span className="theme-text-muted text-xs font-medium uppercase tracking-[0.12em]">Format</span>
+                        <div className="flex flex-wrap gap-1.5">
+                          <button
+                            type="button"
+                            onClick={() => setSelectedFormat('all')}
+                            className={`rounded-full px-2.5 py-1 text-xs font-medium transition-colors ${
+                              selectedFormat === 'all' ? 'theme-nav-link-active border' : 'theme-pill theme-hover-surface'
+                            }`}
+                          >
+                            All
+                          </button>
+                          {formatOptions.map((formatValue) => (
+                            <button
+                              key={formatValue}
+                              type="button"
+                              onClick={() => setSelectedFormat(formatValue)}
+                              className={`rounded-full px-2.5 py-1 text-xs font-medium transition-colors ${
+                                selectedFormat === formatValue ? 'theme-nav-link-active border' : 'theme-pill theme-hover-surface'
+                              }`}
+                            >
+                              {getFormatLabel(formatValue)}
+                            </button>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+
+                    {showProviderFilter && (
+                      <div className="flex flex-wrap items-center gap-2">
+                        <span className="theme-text-muted text-xs font-medium uppercase tracking-[0.12em]">Provider</span>
+                        <div className="flex flex-wrap gap-1.5">
+                          <button
+                            type="button"
+                            onClick={() => setSelectedProvider('all')}
+                            className={`rounded-full px-2.5 py-1 text-xs font-medium transition-colors ${
+                              selectedProvider === 'all' ? 'theme-nav-link-active border' : 'theme-pill theme-hover-surface'
+                            }`}
+                          >
+                            All
+                          </button>
+                          {providerOptions.map((provider) => (
+                            <button
+                              key={provider}
+                              type="button"
+                              onClick={() => setSelectedProvider(provider)}
+                              className={`rounded-full px-2.5 py-1 text-xs font-medium transition-colors ${
+                                selectedProvider === provider ? 'theme-nav-link-active border' : 'theme-pill theme-hover-surface'
+                              }`}
+                            >
+                              {provider}
+                            </button>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              )}
+            </section>
+          )}
 
           {filteredBooks.length > 0 ? (
             <BookGrid

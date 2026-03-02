@@ -76,20 +76,20 @@ describe('LocalLibraryView filters', () => {
     );
 
     expect(screen.getByText('Showing 3 of 3 books')).toBeInTheDocument();
-    expect(screen.getByRole('option', { name: 'All Formats' })).toBeInTheDocument();
-    expect(screen.getByRole('option', { name: 'All Providers' })).toBeInTheDocument();
-    expect(screen.getByRole('option', { name: 'Local Upload' })).toBeInTheDocument();
 
-    const selects = screen.getAllByRole('combobox');
-    fireEvent.change(selects[0], { target: { value: 'PDF' } });
+    fireEvent.click(screen.getByRole('button', { name: /Open filters/i }));
+    expect(screen.getAllByRole('button', { name: 'All' }).length).toBeGreaterThan(0);
+    expect(screen.getByRole('button', { name: 'Local Upload' })).toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole('button', { name: 'PDF' }));
 
     expect(screen.getByText('Showing 1 of 3 books')).toBeInTheDocument();
     expect(bookGridSpy.mock.calls.at(-1)?.[0]).toMatchObject({
       books: [{ title: 'Catalog PDF' }],
     });
 
-    fireEvent.change(selects[0], { target: { value: 'all' } });
-    fireEvent.change(selects[1], { target: { value: 'Local Upload' } });
+    fireEvent.click(screen.getAllByRole('button', { name: 'All' })[0]);
+    fireEvent.click(screen.getByRole('button', { name: 'Local Upload' }));
 
     expect(screen.getByText('Showing 1 of 3 books')).toBeInTheDocument();
     expect(bookGridSpy.mock.calls.at(-1)?.[0]).toMatchObject({
