@@ -780,6 +780,8 @@ const AudioReaderView: React.FC<AudioReaderViewProps> = ({ bookId: propBookId, o
                       group.duration,
                     );
                     const isActive = currentTrackIndex >= group.startTrackIndex && currentTrackIndex <= group.endTrackIndex;
+                    const detailTextClass = isActive ? 'theme-on-accent-text-muted' : 'theme-text-muted';
+                    const statusTextClass = isActive ? 'theme-on-accent-text-muted' : 'theme-text-muted';
 
                     return (
                       <button
@@ -795,14 +797,14 @@ const AudioReaderView: React.FC<AudioReaderViewProps> = ({ bookId: propBookId, o
                         }`}
                       >
                         <span className="block font-medium">{group.title}</span>
-                        <span className="theme-text-muted text-xs">
+                        <span className={`${detailTextClass} text-xs`}>
                           {group.startTrackIndex === group.endTrackIndex
                             ? `Track ${group.startTrackIndex + 1}`
                             : `Tracks ${group.startTrackIndex + 1}-${group.endTrackIndex + 1}`}
                           {formatDuration(group.duration) ? ` · ${formatDuration(group.duration)}` : ''}
                         </span>
                         <div className="mt-2 flex items-center gap-2">
-                          <span className="theme-text-muted min-w-20 text-[11px] font-semibold uppercase tracking-[0.08em]">
+                          <span className={`${statusTextClass} min-w-20 text-[11px] font-semibold uppercase tracking-[0.08em]`}>
                             {progress.state === 'completed'
                               ? 'Finished'
                               : progress.state === 'in-progress'
@@ -818,7 +820,7 @@ const AudioReaderView: React.FC<AudioReaderViewProps> = ({ bookId: propBookId, o
                             </div>
                           )}
                           {progress.state !== 'not-started' && (
-                            <span className="theme-text-muted text-[11px] font-semibold">
+                            <span className={`${statusTextClass} text-[11px] font-semibold`}>
                               {formatDuration(progress.listenedSeconds) || '0:00'}
                             </span>
                           )}
@@ -831,6 +833,9 @@ const AudioReaderView: React.FC<AudioReaderViewProps> = ({ bookId: propBookId, o
                 <div className="max-h-[55vh] space-y-2 overflow-y-auto">
                   {manifest.tracks.map((track, index) => {
                     const progress = getTrackProgress(index, track.duration);
+                    const isActive = index === currentTrackIndex;
+                    const detailTextClass = isActive ? 'theme-on-accent-text-muted' : 'theme-text-muted';
+                    const statusTextClass = isActive ? 'theme-on-accent-text-muted' : 'theme-text-muted';
                     return (
                       <button
                         key={`${track.href}-${index}`}
@@ -839,18 +844,18 @@ const AudioReaderView: React.FC<AudioReaderViewProps> = ({ bookId: propBookId, o
                           jumpToTrack(index);
                         }}
                         className={`w-full rounded-lg px-3 py-2 text-left text-sm transition-colors ${
-                          index === currentTrackIndex
+                          isActive
                             ? 'bg-sky-700 text-white'
                             : 'theme-hover-surface theme-text-secondary'
                         }`}
                       >
                         <span className="block font-medium">{track.title}</span>
-                        <span className="theme-text-muted text-xs">
+                        <span className={`${detailTextClass} text-xs`}>
                           Track {index + 1}
                           {formatDuration(track.duration) ? ` · ${formatDuration(track.duration)}` : ''}
                         </span>
                         <div className="mt-2 flex items-center gap-2">
-                          <span className="theme-text-muted min-w-20 text-[11px] font-semibold uppercase tracking-[0.08em]">
+                          <span className={`${statusTextClass} min-w-20 text-[11px] font-semibold uppercase tracking-[0.08em]`}>
                             {progress.state === 'completed'
                               ? 'Finished'
                               : progress.state === 'in-progress'
@@ -866,7 +871,7 @@ const AudioReaderView: React.FC<AudioReaderViewProps> = ({ bookId: propBookId, o
                             </div>
                           )}
                           {progress.state !== 'not-started' && (
-                            <span className="theme-text-muted text-[11px] font-semibold">
+                            <span className={`${statusTextClass} text-[11px] font-semibold`}>
                               {formatDuration(progress.listenedSeconds) || '0:00'}
                             </span>
                           )}

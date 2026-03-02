@@ -147,6 +147,14 @@ body {
   color: var(--accent-text-emphasis) !important;
 }
 
+.theme-on-accent-text {
+  color: var(--button-primary-fg) !important;
+}
+
+.theme-on-accent-text-muted {
+  color: color-mix(in srgb, var(--button-primary-fg) 82%, transparent) !important;
+}
+
 .theme-accent-surface {
   background-color: var(--accent-soft-bg) !important;
   border-color: var(--accent-soft-border) !important;

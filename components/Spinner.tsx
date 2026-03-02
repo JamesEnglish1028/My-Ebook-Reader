@@ -12,11 +12,11 @@ const Spinner: React.FC<{ text?: string, size?: 'small' | 'medium' }> = ({ text,
             aria-busy="true"
         >
             <div
-                className={`animate-spin rounded-full border-sky-400 ${sizeClasses}`}
+                className={`theme-accent-text-emphasis animate-spin rounded-full border-current ${sizeClasses}`}
                 aria-hidden="true"
             />
             {text && (
-                <p className={`text-sky-300 ${textClasses}`}>
+                <p className={`theme-accent-text-emphasis ${textClasses}`}>
                     {text}
                 </p>
             )}
