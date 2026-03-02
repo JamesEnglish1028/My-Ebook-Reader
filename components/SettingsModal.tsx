@@ -73,14 +73,14 @@ const SettingsModal: React.FC<SettingsModalProps> = ({
     <div className="fixed inset-0 bg-black/60 z-50 flex items-center justify-center p-4" onClick={handleClose} aria-modal="true" role="dialog">
       <div ref={modalRef} className="theme-surface-elevated theme-border theme-text-primary w-full max-w-lg rounded-lg border p-6 shadow-xl" onClick={(e) => e.stopPropagation()}>
         <div className="flex justify-between items-center mb-6">
-          <h2 className="text-xl font-bold text-sky-300">Cloud Sync</h2>
+          <h2 className="theme-accent-text-emphasis text-xl font-bold">Cloud Sync</h2>
           <button onClick={handleClose} className="theme-hover-surface rounded-full p-2 transition-colors" aria-label="Close" disabled={isSyncing}>
             <CloseIcon className="w-6 h-6" />
           </button>
         </div>
 
         <div className="space-y-6">
-          <div className="bg-slate-900/50 p-4 rounded-lg theme-surface-muted">
+          <div className="theme-surface-muted rounded-lg p-4">
             <h3 className="theme-text-primary mb-4 text-lg font-semibold">Account & Sync</h3>
             {isLoggedIn && user ? (
               <div className="space-y-3">
@@ -90,7 +90,7 @@ const SettingsModal: React.FC<SettingsModalProps> = ({
                     <p className="font-semibold">{user.name}</p>
                     <p className="theme-text-secondary text-sm">{user.email}</p>
                   </div>
-                  <button onClick={reauthorizeDrive} className="py-2 px-3 rounded-md bg-sky-700 hover:bg-sky-600 transition-colors font-semibold text-xs">
+                  <button onClick={reauthorizeDrive} className="theme-button-primary rounded-md px-3 py-2 text-xs font-semibold transition-colors">
                     Refresh Drive Access
                   </button>
                   <button onClick={signOut} className="theme-button-neutral theme-hover-surface rounded-md px-4 py-2 text-sm font-semibold transition-colors">
@@ -121,7 +121,7 @@ const SettingsModal: React.FC<SettingsModalProps> = ({
           </div>
 
           {isLoggedIn && (
-            <div className="bg-slate-900/50 p-4 rounded-lg theme-surface-muted">
+            <div className="theme-surface-muted rounded-lg p-4">
               <h3 className="theme-text-primary mb-2 text-lg font-semibold">Google Drive Sync</h3>
               <p className="theme-text-muted mb-4 text-xs">Last synced: {lastSyncString}</p>
 
@@ -166,12 +166,12 @@ const SettingsModal: React.FC<SettingsModalProps> = ({
               ) : (
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                   <button onClick={onUploadToDrive} className="theme-button-neutral theme-hover-surface flex flex-col items-center justify-center gap-2 rounded-md p-4 transition-colors disabled:opacity-50" disabled={isSyncing}>
-                    <UploadIcon className="w-6 h-6 text-sky-400" />
+                    <UploadIcon className="theme-accent-text w-6 h-6" />
                     <span className="font-semibold">Upload to Drive</span>
                     <span className="theme-text-secondary text-center text-xs">Save your local library to the cloud. This will overwrite any existing data in Drive.</span>
                   </button>
                   <button onClick={onDownloadFromDrive} className="theme-button-neutral theme-hover-surface flex flex-col items-center justify-center gap-2 rounded-md p-4 transition-colors disabled:opacity-50" disabled={isSyncing}>
-                    <DownloadIcon className="w-6 h-6 text-sky-400" />
+                    <DownloadIcon className="theme-accent-text w-6 h-6" />
                     <span className="font-semibold">Download from Drive</span>
                     <span className="theme-text-secondary text-center text-xs">Replace your local library with the one from Drive. Local changes will be lost.</span>
                   </button>

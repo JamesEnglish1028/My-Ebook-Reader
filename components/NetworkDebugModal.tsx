@@ -78,40 +78,40 @@ const NetworkDebugModal: React.FC<{ isOpen: boolean; onClose: () => void }> = ({
   if (!isOpen) return null;
 
   return (
-    <div className="fixed inset-0 z-50 flex items-start justify-center p-6">
+    <div className="fixed inset-0 z-50 flex items-start justify-center bg-black/60 p-6" aria-modal="true" role="dialog">
       <div
         ref={modalRef}
-        className="theme-surface-elevated theme-border theme-text-primary w-full max-w-2xl overflow-auto rounded border shadow-lg"
+        className="theme-surface-elevated theme-border theme-text-primary w-full max-w-2xl overflow-auto rounded border shadow-xl"
         style={{ maxHeight: '80vh' }}
       >
         <div className="theme-divider flex items-center justify-between border-b p-4">
-          <strong>Network Debug</strong>
+          <strong className="theme-accent-text-emphasis">Network Debug</strong>
           <div>
             <button className="theme-button-neutral theme-hover-surface mr-2 rounded px-3 py-1" onClick={() => { setUrl(''); setResult(null); }}>Clear</button>
-            <button className="px-3 py-1 bg-red-500 text-white rounded" onClick={onClose}>Close</button>
+            <button className="theme-button-neutral theme-hover-surface rounded px-3 py-1" onClick={onClose}>Close</button>
           </div>
         </div>
         <div className="p-4">
           <div className="mb-2">
-            <label className="block text-sm font-medium">Target URL</label>
+            <label className="theme-text-secondary block text-sm font-medium">Target URL</label>
             <input className="theme-input w-full rounded border p-2" value={url} onChange={e => setUrl(e.target.value)} placeholder="https://example.org/opds/borrow/123" />
           </div>
           <div className="mb-2">
-            <label className="block text-sm font-medium">Authorization header (optional)</label>
+            <label className="theme-text-secondary block text-sm font-medium">Authorization header (optional)</label>
             <input className="theme-input w-full rounded border p-2" value={authHeader} onChange={e => setAuthHeader(e.target.value)} placeholder="Basic base64(...)" />
             <div className="theme-text-secondary text-xs">You can paste an Authorization header value to simulate client-sent auth. Note: browsers may preflight requests when custom headers are present.</div>
           </div>
           <div className="mb-4 flex items-center gap-3">
-            <label className="flex items-center gap-2"><input type="checkbox" checked={includeCreds} onChange={e => setIncludeCreds(e.target.checked)} /> Include credentials (cookies)</label>
+            <label className="theme-text-secondary flex items-center gap-2"><input type="checkbox" checked={includeCreds} onChange={e => setIncludeCreds(e.target.checked)} /> Include credentials (cookies)</label>
           </div>
 
           <div className="mb-4 flex gap-2">
-            <button className="px-3 py-2 bg-blue-600 text-white rounded" onClick={() => runProbe(false)} disabled={loading || !url}>Probe (auto)</button>
-            <button className="px-3 py-2 bg-indigo-600 text-white rounded" onClick={() => runProbe(true)} disabled={loading || !url}>Force Proxy</button>
+            <button className="theme-button-primary rounded px-3 py-2" onClick={() => runProbe(false)} disabled={loading || !url}>Probe (auto)</button>
+            <button className="theme-button-neutral theme-hover-surface rounded px-3 py-2" onClick={() => runProbe(true)} disabled={loading || !url}>Force Proxy</button>
           </div>
 
           <div className="text-sm">
-            {loading && <div>Running probe...</div>}
+            {loading && <div className="theme-text-secondary">Running probe...</div>}
             {result && (
               <div className="mt-3">
                 <div><strong>Target used:</strong> {result.url || result.target}</div>

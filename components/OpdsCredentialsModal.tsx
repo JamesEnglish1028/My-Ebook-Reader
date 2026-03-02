@@ -106,12 +106,12 @@ const OpdsCredentialsModal: React.FC<Props> = ({
   const resolvedPasswordPlaceholder = passwordPlaceholder || authDocument?.password_placeholder || authPasswordPlaceholder || 'Password';
   const resolvedSaveLabel = saveLabel || 'Save credential for this host';
   return (
-    <div className="theme-shell fixed inset-0 z-50 flex items-center justify-center bg-opacity-75 p-4">
-      <div ref={modalRef} className="theme-surface-elevated theme-border theme-text-primary w-full max-w-md rounded-lg border p-6">
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4" aria-modal="true" role="dialog">
+      <div ref={modalRef} className="theme-surface-elevated theme-border theme-text-primary w-full max-w-md rounded-lg border p-6 shadow-xl">
         <div className="flex items-start gap-4 mb-2">
           {logo && <img src={logo} alt="provider logo" className="w-12 h-12 object-contain" />}
           <div>
-            <h3 className="text-lg font-semibold">{realmFromAuth ? `Login to ${realmFromAuth}` : 'Authentication required'}</h3>
+            <h3 className="theme-accent-text-emphasis text-lg font-semibold">{realmFromAuth ? `Login to ${realmFromAuth}` : 'Authentication required'}</h3>
             <p className="theme-text-secondary text-sm">{resolvedDescription}</p>
           </div>
 
@@ -122,7 +122,7 @@ const OpdsCredentialsModal: React.FC<Props> = ({
             </div>
           )}
           {directAvailable && (
-            <div className="mb-3 text-sm text-emerald-300 flex items-center justify-between">
+            <div className="theme-text-success mb-3 flex items-center justify-between text-sm">
               <span>Direct access appears to be available. You can retry the acquisition now.</span>
               <div className="ml-4">
                 <button
@@ -132,7 +132,7 @@ const OpdsCredentialsModal: React.FC<Props> = ({
                     setIsPolling(false);
                     if (typeof onRetry === 'function') onRetry();
                   }}
-                  className="px-3 py-1 rounded bg-emerald-600 hover:bg-emerald-500 text-white"
+                  className="theme-button-primary rounded px-3 py-1"
                 >
                   Retry now
                 </button>
@@ -140,14 +140,16 @@ const OpdsCredentialsModal: React.FC<Props> = ({
             </div>
           )}
         </div>
-        {description && <p className="theme-text-secondary mb-4 text-sm">{description}</p>}
+        {description && resolvedDescription !== description && (
+          <p className="theme-text-secondary mb-4 text-sm">{description}</p>
+        )}
 
         {links.length > 0 && (
           <div className="theme-text-secondary mb-4 text-sm">
             <div className="font-semibold mb-1">Authentication Links</div>
             <ul className="list-disc list-inside">
               {links.map((l, i) => (
-                <li key={i}><a className="text-sky-400" href={l.href} target="_blank" rel="noreferrer">{l.title || l.href}</a> {l.rel ? <span className="theme-text-muted text-xs">({l.rel})</span> : null}</li>
+                <li key={i}><a className="theme-accent-text theme-accent-text-emphasis-hover" href={l.href} target="_blank" rel="noreferrer">{l.title || l.href}</a> {l.rel ? <span className="theme-text-muted text-xs">({l.rel})</span> : null}</li>
               ))}
             </ul>
           </div>
@@ -206,7 +208,7 @@ const OpdsCredentialsModal: React.FC<Props> = ({
                         // If polling cannot be started, silently ignore and let user click Retry
                       }
                     }}
-                    className="px-3 py-2 rounded bg-emerald-600 hover:bg-emerald-500 text-white"
+                    className="theme-button-primary rounded px-3 py-2"
                   >
                     Open sign-in page
                   </button>
@@ -234,9 +236,9 @@ const OpdsCredentialsModal: React.FC<Props> = ({
           <button onClick={onClose} className="theme-button-neutral theme-hover-surface rounded px-4 py-2">Cancel</button>
           {/* If a retry handler is provided, show a Retry button so users can retry after using the provider login page */}
           {typeof onRetry === 'function' && (
-            <button onClick={() => onRetry()} className="px-4 py-2 rounded bg-yellow-600 hover:bg-yellow-500">Retry</button>
+            <button onClick={() => onRetry()} className="theme-button-neutral theme-hover-surface rounded px-4 py-2">Retry</button>
           )}
-          <button onClick={() => onSubmit(username, password, save)} className="px-4 py-2 rounded bg-sky-500 hover:bg-sky-600">Continue</button>
+          <button onClick={() => onSubmit(username, password, save)} className="theme-button-primary rounded px-4 py-2">Continue</button>
         </div>
       </div>
     </div>

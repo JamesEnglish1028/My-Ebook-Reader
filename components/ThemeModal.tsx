@@ -40,7 +40,7 @@ const ThemeModal: React.FC<ThemeModalProps> = ({
         onClick={(e) => e.stopPropagation()}
       >
         <div className="mb-4 flex items-center justify-between">
-          <h2 className="theme-accent-text text-xl font-bold">UI Theme</h2>
+          <h2 className="theme-accent-text-emphasis text-xl font-bold">UI Theme</h2>
           <button onClick={onClose} className="theme-hover-surface rounded-full p-2 transition-colors" aria-label="Close">
             <CloseIcon className="w-6 h-6" />
           </button>
