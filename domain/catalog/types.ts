@@ -66,8 +66,8 @@ export interface CatalogBook {
   // OPDS 1 collections
   collections?: Collection[];
 
-  // OPDS 2 series
-  series?: Series;
+  // OPDS 2 series metadata (metadata.series or belongsTo.series)
+  series?: Series[];
 
   // Palace.io categories
   categories?: Category[];
@@ -95,7 +95,12 @@ export interface Collection {
 export interface Series {
   name: string;
   position?: number;
+  volume?: string | number;
+  url?: string;
 }
+
+// Backward-compatible alias used by some in-progress UI extracts.
+export type SeriesInfo = Series;
 
 /**
  * Category metadata (Palace.io OPDS 1)

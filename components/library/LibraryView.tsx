@@ -23,7 +23,7 @@ interface LibraryViewProps {
   };
   onAutoBackupToDrive: () => Promise<void>;
   onOpenBook: (id: number, animationData: CoverAnimationData, format?: string) => void;
-  onShowBookDetail: (book: BookMetadata | CatalogBook, source: 'library' | 'catalog', catalogName?: string) => void;
+  onShowBookDetail: (book: BookMetadata | CatalogBook, source: 'library' | 'catalog', catalogName?: string, relatedSeriesBooks?: CatalogBook[]) => void;
   processAndSaveBook: (
     epubData: ArrayBuffer,
     fileName?: string,

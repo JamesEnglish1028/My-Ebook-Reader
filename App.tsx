@@ -90,6 +90,7 @@ const AppInner: React.FC = () => {
     book: BookMetadata | CatalogBook;
     source: 'library' | 'catalog';
     catalogName?: string;
+    relatedSeriesBooks?: CatalogBook[];
   } | null>(null);
 
   const handleReturnToLibrary = useCallback(() => {
@@ -293,8 +294,13 @@ const AppInner: React.FC = () => {
     navigate('/');
   }, [navigate]);
 
-  const handleShowBookDetail = useCallback((book: BookMetadata | CatalogBook, source: 'library' | 'catalog', catalogName?: string) => {
-    setDetailViewData({ book, source, catalogName });
+  const handleShowBookDetail = useCallback((
+    book: BookMetadata | CatalogBook,
+    source: 'library' | 'catalog',
+    catalogName?: string,
+    relatedSeriesBooks?: CatalogBook[],
+  ) => {
+    setDetailViewData({ book, source, catalogName, relatedSeriesBooks });
     setCurrentView('bookDetail');
   }, []);
 

@@ -1,7 +1,7 @@
 import React, { useCallback, useState } from 'react';
 
 import { useBooks, useDeleteBook } from '../../../hooks';
-import type { BookMetadata, CoverAnimationData } from '../../../types';
+import type { BookMetadata, CatalogBook, CoverAnimationData } from '../../../types';
 import DeleteConfirmationModal from '../../DeleteConfirmationModal';
 import { AdjustmentsVerticalIcon, ListIcon, Squares2X2Icon } from '../../icons';
 import { Error as ErrorDisplay, Loading } from '../../shared';
@@ -12,7 +12,7 @@ interface LocalLibraryViewProps {
   /** Callback to open a book for reading */
   onOpenBook: (id: number, animationData: CoverAnimationData, format?: string) => void;
   /** Callback to show book detail view */
-  onShowBookDetail: (book: BookMetadata, source: 'library' | 'catalog') => void;
+  onShowBookDetail: (book: BookMetadata, source: 'library' | 'catalog', catalogName?: string, relatedSeriesBooks?: CatalogBook[]) => void;
   /** Callback when file is selected for import */
   onFileChange: (event: React.ChangeEvent<HTMLInputElement>) => void;
   /** Import status */

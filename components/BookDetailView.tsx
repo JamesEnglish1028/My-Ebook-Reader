@@ -18,6 +18,8 @@ export interface BookDetailViewProps {
   book: BookDetailMetadata;
   source: 'library' | 'catalog' | string;
   catalogName?: string;
+  relatedSeriesBooks?: CatalogBook[];
+  onShowRelatedCatalogBook?: (book: CatalogBook, relatedSeriesBooks?: CatalogBook[]) => void;
   onBack: () => void;
   onReadBook: (book: BookDetailMetadata) => void;
   onImportFromCatalog?: (book: CatalogBook | BookDetailMetadata, catalogName?: string) => Promise<{ success: boolean; bookRecord?: BookRecord; existingBook?: BookRecord }>;
@@ -28,6 +30,7 @@ export interface BookDetailViewProps {
 
 import { LeftArrowIcon } from './icons';
 import AccessibilityBadges from './library/shared/AccessibilityBadges';
+import SeriesLane from './library/catalog/SeriesLane';
 import BookBadges from './library/shared/BookBadges';
 import { db, ensureFreshPatronAuthorization } from '../services';
 
@@ -277,7 +280,7 @@ const getPrimaryActionNotice = (
   return null;
 };
 
-const BookDetailView: React.FC<BookDetailViewProps> = ({ book, onBack, source, catalogName, userCitationFormat = 'apa', onReadBook, onImportFromCatalog, importStatus, setImportStatus }) => {
+const BookDetailView: React.FC<BookDetailViewProps> = ({ book, onBack, source, catalogName, relatedSeriesBooks, onShowRelatedCatalogBook, userCitationFormat = 'apa', onReadBook, onImportFromCatalog, importStatus, setImportStatus }) => {
   const bookAny = book as any;
   const publisherText = typeof bookAny.publisher === 'string' ? bookAny.publisher : undefined;
   const publicationDateText = formatPublicationDate(bookAny.publicationDate);
@@ -316,6 +319,13 @@ const BookDetailView: React.FC<BookDetailViewProps> = ({ book, onBack, source, c
   };
   const [localBookmarks, setLocalBookmarks] = React.useState<Bookmark[]>([]);
   const [localCitations, setLocalCitations] = React.useState<Citation[]>([]);
+  const primarySeries = 'downloadUrl' in book && Array.isArray(book.series) ? book.series[0] : undefined;
+  const seriesBooksForLane = source === 'catalog'
+    && primarySeries
+    && Array.isArray(relatedSeriesBooks)
+    && relatedSeriesBooks.length > 1
+      ? relatedSeriesBooks
+      : null;
 
   React.useEffect(() => {
     if (bookAny.id) {
@@ -595,6 +605,20 @@ const BookDetailView: React.FC<BookDetailViewProps> = ({ book, onBack, source, c
               className="theme-text-secondary mt-4 text-base leading-7 [&_ol]:my-4 [&_ol]:list-decimal [&_ol]:pl-6 [&_p]:mb-4 [&_ul]:my-4 [&_ul]:list-disc [&_ul]:pl-6"
               dangerouslySetInnerHTML={{ __html: descriptionHtml }}
             />
+          )}
+          {primarySeries && seriesBooksForLane && (
+            <div className="mt-6">
+              <SeriesLane
+                series={primarySeries}
+                books={seriesBooksForLane}
+                onBookClick={(seriesBook) => {
+                  if (seriesBook.providerId === ('providerId' in book ? book.providerId : undefined)) {
+                    return;
+                  }
+                  onShowRelatedCatalogBook?.(seriesBook, seriesBooksForLane);
+                }}
+              />
+            </div>
           )}
         </div>
         {/* Book Details Section (accessibility, provider) INSIDE container */}

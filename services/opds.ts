@@ -1914,8 +1914,8 @@ export const getAvailableCollections = (books: CatalogBook[], navLinks: CatalogN
         // For series, sort by position if available
         if (categoryGroup.category.scheme === 'http://opds-spec.org/series') {
             sortedBooks = [...categoryGroup.books].sort((a, b) => {
-                const aPos = a.series?.position || 0;
-                const bPos = b.series?.position || 0;
+                const aPos = a.series?.[0]?.position || 0;
+                const bPos = b.series?.[0]?.position || 0;
                 return aPos - bPos;
             });
         }

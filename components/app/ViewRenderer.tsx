@@ -34,6 +34,7 @@ export interface ViewRendererProps {
     book: BookDetailMetadata;
     source: 'library' | 'catalog';
     catalogName?: string;
+    relatedSeriesBooks?: CatalogBook[];
   } | null;
   onReturnToLibrary: () => void;
   onReadBook: (id: number, animationData: CoverAnimationData, format?: string) => void;
@@ -46,7 +47,7 @@ export interface ViewRendererProps {
   };
   onAutoBackupToDrive: () => Promise<void>;
   onOpenBook: (id: number, animationData: CoverAnimationData, format?: string) => void;
-  onShowBookDetail: (book: BookMetadata | CatalogBook, source: 'library' | 'catalog', catalogName?: string) => void;
+  onShowBookDetail: (book: BookMetadata | CatalogBook, source: 'library' | 'catalog', catalogName?: string, relatedSeriesBooks?: CatalogBook[]) => void;
   userCitationFormat: 'apa' | 'mla' | 'chicago';
   processAndSaveBook: (
     bookData: ArrayBuffer,
@@ -203,6 +204,13 @@ export const ViewRenderer: React.FC<ViewRendererProps> = (props) => {
             book={detailViewData.book}
             source={detailViewData.source as 'library' | 'catalog'}
             catalogName={detailViewData.catalogName}
+            relatedSeriesBooks={detailViewData.relatedSeriesBooks}
+            onShowRelatedCatalogBook={(book, relatedSeriesBooks) => onShowBookDetail(
+              book,
+              'catalog',
+              detailViewData.catalogName,
+              relatedSeriesBooks,
+            )}
             onBack={onReturnToLibrary}
             onReadBook={handleReadBook}
             onImportFromCatalog={onImportFromCatalog}

@@ -133,4 +133,51 @@ describe('Catalog vs Library BookDetailView Differences', () => {
 
     console.log('✅ PDF catalog book shows Add to Bookshelf and distributor');
   });
+
+  test('catalog book shows a series lane when related series books are available', () => {
+    const onShowRelatedCatalogBook = vi.fn();
+    const catalogBook = {
+      id: 201,
+      title: 'Episode 2',
+      author: 'Series Author',
+      coverImage: null,
+      downloadUrl: 'https://example.com/download-2',
+      summary: 'Second book in a series',
+      providerId: 'series-2',
+      format: 'EPUB',
+      acquisitionMediaType: 'application/epub+zip',
+      series: [{ name: 'Great Saga', position: 2 }],
+    } as any;
+
+    const relatedSeriesBooks = [
+      {
+        ...catalogBook,
+        id: 200,
+        title: 'Episode 1',
+        providerId: 'series-1',
+        downloadUrl: 'https://example.com/download-1',
+        series: [{ name: 'Great Saga', position: 1 }],
+      },
+      catalogBook,
+    ];
+
+    render(
+      <BookDetailView
+        book={catalogBook}
+        source="catalog"
+        catalogName="Series Catalog"
+        relatedSeriesBooks={relatedSeriesBooks}
+        onShowRelatedCatalogBook={onShowRelatedCatalogBook}
+        onBack={vi.fn()}
+        onReadBook={vi.fn()}
+        onImportFromCatalog={vi.fn()}
+        importStatus={{ isLoading: false, message: '', error: null, state: 'awaiting-auth' as 'awaiting-auth', host: 'test-host' }}
+        setImportStatus={vi.fn()}
+        userCitationFormat="apa"
+      />,
+    );
+
+    expect(screen.getByText('Series: Great Saga')).toBeInTheDocument();
+    expect(screen.getByText('2 books')).toBeInTheDocument();
+  });
 });

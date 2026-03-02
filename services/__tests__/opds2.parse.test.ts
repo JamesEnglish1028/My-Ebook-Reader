@@ -92,8 +92,36 @@ describe('parseOpds2Json', () => {
     };
 
     const { books } = parseOpds2Json(feed, 'https://example.org/');
-    expect(books[0].series?.name).toBe('Great Saga');
-    expect(books[0].series?.position).toBe(2);
+    expect(books[0].series?.[0]?.name).toBe('Great Saga');
+    expect(books[0].series?.[0]?.position).toBe(2);
+  });
+
+  it('extracts multiple belongsTo series entries as an ordered array', () => {
+    const feed = {
+      metadata: { title: 'Series Catalog' },
+      publications: [
+        {
+          metadata: {
+            title: 'Episode 4',
+            author: 'J. Writer',
+            identifier: 'ep-4',
+            belongsTo: {
+              series: [
+                { name: 'Great Saga', position: 4, url: 'https://example.org/series/great-saga' },
+                { name: 'Spin-Off', ordinal: 1 },
+              ],
+            },
+          },
+          links: [ { href: '/works/4', rel: 'http://opds-spec.org/acquisition/open-access', type: 'application/epub+zip' } ],
+        },
+      ],
+    };
+
+    const { books } = parseOpds2Json(feed, 'https://example.org/');
+    expect(books[0].series).toEqual([
+      { name: 'Great Saga', position: 4, volume: undefined, url: 'https://example.org/series/great-saga' },
+      { name: 'Spin-Off', position: 1, volume: undefined, url: undefined },
+    ]);
   });
 
   it('maps subject objects into subjects and categories', () => {

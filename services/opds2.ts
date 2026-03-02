@@ -44,9 +44,38 @@ function normalizeRelValues(rel: unknown): string[] {
     .map((r) => normalizeRel(toLowerSafe(r)))
     .filter((r) => r.length > 0);
 }
-import type { CatalogBook, CatalogFacetGroup, CatalogFacetLink, CatalogNavigationLink, CatalogPagination, CatalogSearchMetadata } from '../types';
+import type { CatalogBook, CatalogFacetGroup, CatalogFacetLink, CatalogNavigationLink, CatalogPagination, CatalogSearchMetadata, Series } from '../types';
 import type { Opds2Link, Opds2NavigationGroup, Opds2Publication } from '../types/opds2';
 import { parseCatalogSearchTemplateParameters, resolveCatalogSearchTemplateUrl } from './opensearch';
+
+function parseSeriesMetadata(metadata: any): Series[] | undefined {
+  try {
+    const rawSeries = metadata?.series || metadata?.belongsTo?.series;
+    if (!rawSeries) return undefined;
+
+    const normalizedSeries = (Array.isArray(rawSeries) ? rawSeries : [rawSeries])
+      .map((entry: any) => {
+        const name = typeof entry === 'string' ? entry : entry?.name;
+        if (!name) return undefined;
+
+        const rawPosition = typeof entry === 'object' && entry
+          ? (entry.position ?? entry.ordinal ?? entry.index)
+          : undefined;
+
+        return {
+          name: String(name).trim(),
+          position: typeof rawPosition === 'number' ? rawPosition : undefined,
+          volume: entry?.volume,
+          url: entry?.uri || entry?.url,
+        };
+      })
+      .filter((entry): entry is Series => entry !== undefined);
+
+    return normalizedSeries.length > 0 ? normalizedSeries : undefined;
+  } catch {
+    return undefined;
+  }
+}
 
 function isOpdsNavigationTarget(link: Partial<Opds2Link> | undefined): boolean {
   if (!link) return false;
@@ -713,16 +742,6 @@ function processOpds2Publication(pub: Opds2Publication, baseUrl: string): Catalo
     const found = metadata.identifier.find((id: string) => typeof id === 'string');
     if (found) providerId = found;
   }
-  // Series may be provided as metadata.series or belongsTo.series in some feeds
-  let series: { name: string; position?: number } | undefined;
-  try {
-    const rawSeries = (metadata as any).series || (metadata as any).belongsTo?.series;
-    const s = Array.isArray(rawSeries) ? rawSeries[0] : rawSeries;
-    const name = typeof s === 'string' ? s : s?.name;
-    const position = typeof s === 'object' && s ? (s.position ?? s.ordinal ?? s.index) : undefined;
-    if (name) series = { name, position: typeof position === 'number' ? position : undefined };
-  } catch (_) { /* tolerate malformed series */ }
-  
   // Extract categories from subject field (for backward compatibility)
   let categories: { scheme: string; term: string; label: string }[] | undefined = undefined;
   if (Array.isArray(metadata.subject)) {
@@ -869,27 +888,7 @@ function processOpds2Publication(pub: Opds2Publication, baseUrl: string): Catalo
     ? parseInt(String(pub.properties['opds:holds']), 10)
     : undefined;
 
-  // Extract series as array
-  let seriesArray: import('../domain/catalog').SeriesInfo[] | undefined;
-  try {
-    const rawSeries = (metadata as any).series || (metadata as any).belongsTo?.series;
-    if (rawSeries) {
-      const arr = Array.isArray(rawSeries) ? rawSeries : [rawSeries];
-      seriesArray = arr
-        .map((s: any) => {
-          const name = typeof s === 'string' ? s : s?.name;
-          if (!name) return undefined;
-          return {
-            name: String(name).trim(),
-            position: typeof s === 'object' && s ? (s.position ?? s.ordinal ?? s.index) : undefined,
-            volume: s?.volume,
-            url: s?.uri || s?.url
-          };
-        })
-        .filter((s: any) => s !== undefined);
-      if (seriesArray.length === 0) seriesArray = undefined;
-    }
-  } catch (_) { /* tolerate malformed series */ }
+  const series = parseSeriesMetadata(metadata);
 
   if (title && (downloadUrl || coverImage)) {
     return {
@@ -918,7 +917,7 @@ function processOpds2Publication(pub: Opds2Publication, baseUrl: string): Catalo
       schemaOrgType,
       publicationTypeLabel,
       mediumFormatCode,
-      series: seriesArray,
+      series,
       language,
       duration,
       extent,

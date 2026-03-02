@@ -50,7 +50,7 @@ interface CatalogViewProps {
   activeOpdsSource: Catalog | CatalogRegistry;
   catalogNavPath: { name: string; url: string }[];
   setCatalogNavPath: React.Dispatch<React.SetStateAction<{ name: string; url: string }[]>>;
-  onShowBookDetail: (book: CatalogBook, source: 'catalog', catalogName?: string) => void;
+  onShowBookDetail: (book: CatalogBook, source: 'catalog', catalogName?: string, relatedSeriesBooks?: CatalogBook[]) => void;
   importedProviderIds?: Set<string>;
 }
 
@@ -302,7 +302,11 @@ const CatalogView: React.FC<CatalogViewProps> = ({
     if (currentRequestAuth?.scheme === 'bearer' && book.downloadUrl) {
       cachePatronAuthorizationForUrl(book.downloadUrl, currentRequestAuth);
     }
-    onShowBookDetail(book, 'catalog', activeOpdsSource.name);
+    const primarySeriesName = book.series?.[0]?.name;
+    const relatedSeriesBooks = primarySeriesName
+      ? catalogBooks.filter((candidate) => candidate.series?.some((series) => series.name === primarySeriesName))
+      : undefined;
+    onShowBookDetail(book, 'catalog', activeOpdsSource.name, relatedSeriesBooks);
   };
 
   const handleSearchSubmit = () => {
