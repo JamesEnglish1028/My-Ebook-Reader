@@ -38,6 +38,14 @@ const isHttpUrl = (value: string | undefined | null): value is string => {
   return /^https?:\/\//i.test(value);
 };
 
+const getStoredProviderName = (
+  source: 'file' | 'catalog',
+  providerName?: string,
+): string | undefined => {
+  if (providerName) return providerName;
+  return source === 'file' ? 'Local Upload' : undefined;
+};
+
 export const useImportCoordinator = ({ onCatalogImportSuccess }: UseImportCoordinatorOptions) => {
   const [importStatus, setImportStatus] = useState<ImportStatusState>(initialImportState);
   const [libraryRefreshFlag, setLibraryRefreshFlag] = useState(0);
@@ -58,6 +66,7 @@ export const useImportCoordinator = ({ onCatalogImportSuccess }: UseImportCoordi
     catalogBookMeta?: Partial<CatalogBook>,
   ): Promise<ImportResult> => {
     let finalCoverImage: string | null = null;
+    const storedProviderName = getStoredProviderName(source, providerName);
     if (coverImageUrl) {
       finalCoverImage = await imageUrlToBase64(coverImageUrl);
     }
@@ -95,7 +104,7 @@ export const useImportCoordinator = ({ onCatalogImportSuccess }: UseImportCoordi
           manifestUrl,
           fulfillmentUrl,
           authDocument: runtimeMeta?.authDocument,
-          providerName,
+          providerName: storedProviderName,
           providerId: finalProviderId,
           description: manifest.description,
           publisher: normalizePublisher(catalogBookMeta?.publisher),
@@ -178,7 +187,7 @@ export const useImportCoordinator = ({ onCatalogImportSuccess }: UseImportCoordi
           coverImage: (catalogMeta as { coverImage?: string | null }).coverImage || validCover,
           epubData: bookData,
           format: 'PDF',
-          providerName,
+          providerName: storedProviderName,
           providerId: finalProviderId,
           description: (catalogMeta as Partial<CatalogBook>).summary,
           publisher: normalizePublisher((catalogMeta as Partial<CatalogBook>).publisher),
@@ -245,7 +254,7 @@ export const useImportCoordinator = ({ onCatalogImportSuccess }: UseImportCoordi
         publisher: opfMetadata?.publisher as string | undefined,
         publicationDate: opfMetadata?.publicationDate as string | undefined,
         providerId: finalProviderId,
-        providerName,
+        providerName: storedProviderName,
         description: opfMetadata?.description as string | undefined,
         subjects: opfMetadata?.subjects as BookRecord['subjects'] | undefined,
         format: 'EPUB',
