@@ -18,6 +18,21 @@ interface SavedAudioPosition {
   time: number;
 }
 
+const PLAYBACK_SPEEDS = [0.75, 1, 1.25, 1.5, 2];
+
+const formatDuration = (seconds: number | undefined): string | null => {
+  if (!Number.isFinite(seconds) || !seconds || seconds <= 0) return null;
+  const totalSeconds = Math.round(seconds);
+  const hours = Math.floor(totalSeconds / 3600);
+  const minutes = Math.floor((totalSeconds % 3600) / 60);
+  const remainingSeconds = totalSeconds % 60;
+
+  if (hours > 0) {
+    return `${hours}:${String(minutes).padStart(2, '0')}:${String(remainingSeconds).padStart(2, '0')}`;
+  }
+  return `${minutes}:${String(remainingSeconds).padStart(2, '0')}`;
+};
+
 const buildAuthorizationHeader = (auth: RequestAuthorization): string => (
   auth.scheme === 'bearer'
     ? `Bearer ${auth.token}`
@@ -37,6 +52,7 @@ const AudioReaderView: React.FC<AudioReaderViewProps> = ({ bookId: propBookId, o
   const [trackSrc, setTrackSrc] = useState<string | null>(null);
   const [trackError, setTrackError] = useState<string | null>(null);
   const [isContentsOpen, setIsContentsOpen] = useState(false);
+  const [playbackRate, setPlaybackRate] = useState(1);
   const audioRef = useRef<HTMLAudioElement | null>(null);
   const saveTickRef = useRef(0);
 
@@ -120,15 +136,18 @@ const AudioReaderView: React.FC<AudioReaderViewProps> = ({ bookId: propBookId, o
       const endExclusive = index < trackStarts.length - 1
         ? trackStarts[index + 1].startIndex
         : manifest.tracks.length;
+      const tracks = manifest.tracks
+        .slice(group.startIndex, endExclusive)
+        .map((track, trackOffset) => ({
+          track,
+          trackIndex: group.startIndex + trackOffset,
+        }));
+      const duration = tracks.reduce((total, entry) => total + (entry.track.duration || 0), 0);
       return {
         title: group.title,
         tocIndex: group.tocIndex,
-        tracks: manifest.tracks
-          .slice(group.startIndex, endExclusive)
-          .map((track, trackOffset) => ({
-            track,
-            trackIndex: group.startIndex + trackOffset,
-          })),
+        duration,
+        tracks,
       };
     });
   }, [manifest]);
@@ -149,6 +168,11 @@ const AudioReaderView: React.FC<AudioReaderViewProps> = ({ bookId: propBookId, o
     audio.addEventListener('loadedmetadata', applyResumeTime, { once: true });
     return () => audio.removeEventListener('loadedmetadata', applyResumeTime);
   }, [currentTrackIndex, resumeTime]);
+
+  useEffect(() => {
+    if (!audioRef.current) return;
+    audioRef.current.playbackRate = playbackRate;
+  }, [playbackRate, trackSrc]);
 
   useEffect(() => {
     let cancelled = false;
@@ -210,6 +234,15 @@ const AudioReaderView: React.FC<AudioReaderViewProps> = ({ bookId: propBookId, o
     } satisfies SavedAudioPosition));
   };
 
+  const seekBy = (seconds: number) => {
+    const audio = audioRef.current;
+    if (!audio) return;
+    const duration = Number.isFinite(audio.duration) ? audio.duration : Number.POSITIVE_INFINITY;
+    const nextTime = Math.max(0, Math.min(audio.currentTime + seconds, duration));
+    audio.currentTime = nextTime;
+    persistPosition(nextTime);
+  };
+
   if (isLoading) {
     return <Spinner message="Loading audiobook..." />;
   }
@@ -262,6 +295,36 @@ const AudioReaderView: React.FC<AudioReaderViewProps> = ({ bookId: propBookId, o
           <div className="w-full">
             <p className="theme-text-secondary mb-2 text-sm uppercase tracking-[0.16em]">Now Playing</p>
             <h2 className="mb-1 text-xl font-semibold">{currentTrack?.title || 'Track'}</h2>
+            <div className="mb-4 mt-4 flex flex-wrap items-center justify-center gap-3">
+              <button
+                type="button"
+                onClick={() => seekBy(-15)}
+                className="rounded-full bg-slate-700 px-4 py-2 text-sm font-semibold text-white transition-colors hover:bg-slate-600"
+              >
+                Rewind 15s
+              </button>
+              <label className="theme-text-secondary flex items-center gap-2 text-sm font-semibold">
+                Speed
+                <select
+                  value={playbackRate}
+                  onChange={(event) => setPlaybackRate(Number(event.target.value))}
+                  className="theme-surface rounded-md border border-white/10 px-2 py-1 theme-text-primary"
+                >
+                  {PLAYBACK_SPEEDS.map((speed) => (
+                    <option key={speed} value={speed}>
+                      {speed}x
+                    </option>
+                  ))}
+                </select>
+              </label>
+              <button
+                type="button"
+                onClick={() => seekBy(30)}
+                className="rounded-full bg-slate-700 px-4 py-2 text-sm font-semibold text-white transition-colors hover:bg-slate-600"
+              >
+                Forward 30s
+              </button>
+            </div>
             <audio
               key={trackSrc || currentTrackIndex}
               ref={audioRef}
@@ -318,7 +381,10 @@ const AudioReaderView: React.FC<AudioReaderViewProps> = ({ bookId: propBookId, o
                     <div key={`${group.title}-${group.tocIndex}-${groupIndex}`} className="rounded-xl border border-white/10 p-3">
                       <div className="mb-2">
                         <p className="theme-text-primary text-sm font-semibold">{group.title}</p>
-                        <p className="theme-text-muted text-xs">Chapter {groupIndex + 1}</p>
+                        <p className="theme-text-muted text-xs">
+                          Chapter {groupIndex + 1}
+                          {formatDuration(group.duration) ? ` · ${formatDuration(group.duration)}` : ''}
+                        </p>
                       </div>
                       <div className="space-y-2">
                         {group.tracks.map(({ track, trackIndex }) => (
@@ -336,7 +402,10 @@ const AudioReaderView: React.FC<AudioReaderViewProps> = ({ bookId: propBookId, o
                             }`}
                           >
                             <span className="block font-medium">{track.title}</span>
-                            <span className="theme-text-muted text-xs">Track {trackIndex + 1}</span>
+                            <span className="theme-text-muted text-xs">
+                              Track {trackIndex + 1}
+                              {formatDuration(track.duration) ? ` · ${formatDuration(track.duration)}` : ''}
+                            </span>
                           </button>
                         ))}
                       </div>
@@ -360,7 +429,10 @@ const AudioReaderView: React.FC<AudioReaderViewProps> = ({ bookId: propBookId, o
                       }`}
                     >
                       <span className="block font-medium">{track.title}</span>
-                      <span className="theme-text-muted text-xs">Track {index + 1}</span>
+                      <span className="theme-text-muted text-xs">
+                        Track {index + 1}
+                        {formatDuration(track.duration) ? ` · ${formatDuration(track.duration)}` : ''}
+                      </span>
                     </button>
                   ))}
                 </div>
