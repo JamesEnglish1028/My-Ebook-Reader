@@ -6,7 +6,7 @@
  */
 
 import type { BookRecord } from '../book/types';
-import type { Catalog } from '../catalog/types';
+import type { Catalog, CatalogRegistry } from '../catalog/types';
 import type { Bookmark, Citation, ReaderSettings } from '../reader/types';
 
 /**
@@ -28,6 +28,9 @@ export interface SyncPayload {
 
   // User's configured catalogs
   catalogs: Catalog[];
+
+  // User's configured registries
+  registries: CatalogRegistry[];
 
   // Bookmarks mapped by book ID
   bookmarks: Record<number, Bookmark[]>;

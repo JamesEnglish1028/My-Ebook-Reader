@@ -1,10 +1,12 @@
 import { useCallback, useState } from 'react';
 
+import { LIBRARY_KEYS, READER_KEYS } from '../../constants';
 import { db, downloadLibraryFromDrive, listDriveSnapshots, logger, uploadLibraryToDrive } from '../../services';
 import type {
   Bookmark,
   BookRecord,
   Catalog,
+  CatalogRegistry,
   Citation,
   DriveSnapshot,
   ReaderSettings,
@@ -23,6 +25,15 @@ interface UseSyncCoordinatorOptions {
 
 const initialSyncStatus: SyncStatusState = { state: 'idle', message: '' };
 
+const readStoredJson = <T,>(key: string, fallback: T): T => {
+  try {
+    const raw = localStorage.getItem(key);
+    return raw ? JSON.parse(raw) as T : fallback;
+  } catch {
+    return fallback;
+  }
+};
+
 export const useSyncCoordinator = ({ tokenClient, confirm }: UseSyncCoordinatorOptions) => {
   const [syncStatus, setSyncStatus] = useState<SyncStatusState>(initialSyncStatus);
   const [driveSnapshots, setDriveSnapshots] = useState<DriveSnapshot[]>([]);
@@ -37,8 +48,12 @@ export const useSyncCoordinator = ({ tokenClient, confirm }: UseSyncCoordinatorO
       return meta;
     });
 
-    const catalogs: Catalog[] = JSON.parse(localStorage.getItem('ebook-catalogs') || '[]');
-    const settings: ReaderSettings = JSON.parse(localStorage.getItem('ebook-reader-settings-global') || '{}');
+    const catalogs = readStoredJson<Catalog[]>(LIBRARY_KEYS.CATALOGS, []);
+    const registries = readStoredJson<CatalogRegistry[]>(LIBRARY_KEYS.REGISTRIES, [])
+      .length > 0
+      ? readStoredJson<CatalogRegistry[]>(LIBRARY_KEYS.REGISTRIES, [])
+      : readStoredJson<CatalogRegistry[]>('ebook-registries', []);
+    const settings = readStoredJson<ReaderSettings>(READER_KEYS.GLOBAL_SETTINGS, {});
 
     const bookmarks: Record<number, Bookmark[]> = {};
     const citations: Record<number, Citation[]> = {};
@@ -53,7 +68,7 @@ export const useSyncCoordinator = ({ tokenClient, confirm }: UseSyncCoordinatorO
     });
 
     return {
-      payload: { library, catalogs, bookmarks, citations, positions, settings },
+      payload: { library, catalogs, registries, bookmarks, citations, positions, settings },
       booksWithData,
     };
   }, []);
@@ -131,8 +146,10 @@ export const useSyncCoordinator = ({ tokenClient, confirm }: UseSyncCoordinatorO
         .forEach((key) => localStorage.removeItem(key));
 
       setSyncStatus({ state: 'syncing', message: 'Importing downloaded library...' });
-      localStorage.setItem('ebook-catalogs', JSON.stringify(downloadedData.payload.catalogs || []));
-      localStorage.setItem('ebook-reader-settings-global', JSON.stringify(downloadedData.payload.settings || {}));
+      localStorage.setItem(LIBRARY_KEYS.CATALOGS, JSON.stringify(downloadedData.payload.catalogs || []));
+      localStorage.setItem(LIBRARY_KEYS.REGISTRIES, JSON.stringify(downloadedData.payload.registries || []));
+      localStorage.removeItem('ebook-registries');
+      localStorage.setItem(READER_KEYS.GLOBAL_SETTINGS, JSON.stringify(downloadedData.payload.settings || {}));
 
       for (const book of downloadedData.booksWithData) {
         await db.saveBook(book);
