@@ -4,7 +4,7 @@ import { db, generatePdfCover, imageUrlToBase64, logger } from '../../services';
 import { parseAudiobookManifest } from '../../services/audiobookManifest';
 import { extractBookMetadataFromOpf } from '../../services/epubParser';
 import { extractCoverImageFromEpub, extractOpfXmlFromEpub } from '../../services/epubZipUtils';
-import type { BookRecord, CatalogBook } from '../../types';
+import type { AuthDocument, BookRecord, CatalogBook } from '../../types';
 
 export interface ImportStatusState {
   isLoading: boolean;
@@ -70,6 +70,7 @@ export const useImportCoordinator = ({ onCatalogImportSuccess }: UseImportCoordi
         const runtimeMeta = catalogBookMeta as (Partial<CatalogBook> & {
           manifestUrl?: string;
           fulfillmentUrl?: string;
+          authDocument?: AuthDocument;
         }) | undefined;
         const manifestBaseUrl = runtimeMeta?.manifestUrl || providerId || undefined;
         const manifest = parseAudiobookManifest(bookData, manifestBaseUrl);
@@ -93,6 +94,7 @@ export const useImportCoordinator = ({ onCatalogImportSuccess }: UseImportCoordi
           sourceUrl: manifestUrl,
           manifestUrl,
           fulfillmentUrl,
+          authDocument: runtimeMeta?.authDocument,
           providerName,
           providerId: finalProviderId,
           description: manifest.description,

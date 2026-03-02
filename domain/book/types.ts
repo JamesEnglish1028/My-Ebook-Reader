@@ -1,3 +1,5 @@
+import type { AuthDocument } from '../catalog/types';
+
 /**
  * Book Domain Types
  *
@@ -22,6 +24,7 @@ export interface BookMetadata {
   sourceUrl?: string;
   manifestUrl?: string;
   fulfillmentUrl?: string;
+  authDocument?: AuthDocument;
   publisher?: string;
   publicationDate?: string;
   isbn?: string; // Kept for backwards compatibility
@@ -64,6 +67,7 @@ export interface BookRecord {
   sourceUrl?: string;
   manifestUrl?: string;
   fulfillmentUrl?: string;
+  authDocument?: AuthDocument;
   publisher?: string;
   publicationDate?: string;
   isbn?: string;

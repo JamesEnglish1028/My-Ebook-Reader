@@ -2,6 +2,7 @@ import React, { useEffect, useMemo, useRef, useState } from 'react';
 
 import type { BookRecord, RequestAuthorization } from '../types';
 import {
+  cacheAuthDocumentForUrl,
   cachePatronAuthorizationForUrl,
   db,
   ensureFreshPatronAuthorization,
@@ -109,6 +110,12 @@ const AudioReaderView: React.FC<AudioReaderViewProps> = ({ bookId: propBookId, o
         return;
       }
       setBookData(data);
+      if (data.authDocument) {
+        const authContextUrl = data.fulfillmentUrl || data.sourceUrl || data.providerId;
+        if (authContextUrl) {
+          cacheAuthDocumentForUrl(authContextUrl, data.authDocument);
+        }
+      }
       parseManifestData(data.epubData, data.manifestUrl || data.sourceUrl || data.providerId || undefined);
       const saved = getLastPositionForBook(bookId);
       if (saved) {
@@ -309,7 +316,7 @@ const AudioReaderView: React.FC<AudioReaderViewProps> = ({ bookId: propBookId, o
         if (!sourceUrl) return null;
         const storedCredential = await findCredentialForUrl(sourceUrl);
         if (!storedCredential) return null;
-        const authDocument = getCachedAuthDocumentForUrl(sourceUrl);
+        const authDocument = getCachedAuthDocumentForUrl(sourceUrl) || bookData?.authDocument || null;
         if (!authDocument) return null;
 
         if (forceRefresh) {

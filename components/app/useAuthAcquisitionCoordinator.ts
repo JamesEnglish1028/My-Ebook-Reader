@@ -316,6 +316,7 @@ export const useAuthAcquisitionCoordinator = ({
       const resolvedFulfill = await resolveLibrarySimplifiedBearerTokenDocument(response, finalUrl);
       response = resolvedFulfill.response;
       validateFulfillResponse(response, book);
+      const activeAuthDocument = getCachedAuthDocumentForUrl(book.downloadUrl);
 
       const bookData = await response.arrayBuffer();
       if (book.format?.toUpperCase() === 'AUDIOBOOK') {
@@ -339,6 +340,7 @@ export const useAuthAcquisitionCoordinator = ({
               downloadUrl: resolvedFulfill.resolvedUrl || finalUrl,
               manifestUrl: resolvedFulfill.resolvedUrl || finalUrl,
               fulfillmentUrl: book.downloadUrl,
+              authDocument: activeAuthDocument || undefined,
             }
         : undefined;
 
@@ -445,6 +447,9 @@ export const useAuthAcquisitionCoordinator = ({
                 subjects: credentialPrompt.pendingBook.subjects,
                 coverImage: credentialPrompt.pendingBook.coverImage,
                 downloadUrl: resolvedFulfill.resolvedUrl || credentialPrompt.pendingBook.downloadUrl,
+                manifestUrl: resolvedFulfill.resolvedUrl || credentialPrompt.pendingBook.downloadUrl,
+                fulfillmentUrl: credentialPrompt.pendingBook.downloadUrl,
+                authDocument: activeAuthDocument || undefined,
               }
             : undefined,
         );
@@ -515,6 +520,9 @@ export const useAuthAcquisitionCoordinator = ({
               subjects: credentialPrompt.pendingBook.subjects,
               coverImage: credentialPrompt.pendingBook.coverImage,
               downloadUrl: credentialPrompt.pendingBook.downloadUrl,
+              manifestUrl: credentialPrompt.pendingBook.downloadUrl,
+              fulfillmentUrl: credentialPrompt.pendingBook.downloadUrl,
+              authDocument: credentialPrompt.authDocument || getCachedAuthDocumentForUrl(credentialPrompt.pendingBook.downloadUrl) || undefined,
             }
           : undefined,
       );
