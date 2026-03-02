@@ -497,6 +497,7 @@ export const downloadLibraryFromDrive = async (
       if (bookMeta.contentExcludedFromSync) {
         booksWithData.push({
           ...bookMeta,
+          restoredFromSync: true,
           epubData: new ArrayBuffer(0),
         });
         continue;
@@ -528,6 +529,7 @@ export const downloadLibraryFromDrive = async (
 
         const bookRecord: BookRecord = {
           ...bookMeta,
+          restoredFromSync: true,
           epubData,
         };
         booksWithData.push(bookRecord);

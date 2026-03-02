@@ -41,6 +41,9 @@ describe('BookDetailView Library Book UI', () => {
       book: {
         ...libraryBook,
         contentExcludedFromSync: true,
+        requiresReauthorization: true,
+        restoredFromSync: true,
+        providerName: 'My Local Library',
       },
       source: 'library' as const,
       onBack: vi.fn(),
@@ -53,10 +56,10 @@ describe('BookDetailView Library Book UI', () => {
 
     render(<BookDetailView {...mockProps} />);
 
-    const button = screen.getByRole('button', { name: /Re-download to Read/i });
+    const button = screen.getByRole('button', { name: /Reauthorize Access Required/i });
     expect(button).toBeDisabled();
     expect(
-      screen.getByText(/This protected title was synced as a record only\./i),
+      screen.getByText(/Sign in to My Local Library in Catalog or Loans, then restore access on this device\./i),
     ).toBeInTheDocument();
   });
 });

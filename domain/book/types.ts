@@ -26,6 +26,8 @@ export interface BookMetadata {
   fulfillmentUrl?: string;
   authDocument?: AuthDocument;
   contentExcludedFromSync?: boolean;
+  requiresReauthorization?: boolean;
+  restoredFromSync?: boolean;
   publisher?: string;
   publicationDate?: string;
   isbn?: string; // Kept for backwards compatibility
@@ -70,6 +72,8 @@ export interface BookRecord {
   fulfillmentUrl?: string;
   authDocument?: AuthDocument;
   contentExcludedFromSync?: boolean;
+  requiresReauthorization?: boolean;
+  restoredFromSync?: boolean;
   publisher?: string;
   publicationDate?: string;
   isbn?: string;

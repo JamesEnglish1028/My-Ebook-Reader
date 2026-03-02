@@ -74,6 +74,8 @@ export function useBookMetadata(bookId: number | null) {
           providerId: book.providerId,
           providerName: book.providerName,
           contentExcludedFromSync: book.contentExcludedFromSync,
+          requiresReauthorization: book.requiresReauthorization,
+          restoredFromSync: book.restoredFromSync,
           distributor: book.distributor,
           description: book.description,
           subjects: book.subjects,

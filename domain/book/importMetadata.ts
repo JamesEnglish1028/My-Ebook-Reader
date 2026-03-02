@@ -10,6 +10,7 @@ export type CatalogImportMeta = Pick<Partial<CatalogBook>, 'summary' | 'publishe
   fulfillmentUrl?: string;
   authDocument?: AuthDocument;
   contentExcludedFromSync?: boolean;
+  requiresReauthorization?: boolean;
 };
 
 interface BuildCatalogImportMetaOptions {
@@ -23,9 +24,11 @@ export const buildCatalogImportMeta = (
   options: BuildCatalogImportMetaOptions = {},
 ): CatalogImportMeta => {
   const normalizedFormat = (book.format || '').toUpperCase();
-  const shouldExcludeContentFromSync = normalizedFormat !== 'AUDIOBOOK' && !book.isOpenAccess;
+  const requiresReauthorization = !book.isOpenAccess;
+  const shouldExcludeContentFromSync = requiresReauthorization;
   const baseMeta: CatalogImportMeta = {
     contentExcludedFromSync: shouldExcludeContentFromSync || undefined,
+    requiresReauthorization: requiresReauthorization || undefined,
   };
 
   if (normalizedFormat === 'PDF') {

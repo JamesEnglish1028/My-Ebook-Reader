@@ -34,6 +34,14 @@ const readStoredJson = <T,>(key: string, fallback: T): T => {
   }
 };
 
+const shouldTreatAsProtectedCatalogRecord = (book: BookRecord): boolean => {
+  if (book.contentExcludedFromSync) return true;
+  if (book.requiresReauthorization) return true;
+
+  const normalizedFormat = String(book.format || '').toUpperCase();
+  return normalizedFormat === 'AUDIOBOOK' && (Boolean(book.fulfillmentUrl) || Boolean(book.authDocument));
+};
+
 export const useSyncCoordinator = ({ tokenClient, confirm }: UseSyncCoordinatorOptions) => {
   const [syncStatus, setSyncStatus] = useState<SyncStatusState>(initialSyncStatus);
   const [driveSnapshots, setDriveSnapshots] = useState<DriveSnapshot[]>([]);
@@ -42,9 +50,19 @@ export const useSyncCoordinator = ({ tokenClient, confirm }: UseSyncCoordinatorO
 
   const gatherDataForUpload = useCallback(async (): Promise<{ payload: SyncPayload; booksWithData: BookRecord[] }> => {
     const booksWithData = await db.getAllBooks();
-    const library = booksWithData.map((book) => {
+    const normalizedBooksWithData = booksWithData.map((book) => (
+      shouldTreatAsProtectedCatalogRecord(book)
+        ? {
+            ...book,
+            contentExcludedFromSync: true,
+            requiresReauthorization: true,
+          }
+        : book
+    ));
+    const library = normalizedBooksWithData.map((book) => {
       const meta = { ...book } as Omit<BookRecord, 'epubData'> & { epubData?: ArrayBuffer };
       delete meta.epubData;
+      delete meta.restoredFromSync;
       return meta;
     });
 
@@ -69,7 +87,7 @@ export const useSyncCoordinator = ({ tokenClient, confirm }: UseSyncCoordinatorO
 
     return {
       payload: { library, catalogs, registries, bookmarks, citations, positions, settings },
-      booksWithData,
+      booksWithData: normalizedBooksWithData,
     };
   }, []);
 

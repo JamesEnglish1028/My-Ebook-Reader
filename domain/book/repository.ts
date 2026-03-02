@@ -170,6 +170,8 @@ export class BookRepository {
         providerId: bookRecord.providerId,
         providerName: bookRecord.providerName,
         contentExcludedFromSync: bookRecord.contentExcludedFromSync,
+        requiresReauthorization: bookRecord.requiresReauthorization,
+        restoredFromSync: bookRecord.restoredFromSync,
         distributor: bookRecord.distributor,
         description: bookRecord.description,
         subjects: bookRecord.subjects,
@@ -242,11 +244,13 @@ export class BookRepository {
         request.onsuccess = (event) => {
           const cursor = (event.target as IDBRequest<IDBCursorWithValue>).result;
           if (cursor) {
-            const value = cursor.value as BookRecord;
-            metadata.push({
+          const value = cursor.value as BookRecord;
+          metadata.push({
               ...value,
+              requiresReauthorization: value.requiresReauthorization,
+              restoredFromSync: value.restoredFromSync,
               id: typeof value.id === 'number' ? value.id : Number(cursor.primaryKey),
-            });
+          });
             cursor.continue();
           } else {
             console.log('[BookRepository.findAllMetadata] Loaded metadata:', metadata);

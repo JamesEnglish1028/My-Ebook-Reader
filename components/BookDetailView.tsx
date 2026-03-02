@@ -33,7 +33,7 @@ import { LeftArrowIcon } from './icons';
 import AccessibilityBadges from './library/shared/AccessibilityBadges';
 import SeriesLane from './library/catalog/SeriesLane';
 import BookBadges from './library/shared/BookBadges';
-import { db, ensureFreshPatronAuthorization } from '../services';
+import { db, ensureFreshPatronAuthorization, findCredentialForUrl } from '../services';
 
 const handleImgError = (e: React.SyntheticEvent<HTMLImageElement, Event>) => {
   (e.target as HTMLImageElement).src = '/default-cover.png';
@@ -194,10 +194,11 @@ const getLibraryPrimaryActionState = (
   normalizedFormat: string,
   isPreparingPlayback: boolean,
   isContentExcludedFromSync: boolean,
+  requiresReauthorization: boolean,
 ): PrimaryActionState => {
   if (isContentExcludedFromSync) {
     return {
-      label: 'Re-download to Read',
+      label: requiresReauthorization ? 'Reauthorize Access Required' : 'Re-download to Read',
       disabled: true,
     };
   }
@@ -252,6 +253,10 @@ const getPrimaryActionNotice = (
   source: string,
   isAlreadyInLibrary: boolean,
   isContentExcludedFromSync: boolean,
+  requiresReauthorization: boolean,
+  restoredFromSync: boolean,
+  providerName: string | undefined,
+  hasCatalogCredential: boolean | null,
   drmBlockReason: string | null,
   isLcpProtected: boolean,
 ): PrimaryActionNotice | null => {
@@ -259,6 +264,15 @@ const getPrimaryActionNotice = (
     return {
       tone: 'default',
       message: 'This title is already in My Shelf.',
+    };
+  }
+
+  if (source === 'library' && isContentExcludedFromSync && requiresReauthorization && restoredFromSync) {
+    return {
+      tone: 'warning',
+      message: hasCatalogCredential
+        ? `This synced loan title needs fresh authorization. You already have saved credentials for ${providerName || 'this library'} on this device. Re-open the source catalog or loans feed to restore access.`
+        : `This synced loan title needs fresh authorization. Sign in to ${providerName || 'the source library'} in Catalog or Loans, then restore access on this device.`,
     };
   }
 
@@ -433,7 +447,10 @@ const BookDetailView: React.FC<BookDetailViewProps> = ({ book, onBack, source, c
   const [showImportSuccess, setShowImportSuccess] = React.useState(false);
   const [isImporting, setIsImporting] = React.useState(false);
   const [isAlreadyInLibrary, setIsAlreadyInLibrary] = React.useState(false);
+  const [hasCatalogCredential, setHasCatalogCredential] = React.useState<boolean | null>(null);
   const isContentExcludedFromSync = Boolean(bookAny.contentExcludedFromSync);
+  const requiresReauthorization = Boolean(bookAny.requiresReauthorization);
+  const restoredFromSync = Boolean(bookAny.restoredFromSync);
   const hasSupportedBookFormat = normalizedFormat === 'PDF' || normalizedFormat === 'EPUB' || normalizedFormat === 'AUDIOBOOK';
   const hasSupportedBookMediaType =
     normalizedMediaType === 'application/pdf'
@@ -467,12 +484,16 @@ const BookDetailView: React.FC<BookDetailViewProps> = ({ book, onBack, source, c
     return hasSupportedBookFormat || hasSupportedBookMediaType;
   })();
   const primaryAction = source === 'library'
-    ? getLibraryPrimaryActionState(normalizedFormat, isPreparingPlayback, isContentExcludedFromSync)
+    ? getLibraryPrimaryActionState(normalizedFormat, isPreparingPlayback, isContentExcludedFromSync, requiresReauthorization)
     : getCatalogPrimaryActionState(isImporting, isAlreadyInLibrary, isImportable, drmBlockReason);
   const primaryActionNotice = getPrimaryActionNotice(
     source,
     isAlreadyInLibrary,
     isContentExcludedFromSync,
+    requiresReauthorization,
+    restoredFromSync,
+    bookAny.providerName,
+    hasCatalogCredential,
     drmBlockReason,
     isLcpProtected,
   );
@@ -504,6 +525,40 @@ const BookDetailView: React.FC<BookDetailViewProps> = ({ book, onBack, source, c
       cancelled = true;
     };
   }, [bookAny.providerId, source]);
+
+  React.useEffect(() => {
+    let cancelled = false;
+
+    const checkCatalogCredential = async () => {
+      if (source !== 'library' || !requiresReauthorization) {
+        if (!cancelled) setHasCatalogCredential(null);
+        return;
+      }
+
+      const contextUrl = (bookAny.fulfillmentUrl || bookAny.sourceUrl || bookAny.manifestUrl || '') as string;
+      if (!contextUrl) {
+        if (!cancelled) setHasCatalogCredential(false);
+        return;
+      }
+
+      try {
+        const credential = await findCredentialForUrl(contextUrl);
+        if (!cancelled) {
+          setHasCatalogCredential(Boolean(credential));
+        }
+      } catch {
+        if (!cancelled) {
+          setHasCatalogCredential(false);
+        }
+      }
+    };
+
+    void checkCatalogCredential();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [bookAny.fulfillmentUrl, bookAny.manifestUrl, bookAny.sourceUrl, requiresReauthorization, source]);
 
   const handleImportClick = async () => {
     if (isImporting || isAlreadyInLibrary) return;
