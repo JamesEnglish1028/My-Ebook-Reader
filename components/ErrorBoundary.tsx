@@ -1,6 +1,31 @@
 import type { ErrorInfo, ReactNode } from 'react';
 import React, { Component } from 'react';
 
+const CHUNK_RELOAD_MARKER_KEY = 'mebooks:chunk-reload-at';
+const CHUNK_RELOAD_WINDOW_MS = 15000;
+
+const isChunkLoadError = (error: Error): boolean => {
+  const message = String(error?.message || '');
+  return /error loading dynamically imported module|failed to fetch dynamically imported module|chunkloaderror/i.test(message);
+};
+
+const shouldReloadForChunkError = (): boolean => {
+  if (typeof window === 'undefined') return false;
+
+  const now = Date.now();
+  const lastAttempt = Number(window.sessionStorage.getItem(CHUNK_RELOAD_MARKER_KEY) || '0');
+  if (Number.isFinite(lastAttempt) && lastAttempt > 0 && now - lastAttempt < CHUNK_RELOAD_WINDOW_MS) {
+    return false;
+  }
+
+  window.sessionStorage.setItem(CHUNK_RELOAD_MARKER_KEY, String(now));
+  return true;
+};
+
+export const reloadPage = (): void => {
+  window.location.reload();
+};
+
 interface Props {
   children: ReactNode;
   onReset: () => void;
@@ -28,6 +53,11 @@ class ErrorBoundary extends Component<Props, State> {
   }
 
   public componentDidCatch(error: Error, errorInfo: ErrorInfo) {
+    if (isChunkLoadError(error) && shouldReloadForChunkError()) {
+      reloadPage();
+      return;
+    }
+
     console.error('ErrorBoundary caught an error:', error, errorInfo);
   }
 
@@ -41,16 +71,16 @@ class ErrorBoundary extends Component<Props, State> {
       return (
         <div className="theme-shell theme-text-primary flex min-h-screen flex-col items-center justify-center p-4 text-center" role="alert">
           <div className="theme-surface-elevated theme-border theme-text-primary w-full max-w-lg rounded-lg border p-8 shadow-xl">
-            <svg className="w-16 h-16 mx-auto text-red-400 mb-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <svg className="theme-text-danger mx-auto mb-4 h-16 w-16" fill="none" viewBox="0 0 24 24" stroke="currentColor">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
             </svg>
-            <h1 className="text-2xl font-bold text-red-300">Something went wrong.</h1>
+            <h1 className="theme-text-danger text-2xl font-bold">Something went wrong.</h1>
             <p className="theme-text-secondary mt-2">
               {this.props.fallbackMessage || 'An unexpected error occurred. Please try again.'}
             </p>
             {this.state.error && (
                  <details className="theme-surface theme-text-secondary mt-4 rounded-md p-3 text-left text-sm">
-                    <summary className="theme-text-secondary cursor-pointer hover:text-sky-400">Error Details</summary>
+                    <summary className="theme-text-secondary theme-accent-text-emphasis-hover cursor-pointer">Error Details</summary>
                     <pre className="theme-text-muted mt-2 whitespace-pre-wrap break-all">
                         <code>{this.state.error.message}</code>
                     </pre>
@@ -58,7 +88,7 @@ class ErrorBoundary extends Component<Props, State> {
             )}
             <button
               onClick={this.handleReset}
-              className="mt-6 py-2 px-6 rounded-md bg-sky-500 hover:bg-sky-600 transition-colors font-bold"
+              className="theme-button-primary mt-6 rounded-md px-6 py-2 font-bold transition-colors"
             >
               Try Again
             </button>
