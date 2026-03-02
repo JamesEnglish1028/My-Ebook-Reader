@@ -84,7 +84,7 @@ describe('Open provider login + Retry flow', () => {
 
     render(<TestHarness />);
 
-    const addButton = screen.getByRole('button', { name: /Import to My Library/i });
+    const addButton = screen.getByRole('button', { name: /Import to My Shelf/i });
     await user.click(addButton);
 
     // Modal should appear with Open sign-in page button

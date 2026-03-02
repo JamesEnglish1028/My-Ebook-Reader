@@ -47,7 +47,7 @@ describe('BookDetailView proxy toast', () => {
     );
 
     // Click the import button
-    const btn = screen.getByRole('button', { name: /Import to My Library/i });
+    const btn = screen.getByRole('button', { name: /Import to My Shelf/i });
     await act(async () => userEvent.click(btn));
 
     expect(onImportFromCatalog).toHaveBeenCalled();

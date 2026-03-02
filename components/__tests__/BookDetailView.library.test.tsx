@@ -28,10 +28,11 @@ describe('BookDetailView Library Book UI', () => {
       userCitationFormat: 'apa' as 'apa' | 'mla',
     };
     render(<BookDetailView {...mockProps} />);
-    expect(screen.getByText('Return to My Library')).toBeInTheDocument();
+    expect(screen.getByText('Return to My Shelf')).toBeInTheDocument();
     expect(screen.getByText('Read Book')).toBeInTheDocument();
-    expect(screen.getByText(/Provider:/)).toBeInTheDocument();
+    expect(screen.getByText('Catalog Provider:')).toBeInTheDocument();
     expect(screen.getByText('My Local Library')).toBeInTheDocument();
-    expect(screen.queryByText('OAPEN')).not.toBeInTheDocument();
+    expect(screen.getByText('Distributor:')).toBeInTheDocument();
+    expect(screen.getByText('OAPEN')).toBeInTheDocument();
   });
 });

@@ -31,7 +31,7 @@ describe('BookDetailView format badge and import button', () => {
     expect(screen.getByText('PDF')).toBeInTheDocument();
 
   // Import button should allow PDF imports (app supports PDF reader)
-  expect(screen.getByRole('button', { name: /Import to My Library/i })).toBeInTheDocument();
+  expect(screen.getByRole('button', { name: /Import to My Shelf/i })).toBeInTheDocument();
   });
 
   it('shows Add to Bookshelf for EPUB catalog book', () => {
@@ -50,8 +50,8 @@ describe('BookDetailView format badge and import button', () => {
     // Format badge should display EPUB
     expect(screen.getByText('EPUB')).toBeInTheDocument();
 
-  // Import button should show 'Import to My Library'
-  expect(screen.getByRole('button', { name: /Import to My Library/i })).toBeInTheDocument();
+  // Import button should show 'Import to My Shelf'
+  expect(screen.getByRole('button', { name: /Import to My Shelf/i })).toBeInTheDocument();
   });
 
   it('does not warn when acquisitionMediaType is present even if mediaType is missing', () => {
@@ -68,7 +68,7 @@ describe('BookDetailView format badge and import button', () => {
 
     render(<BookDetailView {...baseProps} book={book} source="catalog" onImportFromCatalog={async () => ({ success: false })} />);
 
-    expect(screen.getByRole('button', { name: /Import to My Library/i })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /Import to My Shelf/i })).toBeInTheDocument();
     expect(
       screen.queryByText(/Warning: This item may not be a valid book file/i),
     ).not.toBeInTheDocument();

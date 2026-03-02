@@ -16,7 +16,7 @@ describe('BookDetailView PDF Catalog Book UI', () => {
     cleanup();
   });
 
-  test('shows Import to My Library button and provider info for PDF', () => {
+  test('shows Import to My Shelf button and provider info for PDF', () => {
     const mockProps = {
       book: pdfCatalogBook,
       source: 'catalog' as const,
@@ -28,7 +28,7 @@ describe('BookDetailView PDF Catalog Book UI', () => {
       userCitationFormat: 'mla' as 'apa' | 'mla',
     };
     render(<BookDetailView {...mockProps} />);
-    expect(screen.getByText('Import to My Library')).toBeInTheDocument();
-    expect(screen.getByText('BiblioBoard')).toBeInTheDocument();
+    expect(screen.getByText('Import to My Shelf')).toBeInTheDocument();
+    expect(screen.getAllByText('BiblioBoard').length).toBeGreaterThan(0);
   });
 });

@@ -36,7 +36,7 @@ describe('BookDetailView credential retry using stored creds', () => {
 
     render(<TestHarness />);
 
-    const addButton = screen.getByRole('button', { name: /Import to My Library/i });
+    const addButton = screen.getByRole('button', { name: /Import to My Shelf/i });
     await user.click(addButton);
 
     // The import handler should be invoked and success overlay shown

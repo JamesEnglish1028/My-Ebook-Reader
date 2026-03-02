@@ -16,7 +16,7 @@ describe('BookDetailView Catalog Book UI', () => {
     cleanup();
   });
 
-  test('shows Import to My Library button and provider info', () => {
+  test('shows Import to My Shelf button and provider info', () => {
     const mockProps = {
       book: catalogBook,
       source: 'catalog' as const,
@@ -30,9 +30,8 @@ describe('BookDetailView Catalog Book UI', () => {
     };
     render(<BookDetailView {...mockProps} />);
     expect(screen.getByText('Return to Catalog')).toBeInTheDocument();
-    expect(screen.getByText('Import to My Library')).toBeInTheDocument();
-    const providerElements = screen.getAllByText(/Provider/i);
-    expect(providerElements.some(el => el.textContent?.trim() === 'Provider:')).toBe(true);
+    expect(screen.getByText('Import to My Shelf')).toBeInTheDocument();
+    expect(screen.getByText('Catalog Provider:')).toBeInTheDocument();
     expect(screen.getByText('OAPEN Library')).toBeInTheDocument();
   });
 });

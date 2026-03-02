@@ -37,7 +37,7 @@ describe('BookDetailView when stored credentials fail', () => {
 
     render(<TestHarness />);
 
-    const addButton = screen.getByRole('button', { name: /Import to My Library/i });
+    const addButton = screen.getByRole('button', { name: /Import to My Shelf/i });
     await user.click(addButton);
 
     await waitFor(() => expect(screen.getByText(/Import Successful!/i)).toBeInTheDocument());

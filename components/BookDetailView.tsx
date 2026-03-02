@@ -432,7 +432,7 @@ const BookDetailView: React.FC<BookDetailViewProps> = ({ book, onBack, source, c
                 : isAlreadyInLibrary
                   ? 'Already in My Shelf'
                   : isImportable
-                  ? 'Import to My Library'
+                  ? 'Import to My Shelf'
                   : drmBlockReason
                     ? `Cannot Import: ${drmBlockReason}`
                     : 'Cannot Import: Unsupported format'}
@@ -567,7 +567,7 @@ const BookDetailHeader: React.FC<{ onBack: () => void, source: 'library' | 'cata
   <header className="mb-8">
     <button onClick={onBack} className="theme-text-secondary inline-flex items-center gap-2 transition-colors hover:text-sky-400">
       <LeftArrowIcon className="w-5 h-5" />
-      <span>Return to {source === 'library' ? 'My Library' : 'Catalog'}</span>
+      <span>Return to {source === 'library' ? 'My Shelf' : 'Catalog'}</span>
     </button>
   </header>
 );

@@ -354,7 +354,7 @@ const LibraryView: React.FC<LibraryViewProps> = ({
     setImportStatus({ isLoading: false, message: '', error: null });
   }, [setImportStatus]);
 
-  const currentTitle = activeOpdsSource ? activeOpdsSource.name : 'My Library';
+  const currentTitle = activeOpdsSource ? activeOpdsSource.name : 'My Shelf';
   const isBrowsingOpds = !!activeOpdsSource;
   const lastSyncDate = localStorage.getItem('ebook-reader-last-sync');
   const lastSyncLabel = lastSyncDate ? new Date(lastSyncDate).toLocaleString() : 'Never';
@@ -395,7 +395,7 @@ const LibraryView: React.FC<LibraryViewProps> = ({
                 <ul className="theme-text-primary max-h-96 overflow-y-auto p-1">
                   <li>
                     <button onClick={() => handleSelectSource('library')} className={`w-full rounded-md px-3 py-2 text-left text-sm ${!isBrowsingOpds ? 'bg-sky-600' : 'theme-hover-surface'}`}>
-                      My Library
+                      My Shelf
                     </button>
                   </li>
                   {(catalogs.length > 0 || registries.length > 0) && <li className="theme-divider my-1 border-t" />}
