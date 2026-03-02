@@ -29,9 +29,10 @@ const rateLimitWindowMs = Number.parseInt(process.env.RATE_LIMIT_WINDOW_MS || '6
 const rateLimitMax = Number.parseInt(process.env.RATE_LIMIT_MAX || '1000', 10);
 app.use(rateLimit({
   windowMs: Number.isFinite(rateLimitWindowMs) ? rateLimitWindowMs : 60_000,
-  max: Number.isFinite(rateLimitMax) ? rateLimitMax : 240,
+  max: Number.isFinite(rateLimitMax) ? rateLimitMax : 1000,
   standardHeaders: true,
   legacyHeaders: false,
+  skip: (req) => req.method === 'OPTIONS' && req.path === '/proxy',
   handler: (req, res) => {
     const allowOrigin = req.headers.origin || process.env.ALLOW_ORIGIN || '*';
     res.setHeader('Access-Control-Allow-Origin', allowOrigin);
