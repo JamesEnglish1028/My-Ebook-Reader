@@ -43,6 +43,22 @@ const getStoredProviderName = (
   return source === 'file' ? 'Local Upload' : undefined;
 };
 
+const shouldReplaceSyncedPlaceholder = (existing: BookRecord | null): existing is BookRecord => (
+  Boolean(existing && (
+    existing.contentExcludedFromSync
+    || existing.requiresReauthorization
+    || existing.restoredFromSync
+  ))
+);
+
+const mergeWithReplacementRecord = (newBook: BookRecord, existing: BookRecord): BookRecord => ({
+  ...newBook,
+  id: existing.id,
+  contentExcludedFromSync: false,
+  requiresReauthorization: false,
+  restoredFromSync: false,
+});
+
 export const useImportCoordinator = ({ onCatalogImportSuccess }: UseImportCoordinatorOptions) => {
   const [importStatus, setImportStatus] = useState<ImportStatusState>(initialImportState);
   const [libraryRefreshFlag, setLibraryRefreshFlag] = useState(0);
@@ -105,6 +121,18 @@ export const useImportCoordinator = ({ onCatalogImportSuccess }: UseImportCoordi
         if (finalProviderId) {
           const existing = await db.findBookByIdentifier(finalProviderId);
           if (existing) {
+            if (shouldReplaceSyncedPlaceholder(existing)) {
+              await db.saveBook(mergeWithReplacementRecord(newBook, existing));
+              setImportStatus({ isLoading: false, message: 'Import successful!', error: null });
+              bumpLibraryRefresh();
+              setTimeout(() => setImportStatus(initialImportState), 2000);
+
+              if (source === 'catalog') {
+                onCatalogImportSuccess();
+              }
+
+              return { success: true };
+            }
             setImportStatus(initialImportState);
             return { success: false, bookRecord: newBook, existingBook: existing };
           }
@@ -190,6 +218,13 @@ export const useImportCoordinator = ({ onCatalogImportSuccess }: UseImportCoordi
         if (finalProviderId) {
           const existing = await db.findBookByIdentifier(finalProviderId);
           if (existing) {
+            if (shouldReplaceSyncedPlaceholder(existing)) {
+              await db.saveBook(mergeWithReplacementRecord(newBook, existing));
+              setImportStatus({ isLoading: false, message: 'Import successful!', error: null });
+              bumpLibraryRefresh();
+              setTimeout(() => setImportStatus(initialImportState), 2000);
+              return { success: true };
+            }
             setImportStatus(initialImportState);
             return { success: false, bookRecord: newBook, existingBook: existing };
           }
@@ -273,6 +308,19 @@ export const useImportCoordinator = ({ onCatalogImportSuccess }: UseImportCoordi
       if (finalProviderId) {
         const existing = await db.findBookByIdentifier(finalProviderId);
         if (existing) {
+          if (shouldReplaceSyncedPlaceholder(existing)) {
+            setImportStatus((prev) => ({ ...prev, message: 'Saving to library...' }));
+            await db.saveBook(mergeWithReplacementRecord(newBook, existing));
+            setImportStatus({ isLoading: false, message: 'Import successful!', error: null });
+            bumpLibraryRefresh();
+            setTimeout(() => setImportStatus(initialImportState), 2000);
+
+            if (source === 'catalog') {
+              onCatalogImportSuccess();
+            }
+
+            return { success: true };
+          }
           setImportStatus(initialImportState);
           return { success: false, bookRecord: newBook, existingBook: existing };
         }
