@@ -81,6 +81,8 @@ const AudioReaderView: React.FC<AudioReaderViewProps> = ({ bookId: propBookId, o
   const [duration, setDuration] = useState(0);
   const audioRef = useRef<HTMLAudioElement | null>(null);
   const saveTickRef = useRef(0);
+  const trackTimesRef = useRef<Record<number, number>>({});
+  trackTimesRef.current = trackTimes;
 
   const parseManifestData = React.useCallback((data: ArrayBuffer | string, baseUrl?: string): ParsedAudiobookManifest | null => {
     try {
@@ -293,19 +295,20 @@ const AudioReaderView: React.FC<AudioReaderViewProps> = ({ bookId: propBookId, o
   }, [manifest]);
 
   const getSavedTrackTime = React.useCallback((trackIndex: number): number => {
-    const savedTime = trackTimes[trackIndex];
+    const savedTime = trackTimesRef.current[trackIndex];
     return Number.isFinite(savedTime) && savedTime > 0 ? savedTime : 0;
-  }, [trackTimes]);
+  }, []);
 
   const updateTrackTime = React.useCallback((trackIndex: number, time: number): Record<number, number> => {
     const normalizedTime = Math.max(0, time);
     const nextTrackTimes = {
-      ...trackTimes,
+      ...trackTimesRef.current,
       [trackIndex]: normalizedTime,
     };
+    trackTimesRef.current = nextTrackTimes;
     setTrackTimes(nextTrackTimes);
     return nextTrackTimes;
-  }, [trackTimes]);
+  }, []);
 
   const getTrackProgress = React.useCallback((trackIndex: number, trackDuration?: number) => {
     const listenedSeconds = trackIndex === currentTrackIndex
@@ -376,23 +379,6 @@ const AudioReaderView: React.FC<AudioReaderViewProps> = ({ bookId: propBookId, o
       progress: totalDuration > 0 ? clampProgress(listenedSeconds / totalDuration) : null,
     };
   }, [getTrackProgress]);
-
-  useEffect(() => {
-    if (!audioRef.current) return;
-    if (!Number.isFinite(resumeTime) || resumeTime <= 0) return;
-    const audio = audioRef.current;
-    const applyResumeTime = () => {
-      try {
-        if (resumeTime <= (audio.duration || Number.POSITIVE_INFINITY)) {
-          audio.currentTime = resumeTime;
-        }
-      } catch {
-        // ignore
-      }
-    };
-    audio.addEventListener('loadedmetadata', applyResumeTime, { once: true });
-    return () => audio.removeEventListener('loadedmetadata', applyResumeTime);
-  }, [currentTrackIndex, resumeTime]);
 
   useEffect(() => {
     if (!audioRef.current) return;
@@ -533,9 +519,11 @@ const AudioReaderView: React.FC<AudioReaderViewProps> = ({ bookId: propBookId, o
   const persistPosition = (time: number, nextTrackTimes?: Record<number, number>) => {
     if (!bookId) return;
     const mergedTrackTimes = nextTrackTimes || {
-      ...trackTimes,
+      ...trackTimesRef.current,
       [currentTrackIndex]: Math.max(0, time),
     };
+    trackTimesRef.current = mergedTrackTimes;
+    setTrackTimes(mergedTrackTimes);
     saveLastPositionForBook(bookId, JSON.stringify({
       trackIndex: currentTrackIndex,
       time,
@@ -717,6 +705,14 @@ const AudioReaderView: React.FC<AudioReaderViewProps> = ({ bookId: propBookId, o
               onLoadedMetadata={(event) => {
                 const audio = event.currentTarget;
                 const nextDuration = Number.isFinite(audio.duration) ? audio.duration : 0;
+                const targetResumeTime = Math.max(resumeTime, getSavedTrackTime(currentTrackIndex));
+                if (Number.isFinite(targetResumeTime) && targetResumeTime > 0) {
+                  try {
+                    audio.currentTime = Math.min(targetResumeTime, nextDuration || targetResumeTime);
+                  } catch {
+                    // ignore seek failures
+                  }
+                }
                 setDuration(nextDuration);
                 setCurrentTime(audio.currentTime || 0);
                 audio.playbackRate = playbackRate;
