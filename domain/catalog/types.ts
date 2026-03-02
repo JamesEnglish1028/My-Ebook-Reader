@@ -56,6 +56,7 @@ export interface CatalogBook {
   acquisitionMediaType?: string; // e.g., application/epub+zip
   mediaType?: string; // e.g., http://schema.org/EBook
   isLcpProtected?: boolean; // True when acquisition requires Readium LCP, which this app cannot open
+  isAdobeDrmProtected?: boolean; // True when acquisition requires Adobe DRM, which this app cannot open
   isOpenAccess?: boolean; // True if acquisition link is open-access (no auth required)
   availabilityStatus?: string; // e.g., available, unavailable
 

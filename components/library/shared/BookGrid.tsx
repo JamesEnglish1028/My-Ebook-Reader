@@ -16,6 +16,8 @@ interface BookGridProps {
   onBookContextMenu?: (book: BookMetadata | CatalogBook, e: React.MouseEvent) => void;
   /** Additional container class names */
   className?: string;
+  /** Provider IDs already present in the local shelf */
+  importedProviderIds?: Set<string>;
 }
 
 /**
@@ -30,6 +32,7 @@ const BookGrid: React.FC<BookGridProps> = ({
   onBookClick,
   onBookContextMenu,
   className = '',
+  importedProviderIds,
 }) => {
   const [focusedIndex, setFocusedIndex] = useState<number>(-1);
   const gridRef = useRef<HTMLDivElement>(null);
@@ -152,6 +155,13 @@ const BookGrid: React.FC<BookGridProps> = ({
         const key = 'id' in book && book.id
           ? `book-${book.id}`
           : `catalog-${('downloadUrl' in book ? book.downloadUrl : book.title)}-${index}`;
+        const isCatalogBook = 'downloadUrl' in book;
+        const providerId = 'providerId' in book ? book.providerId : undefined;
+        const isAlreadyInLibrary = Boolean(
+          isCatalogBook
+          && providerId
+          && importedProviderIds?.has(providerId),
+        );
 
         return (
           <BookCard
@@ -160,6 +170,7 @@ const BookGrid: React.FC<BookGridProps> = ({
             onClick={onBookClick}
             onContextMenu={onBookContextMenu}
             isFocused={index === focusedIndex}
+            isAlreadyInLibrary={isAlreadyInLibrary}
             ref={(el: HTMLDivElement | null) => {
               if (el) {
                 bookRefs.current.set(index, el);

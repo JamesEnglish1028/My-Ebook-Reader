@@ -11,6 +11,7 @@ interface BookCardProps {
   onContextMenu?: (book: BookMetadata | CatalogBook, e: React.MouseEvent) => void;
   className?: string;
   isFocused?: boolean;
+  isAlreadyInLibrary?: boolean;
 }
 
 const shouldPreferProxyForCatalogCover = (url: string): boolean => {
@@ -35,6 +36,7 @@ const BookCard = React.forwardRef<HTMLDivElement, BookCardProps>(({
   onContextMenu,
   className = '',
   isFocused = false,
+  isAlreadyInLibrary = false,
 }, ref) => {
   const handleClick = () => onClick(book);
 
@@ -136,6 +138,13 @@ const BookCard = React.forwardRef<HTMLDivElement, BookCardProps>(({
           <p className="theme-text-muted truncate text-[11px]" title={categories.join(', ')}>
             Categories: {categories.slice(0, 2).join(', ')}
           </p>
+        )}
+        {isCatalogBook(book) && isAlreadyInLibrary && (
+          <div>
+            <span className="theme-info inline-flex items-center rounded-full border px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide">
+              In My Shelf
+            </span>
+          </div>
         )}
         <BookBadges book={book} />
       </div>

@@ -171,6 +171,14 @@ const isLcpMediaType = (mimeType: string | undefined): boolean => {
         || clean.includes('readium.lcp');
 };
 
+const isAdobeDrmMediaType = (mimeType: string | undefined): boolean => {
+    if (!mimeType) return false;
+    const clean = mimeType.split(';')[0].trim().toLowerCase();
+    return clean.includes('application/adobe+epub')
+        || clean.includes('application/vnd.adobe.adept+xml')
+        || clean.includes('adobe.adept');
+};
+
 const getResolvedIndirectMediaType = (element: Element | null): string | undefined => {
     if (!element) return undefined;
 
@@ -184,7 +192,7 @@ const getResolvedIndirectMediaType = (element: Element | null): string | undefin
         if (nestedResolved) return nestedResolved;
 
         const childType = child.getAttribute('type') || undefined;
-        if (isLcpMediaType(childType) || getFormatFromMimeType(childType)) return childType;
+        if (isLcpMediaType(childType) || isAdobeDrmMediaType(childType) || getFormatFromMimeType(childType)) return childType;
     }
 
     for (const child of children) {
@@ -206,6 +214,22 @@ const hasLcpIndirectAcquisition = (element: Element | null): boolean => {
         }
 
         if (hasLcpIndirectAcquisition(child)) return true;
+    }
+
+    return false;
+};
+
+const hasAdobeDrmIndirectAcquisition = (element: Element | null): boolean => {
+    if (!element) return false;
+
+    for (const child of Array.from(element.children)) {
+        const local = (child.localName || child.nodeName || '').toLowerCase();
+        if (local === 'indirectacquisition') {
+            const childType = child.getAttribute('type') || undefined;
+            if (isAdobeDrmMediaType(childType)) return true;
+        }
+
+        if (hasAdobeDrmIndirectAcquisition(child)) return true;
     }
 
     return false;
@@ -265,6 +289,7 @@ const mergeCatalogBooks = (existing: CatalogBook, incoming: CatalogBook): Catalo
     format: existing.format || incoming.format,
     acquisitionMediaType: existing.acquisitionMediaType || incoming.acquisitionMediaType,
     isLcpProtected: existing.isLcpProtected || incoming.isLcpProtected || undefined,
+    isAdobeDrmProtected: existing.isAdobeDrmProtected || incoming.isAdobeDrmProtected || undefined,
     collections: mergeCollections(existing.collections, incoming.collections),
     isOpenAccess: existing.isOpenAccess || incoming.isOpenAccess || undefined,
     availabilityStatus: existing.availabilityStatus || incoming.availabilityStatus,
@@ -500,11 +525,17 @@ export const parseOpds1Xml = (xmlText: string, baseUrl: string): { books: Catalo
             const type = link.getAttribute('type') || undefined;
             return isLcpMediaType(type) || hasLcpIndirectAcquisition(link);
         };
+        const isAdobeDrmAcquisition = (link: Element) => {
+            const type = link.getAttribute('type') || undefined;
+            return isAdobeDrmMediaType(type) || hasAdobeDrmIndirectAcquisition(link);
+        };
         const openAccessLink = acquisitionCandidates.find(link => isOpenAccessAcquisition(link) && !isLcpAcquisition(link))
             || acquisitionCandidates.find(link => isOpenAccessAcquisition(link));
         const acquisitionLink = openAccessLink
+            || acquisitionCandidates.find(link => isReadableAcquisition(link) && !isLcpAcquisition(link) && !isAdobeDrmAcquisition(link))
             || acquisitionCandidates.find(link => isReadableAcquisition(link) && !isLcpAcquisition(link))
             || acquisitionCandidates.find(link => isReadableAcquisition(link))
+            || acquisitionCandidates.find(link => !isLcpAcquisition(link) && !isAdobeDrmAcquisition(link))
             || acquisitionCandidates.find(link => !isLcpAcquisition(link))
             || acquisitionCandidates[0];
         const isOpenAccess = !!openAccessLink;
@@ -603,6 +634,7 @@ export const parseOpds1Xml = (xmlText: string, baseUrl: string): { books: Catalo
             const resolvedMediaType = getFormatFromMimeType(mimeType) ? mimeType : resolvedIndirectMediaType;
             const canonicalAudiobookMediaType = isAudiobook ? 'http://bib.schema.org/Audiobook' : undefined;
             const isLcpProtected = isLcpMediaType(mimeType) || hasLcpIndirectAcquisition(acquisitionLink as Element);
+            const isAdobeDrmProtected = isAdobeDrmMediaType(mimeType) || hasAdobeDrmIndirectAcquisition(acquisitionLink as Element);
             let format = getFormatFromMimeType(resolvedMediaType || mimeType);
             if (isAudiobook) {
                 format = 'AUDIOBOOK';
@@ -644,6 +676,7 @@ export const parseOpds1Xml = (xmlText: string, baseUrl: string): { books: Catalo
                     format,
                     acquisitionMediaType: finalMediaType || undefined,
                     isLcpProtected: isLcpProtected || undefined,
+                    isAdobeDrmProtected: isAdobeDrmProtected || undefined,
                     collections: collections.length > 0 ? collections : undefined,
                     isOpenAccess: isOpenAccess || undefined,
                     availabilityStatus: availabilityStatus || undefined,

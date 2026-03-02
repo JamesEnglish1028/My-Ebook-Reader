@@ -28,7 +28,7 @@ export interface BookDetailViewProps {
 
 import { LeftArrowIcon } from './icons';
 import BookBadges from './library/shared/BookBadges';
-import { ensureFreshPatronAuthorization } from '../services';
+import { db, ensureFreshPatronAuthorization } from '../services';
 
 const handleImgError = (e: React.SyntheticEvent<HTMLImageElement, Event>) => {
   (e.target as HTMLImageElement).src = '/default-cover.png';
@@ -315,6 +315,7 @@ const BookDetailView: React.FC<BookDetailViewProps> = ({ book, onBack, source, c
   // Import button state and modal
   const [showImportSuccess, setShowImportSuccess] = React.useState(false);
   const [isImporting, setIsImporting] = React.useState(false);
+  const [isAlreadyInLibrary, setIsAlreadyInLibrary] = React.useState(false);
   const hasSupportedBookFormat = normalizedFormat === 'PDF' || normalizedFormat === 'EPUB' || normalizedFormat === 'AUDIOBOOK';
   const hasSupportedBookMediaType =
     normalizedMediaType === 'application/pdf'
@@ -329,21 +330,63 @@ const BookDetailView: React.FC<BookDetailViewProps> = ({ book, onBack, source, c
       const mediaType = String(format?.mediaType || '').toLowerCase();
       return mediaType.includes('readium.lcp') || mediaType.includes('+lcp') || mediaType.includes('license.status');
     }));
+  const isAdobeDrmProtected = Boolean(bookAny.isAdobeDrmProtected)
+    || normalizedMediaType.includes('application/adobe+epub')
+    || normalizedMediaType.includes('adobe.adept')
+    || (Array.isArray(bookAny.alternativeFormats) && bookAny.alternativeFormats.some((format: any) => {
+      const mediaType = String(format?.mediaType || '').toLowerCase();
+      return mediaType.includes('application/adobe+epub') || mediaType.includes('adobe.adept');
+    }));
+  const drmBlockReason = isLcpProtected
+    ? 'LCP Protected'
+    : isAdobeDrmProtected
+      ? 'Adobe DRM'
+      : null;
 
   // Only allow import if format or mediaType is PDF or EPUB
   const isImportable = (() => {
-    if (isLcpProtected) return false;
+    if (drmBlockReason) return false;
     return hasSupportedBookFormat || hasSupportedBookMediaType;
   })();
 
+  React.useEffect(() => {
+    let cancelled = false;
+
+    const checkExistingImport = async () => {
+      if (source !== 'catalog' || !bookAny.providerId) {
+        if (!cancelled) setIsAlreadyInLibrary(false);
+        return;
+      }
+
+      try {
+        const existing = await db.findBookByIdentifier(bookAny.providerId);
+        if (!cancelled) {
+          setIsAlreadyInLibrary(Boolean(existing));
+        }
+      } catch {
+        if (!cancelled) {
+          setIsAlreadyInLibrary(false);
+        }
+      }
+    };
+
+    void checkExistingImport();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [bookAny.providerId, source]);
+
   const handleImportClick = async () => {
-    if (isImporting) return;
+    if (isImporting || isAlreadyInLibrary) return;
     setIsImporting(true);
     if (onImportFromCatalog) {
       const result = await onImportFromCatalog(book as CatalogBook, catalogName);
       if (result.success) {
+        setIsAlreadyInLibrary(true);
         setShowImportSuccess(true);
       } else if (result.existingBook && setImportStatus) {
+        setIsAlreadyInLibrary(true);
         (setImportStatus as React.Dispatch<React.SetStateAction<LegacyImportStatus>>)({
           isLoading: false,
           message: '',
@@ -382,20 +425,29 @@ const BookDetailView: React.FC<BookDetailViewProps> = ({ book, onBack, source, c
             <button
               className="mt-2 px-4 py-2 rounded bg-sky-700 text-white font-bold hover:bg-sky-600 disabled:opacity-60 disabled:cursor-not-allowed"
               onClick={handleImportClick}
-              disabled={isImporting || !isImportable}
+              disabled={isImporting || isAlreadyInLibrary || !isImportable}
             >
               {isImporting
                 ? 'Importing...'
-                : isImportable
+                : isAlreadyInLibrary
+                  ? 'Already in My Shelf'
+                  : isImportable
                   ? 'Import to My Library'
-                  : isLcpProtected
-                    ? 'Cannot Import: LCP Protected'
+                  : drmBlockReason
+                    ? `Cannot Import: ${drmBlockReason}`
                     : 'Cannot Import: Unsupported format'}
             </button>
           )}
-          {source === 'catalog' && isLcpProtected && (
+          {source === 'catalog' && isAlreadyInLibrary && (
+            <div className="theme-text-secondary mt-3 max-w-xs text-center text-sm">
+              This title is already in My Shelf.
+            </div>
+          )}
+          {source === 'catalog' && drmBlockReason && (
             <div className="theme-text-warning mt-3 max-w-xs text-center text-sm">
-              This title is protected with Readium LCP and cannot be imported by this application.
+              {isLcpProtected
+                ? 'This title is protected with Readium LCP and cannot be imported by this application.'
+                : 'This title is protected with Adobe DRM and cannot be imported by this application.'}
             </div>
           )}
           {showImportSuccess && (

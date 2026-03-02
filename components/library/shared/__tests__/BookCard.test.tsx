@@ -73,4 +73,22 @@ describe('BookCard', () => {
 
     expect(screen.getByAltText('Proxy First Book')).toHaveAttribute('src', 'https://proxy.example.org/cover.jpg');
   });
+
+  it('shows an in-library badge for catalog books that are already imported', () => {
+    render(
+      <BookCard
+        book={{
+          title: 'Owned Catalog Book',
+          author: 'Author',
+          coverImage: null,
+          downloadUrl: 'https://catalog.example.org/books/3.epub',
+          summary: null,
+        } as any}
+        onClick={vi.fn()}
+        isAlreadyInLibrary
+      />,
+    );
+
+    expect(screen.getByText('In My Shelf')).toBeInTheDocument();
+  });
 });

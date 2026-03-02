@@ -51,6 +51,7 @@ interface CatalogViewProps {
   catalogNavPath: { name: string; url: string }[];
   setCatalogNavPath: React.Dispatch<React.SetStateAction<{ name: string; url: string }[]>>;
   onShowBookDetail: (book: CatalogBook, source: 'catalog', catalogName?: string) => void;
+  importedProviderIds?: Set<string>;
 }
 
 const isPalaceHost = (url: string): boolean => {
@@ -130,6 +131,7 @@ const CatalogView: React.FC<CatalogViewProps> = ({
   catalogNavPath,
   setCatalogNavPath,
   onShowBookDetail,
+  importedProviderIds,
 }) => {
   const [audienceMode, setAudienceMode] = useState<AudienceMode>('all');
   const [fictionMode, setFictionMode] = useState<FictionMode>('all');
@@ -688,6 +690,7 @@ const CatalogView: React.FC<CatalogViewProps> = ({
             books={catalogBooks}
             onBookClick={handleCatalogBookClick}
             isLoading={isLoading}
+            importedProviderIds={importedProviderIds}
           />
         ) : hasOriginalBooks ? (
           <div className="theme-text-primary py-12 text-center">

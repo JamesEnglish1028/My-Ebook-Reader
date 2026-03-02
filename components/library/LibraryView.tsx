@@ -96,6 +96,7 @@ const LibraryView: React.FC<LibraryViewProps> = ({
   // Duplicate book modal
   const [duplicateBook, setDuplicateBook] = useState<BookRecord | null>(null);
   const [existingBook, setExistingBook] = useState<BookRecord | null>(null);
+  const [importedProviderIds, setImportedProviderIds] = useState<Set<string>>(new Set());
 
   // Refs for click-outside detection
   const dropdownRef = useRef<HTMLDivElement>(null);
@@ -115,6 +116,33 @@ const LibraryView: React.FC<LibraryViewProps> = ({
     document.addEventListener('mousedown', handleClickOutside);
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, []);
+
+  useEffect(() => {
+    let cancelled = false;
+
+    const loadImportedProviderIds = async () => {
+      try {
+        const books = await db.getBooksMetadata();
+        if (cancelled) return;
+        setImportedProviderIds(new Set(
+          books
+            .map((book) => book.providerId)
+            .filter((providerId): providerId is string => typeof providerId === 'string' && providerId.length > 0),
+        ));
+      } catch (error) {
+        logger.warn('Failed to load imported provider IDs for catalog badges', error);
+        if (!cancelled) {
+          setImportedProviderIds(new Set());
+        }
+      }
+    };
+
+    void loadImportedProviderIds();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [libraryRefreshFlag]);
 
   // Handle source selection
   const handleSelectSource = useCallback((source: 'library' | Catalog | CatalogRegistry) => {
@@ -546,6 +574,7 @@ const LibraryView: React.FC<LibraryViewProps> = ({
             catalogNavPath={catalogNavPath}
             setCatalogNavPath={setCatalogNavPath}
             onShowBookDetail={onShowBookDetail}
+            importedProviderIds={importedProviderIds}
           />
         ) : (
           <LocalLibraryView

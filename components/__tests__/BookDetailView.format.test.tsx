@@ -112,4 +112,26 @@ describe('BookDetailView format badge and import button', () => {
       screen.getByText(/This title is protected with Readium LCP and cannot be imported by this application\./i),
     ).toBeInTheDocument();
   });
+
+  it('disables catalog import for Adobe DRM titles', () => {
+    const book: CatalogBook = {
+      title: 'Adobe Locked EPUB Book',
+      author: 'Catalog Author',
+      coverImage: null,
+      downloadUrl: 'https://example.org/p/book.acsm',
+      summary: 'An Adobe DRM-protected EPUB book',
+      providerId: 'p5',
+      format: 'EPUB',
+      acquisitionMediaType: 'application/adobe+epub',
+      isAdobeDrmProtected: true,
+    };
+
+    render(<BookDetailView {...baseProps} book={book} source="catalog" onImportFromCatalog={async () => ({ success: false })} />);
+
+    const button = screen.getByRole('button', { name: /Cannot Import: Adobe DRM/i });
+    expect(button).toBeDisabled();
+    expect(
+      screen.getByText(/This title is protected with Adobe DRM and cannot be imported by this application\./i),
+    ).toBeInTheDocument();
+  });
 });

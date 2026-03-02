@@ -216,6 +216,12 @@ export const useAuthAcquisitionCoordinator = ({
       return { success: false };
     }
 
+    if (book.isAdobeDrmProtected) {
+      const error = `Cannot import "${book.title}". This title is protected with Adobe DRM, which is not supported by this application.`;
+      setImportStatus({ isLoading: false, message: '', error });
+      return { success: false };
+    }
+
     if (book.format && !['EPUB', 'PDF', 'AUDIOBOOK'].includes(book.format.toUpperCase())) {
       const error = `Cannot import this book. The application currently supports EPUB, PDF, and audiobook manifests, but this book is a ${book.format}.`;
       setImportStatus({ isLoading: false, message: '', error });

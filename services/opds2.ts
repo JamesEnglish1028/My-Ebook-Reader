@@ -515,6 +515,14 @@ function isLcpMediaType(type?: string): boolean {
     || normalized.includes('readium.lcp');
 }
 
+function isAdobeDrmMediaType(type?: string): boolean {
+  if (!type) return false;
+  const normalized = String(type).toLowerCase().trim();
+  return normalized.includes('application/adobe+epub')
+    || normalized.includes('application/vnd.adobe.adept+xml')
+    || normalized.includes('adobe.adept');
+}
+
 function hasLcpIndirectAcquisition(indirect: any): boolean {
   if (!indirect) return false;
   const arr = Array.isArray(indirect) ? indirect : [indirect];
@@ -522,6 +530,17 @@ function hasLcpIndirectAcquisition(indirect: any): boolean {
     if (!item) continue;
     if (isLcpMediaType(item.type)) return true;
     if (hasLcpIndirectAcquisition(item.indirectAcquisition)) return true;
+  }
+  return false;
+}
+
+function hasAdobeDrmIndirectAcquisition(indirect: any): boolean {
+  if (!indirect) return false;
+  const arr = Array.isArray(indirect) ? indirect : [indirect];
+  for (const item of arr) {
+    if (!item) continue;
+    if (isAdobeDrmMediaType(item.type)) return true;
+    if (hasAdobeDrmIndirectAcquisition(item.indirectAcquisition)) return true;
   }
   return false;
 }
@@ -727,7 +746,7 @@ function processOpds2Publication(pub: Opds2Publication, baseUrl: string): Catalo
   } else if (typeof pub.links === 'object' && pub.links) {
     links = [pub.links as Opds2Link];
   }
-  const acquisitions: { href: string; rels: string[]; type?: string; indirectType?: string; acquisitionType?: string; isLcpProtected?: boolean }[] = [];
+  const acquisitions: { href: string; rels: string[]; type?: string; indirectType?: string; acquisitionType?: string; isLcpProtected?: boolean; isAdobeDrmProtected?: boolean }[] = [];
   const collections: { title: string; href: string }[] = [];
   links.forEach((l: Record<string, any>) => {
     if (!l || !l.href) return;
@@ -742,7 +761,8 @@ function processOpds2Publication(pub: Opds2Publication, baseUrl: string): Catalo
     if (isAcq) {
       const indirectType = findIndirectType(l.indirectAcquisition || l.properties?.indirectAcquisition);
       const isLcpProtected = isLcpMediaType(l.type) || hasLcpIndirectAcquisition(l.indirectAcquisition || l.properties?.indirectAcquisition);
-      acquisitions.push({ href: new URL(l.href, baseUrl).href, rels, type: l.type, indirectType, isLcpProtected });
+      const isAdobeDrmProtected = isAdobeDrmMediaType(l.type) || hasAdobeDrmIndirectAcquisition(l.indirectAcquisition || l.properties?.indirectAcquisition);
+      acquisitions.push({ href: new URL(l.href, baseUrl).href, rels, type: l.type, indirectType, isLcpProtected, isAdobeDrmProtected });
     }
     if (l.title && rels.includes('collection')) {
       collections.push({ title: l.title, href: new URL(l.href, baseUrl).href });
@@ -773,7 +793,9 @@ function processOpds2Publication(pub: Opds2Publication, baseUrl: string): Catalo
     };
     const isOpen = (a: { rels: string[] }) => a.rels.some((r: string) => r.includes('/open-access') || r === 'http://opds-spec.org/acquisition/open-access');
     const pick = (predicate: (a: typeof acquisitions[number]) => boolean) => (
-      acquisitions.find(a => predicate(a) && !a.isLcpProtected) || acquisitions.find(predicate)
+      acquisitions.find(a => predicate(a) && !a.isLcpProtected && !a.isAdobeDrmProtected)
+      || acquisitions.find(a => predicate(a) && !a.isLcpProtected)
+      || acquisitions.find(predicate)
     );
     chosen = pick(a => isOpen(a) && isType(a, 'epub'));
     if (!chosen) chosen = pick(a => isOpen(a) && isType(a, 'pdf'));
@@ -803,6 +825,7 @@ function processOpds2Publication(pub: Opds2Publication, baseUrl: string): Catalo
     mediumFormatCode = normalizeMediumFormatCode(schemaType, chosen.type);
   }
   const isLcpProtected = chosen?.isLcpProtected || false;
+  const isAdobeDrmProtected = chosen?.isAdobeDrmProtected || false;
 
   // Extract enhanced metadata for OPDS 2
   const language = metadata.language
@@ -886,6 +909,7 @@ function processOpds2Publication(pub: Opds2Publication, baseUrl: string): Catalo
       acquisitionType,
       mediaType: chosen && chosen.type ? String(chosen.type).toLowerCase().trim() : undefined,
       isLcpProtected: isLcpProtected || undefined,
+      isAdobeDrmProtected: isAdobeDrmProtected || undefined,
       isOpenAccess: isOpenAccess ? true : undefined,
       alternativeFormats: alternativeFormats.length > 0 ? alternativeFormats : undefined,
       borrowPeriodDays,
