@@ -48,7 +48,7 @@ vi.mock('../../../DeleteConfirmationModal', () => ({
   default: () => null,
 }));
 
-describe('LocalLibraryView filters', () => {
+describe('LocalLibraryView filters and layouts', () => {
   beforeEach(() => {
     vi.clearAllMocks();
     useDeleteBookMock.mockReturnValue({ mutate: vi.fn() });
@@ -64,7 +64,7 @@ describe('LocalLibraryView filters', () => {
     });
   });
 
-  it('filters by format and provider, including local uploads', () => {
+  it('filters by format and provider, and supports inline grouped layout', () => {
     render(
       <LocalLibraryView
         libraryRefreshFlag={0}
@@ -95,5 +95,15 @@ describe('LocalLibraryView filters', () => {
     expect(bookGridSpy.mock.calls.at(-1)?.[0]).toMatchObject({
       books: [{ title: 'Manual Upload' }],
     });
+
+    fireEvent.click(screen.getByRole('button', { name: /Inline layout/i }));
+
+    expect(screen.getByText('Manual Upload')).toBeInTheDocument();
+    expect(screen.getAllByText('Local Upload').length).toBeGreaterThan(0);
+
+    fireEvent.click(screen.getByRole('button', { name: 'Provider' }));
+
+    expect(screen.getAllByText('Local Upload').length).toBeGreaterThan(1);
+    expect(screen.getByText('1 title')).toBeInTheDocument();
   });
 });

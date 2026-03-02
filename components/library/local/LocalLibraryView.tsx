@@ -3,7 +3,7 @@ import React, { useCallback, useState } from 'react';
 import { useBooks, useDeleteBook } from '../../../hooks';
 import type { BookMetadata, CoverAnimationData } from '../../../types';
 import DeleteConfirmationModal from '../../DeleteConfirmationModal';
-import { AdjustmentsVerticalIcon } from '../../icons';
+import { AdjustmentsVerticalIcon, ListIcon, Squares2X2Icon } from '../../icons';
 import { Error as ErrorDisplay, Loading } from '../../shared';
 import { BookGrid, EmptyState } from '../shared';
 
@@ -37,6 +37,8 @@ const LocalLibraryView: React.FC<LocalLibraryViewProps> = ({
   const [selectedFormat, setSelectedFormat] = useState('all');
   const [selectedProvider, setSelectedProvider] = useState('all');
   const [isFiltersOpen, setIsFiltersOpen] = useState(false);
+  const [layoutMode, setLayoutMode] = useState<'grid' | 'inline'>('grid');
+  const [groupByProvider, setGroupByProvider] = useState(false);
 
   // Fetch books using React Query
   const { data: books = [], isLoading, error, refetch } = useBooks();
@@ -99,6 +101,26 @@ const LocalLibraryView: React.FC<LocalLibraryViewProps> = ({
     })
   ), [books, getFormatValue, getProviderLabel, selectedFormat, selectedProvider]);
 
+  const groupedBooks = React.useMemo(() => {
+    const groups = new Map<string, BookMetadata[]>();
+    filteredBooks.forEach((book) => {
+      const key = getProviderLabel(book);
+      const existing = groups.get(key);
+      if (existing) {
+        existing.push(book);
+      } else {
+        groups.set(key, [book]);
+      }
+    });
+
+    return Array.from(groups.entries())
+      .sort((a, b) => a[0].localeCompare(b[0]))
+      .map(([provider, booksForProvider]) => ({
+        provider,
+        books: [...booksForProvider].sort((a, b) => a.title.localeCompare(b.title)),
+      }));
+  }, [filteredBooks, getProviderLabel]);
+
   // Delete book mutation
   const { mutate: deleteBook } = useDeleteBook();
 
@@ -123,6 +145,79 @@ const LocalLibraryView: React.FC<LocalLibraryViewProps> = ({
       },
     });
   }, [bookToDelete, deleteBook]);
+
+  const renderInlineBookRow = (book: BookMetadata) => {
+    const providerLabel = getProviderLabel(book);
+    const formatLabel = getFormatLabel(getFormatValue(book));
+    const formatTone = formatLabel === 'PDF'
+      ? 'bg-red-600 text-white'
+      : formatLabel === 'Audiobook'
+        ? 'bg-purple-600 text-white'
+        : 'bg-sky-500 text-white';
+
+    return (
+      <button
+        key={book.id}
+        type="button"
+        onClick={() => handleLocalBookClick(book)}
+        onContextMenu={(event) => handleBookContextMenu(book, event)}
+        className="theme-surface-elevated theme-border theme-hover-surface flex w-full items-center gap-4 rounded-xl border p-3 text-left transition-colors"
+      >
+        <div className="theme-surface-muted flex h-16 w-12 flex-shrink-0 items-center justify-center overflow-hidden rounded-md">
+          {book.coverImage ? (
+            <img
+              src={book.coverImage}
+              alt={book.title}
+              className="h-full w-full object-cover"
+              loading="lazy"
+            />
+          ) : (
+            <span className="theme-text-muted px-1 text-center text-[10px] font-semibold">
+              {formatLabel}
+            </span>
+          )}
+        </div>
+        <div className="min-w-0 flex-1">
+          <div className="theme-text-primary truncate text-sm font-semibold">{book.title}</div>
+          <div className="theme-text-secondary truncate text-xs">{book.author}</div>
+        </div>
+        <div className="flex flex-shrink-0 flex-wrap items-center justify-end gap-2">
+          <span className={`inline-flex rounded-full px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide ${formatTone}`}>
+            {formatLabel}
+          </span>
+          <span className="theme-info inline-flex rounded-full border px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide">
+            {providerLabel}
+          </span>
+        </div>
+      </button>
+    );
+  };
+
+  const renderInlineList = () => {
+    if (groupByProvider) {
+      return (
+        <div className="space-y-5">
+          {groupedBooks.map((group) => (
+            <section key={group.provider} className="space-y-2">
+              <div className="flex items-center justify-between">
+                <h3 className="theme-text-primary text-sm font-semibold">{group.provider}</h3>
+                <span className="theme-text-muted text-xs">{group.books.length} title{group.books.length === 1 ? '' : 's'}</span>
+              </div>
+              <div className="space-y-2">
+                {group.books.map(renderInlineBookRow)}
+              </div>
+            </section>
+          ))}
+        </div>
+      );
+    }
+
+    return (
+      <div className="space-y-2">
+        {filteredBooks.map(renderInlineBookRow)}
+      </div>
+    );
+  };
 
   // Show loading state
   if (isLoading) {
@@ -151,18 +246,46 @@ const LocalLibraryView: React.FC<LocalLibraryViewProps> = ({
                 <div className="theme-text-muted text-sm">
                   Showing {filteredBooks.length} of {books.length} books
                 </div>
-                <button
-                  type="button"
-                  onClick={() => setIsFiltersOpen((prev) => !prev)}
-                  className={`theme-button-neutral theme-hover-surface inline-flex items-center gap-1.5 rounded-lg border px-2.5 py-1.5 text-xs font-medium transition-colors ${
-                    isFiltersOpen ? 'theme-nav-link-active' : ''
-                  }`}
-                  aria-label={isFiltersOpen ? 'Hide filters' : 'Open filters'}
-                  title={activeFilterCount > 0 ? `${activeFilterCount} active filters` : 'Filters'}
-                >
-                  <AdjustmentsVerticalIcon className="h-4 w-4" />
-                  <span>{activeFilterCount > 0 ? `Filters (${activeFilterCount})` : 'Filters'}</span>
-                </button>
+                <div className="flex items-center gap-2">
+                  <div className="theme-button-neutral inline-flex rounded-lg border p-1">
+                    <button
+                      type="button"
+                      onClick={() => setLayoutMode('grid')}
+                      className={`inline-flex items-center gap-1 rounded-md px-2 py-1 text-xs font-medium transition-colors ${
+                        layoutMode === 'grid' ? 'theme-nav-link-active' : 'theme-text-secondary'
+                      }`}
+                      aria-label="Grid layout"
+                      title="Grid layout"
+                    >
+                      <Squares2X2Icon className="h-4 w-4" />
+                      <span className="hidden sm:inline">Grid</span>
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setLayoutMode('inline')}
+                      className={`inline-flex items-center gap-1 rounded-md px-2 py-1 text-xs font-medium transition-colors ${
+                        layoutMode === 'inline' ? 'theme-nav-link-active' : 'theme-text-secondary'
+                      }`}
+                      aria-label="Inline layout"
+                      title="Inline layout"
+                    >
+                      <ListIcon className="h-4 w-4" />
+                      <span className="hidden sm:inline">Inline</span>
+                    </button>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => setIsFiltersOpen((prev) => !prev)}
+                    className={`theme-button-neutral theme-hover-surface inline-flex items-center gap-1.5 rounded-lg border px-2.5 py-1.5 text-xs font-medium transition-colors ${
+                      isFiltersOpen ? 'theme-nav-link-active' : ''
+                    }`}
+                    aria-label={isFiltersOpen ? 'Hide filters' : 'Open filters'}
+                    title={activeFilterCount > 0 ? `${activeFilterCount} active filters` : 'Filters'}
+                  >
+                    <AdjustmentsVerticalIcon className="h-4 w-4" />
+                    <span>{activeFilterCount > 0 ? `Filters (${activeFilterCount})` : 'Filters'}</span>
+                  </button>
+                </div>
               </div>
 
               {isFiltersOpen && (
@@ -231,6 +354,33 @@ const LocalLibraryView: React.FC<LocalLibraryViewProps> = ({
                         </div>
                       </div>
                     )}
+
+                    <div className="flex flex-wrap items-center gap-2">
+                      <span className="theme-text-muted text-xs font-medium uppercase tracking-[0.12em]">Grouping</span>
+                      <div className="flex flex-wrap gap-1.5">
+                        <button
+                          type="button"
+                          onClick={() => setGroupByProvider(false)}
+                          className={`rounded-full px-2.5 py-1 text-xs font-medium transition-colors ${
+                            !groupByProvider ? 'theme-nav-link-active border' : 'theme-pill theme-hover-surface'
+                          }`}
+                        >
+                          None
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setLayoutMode('inline');
+                            setGroupByProvider(true);
+                          }}
+                          className={`rounded-full px-2.5 py-1 text-xs font-medium transition-colors ${
+                            groupByProvider ? 'theme-nav-link-active border' : 'theme-pill theme-hover-surface'
+                          }`}
+                        >
+                          Provider
+                        </button>
+                      </div>
+                    </div>
                   </div>
                 </div>
               )}
@@ -238,11 +388,15 @@ const LocalLibraryView: React.FC<LocalLibraryViewProps> = ({
           )}
 
           {filteredBooks.length > 0 ? (
-            <BookGrid
-              books={filteredBooks}
-              onBookClick={handleLocalBookClick}
-              onBookContextMenu={handleBookContextMenu}
-            />
+            layoutMode === 'grid' ? (
+              <BookGrid
+                books={filteredBooks}
+                onBookClick={handleLocalBookClick}
+                onBookContextMenu={handleBookContextMenu}
+              />
+            ) : (
+              renderInlineList()
+            )
           ) : (
             <EmptyState
               variant="library"
