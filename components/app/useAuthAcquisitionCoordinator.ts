@@ -13,6 +13,7 @@ import {
   proxiedUrl,
   saveOpdsCredential,
 } from '../../services';
+import { parseAudiobookManifest } from '../../services/audiobookManifest';
 
 import type {
   BookRecord,
@@ -69,13 +70,19 @@ const getContentType = (response: Response): string => (
     : ''
 );
 
+interface FulfillResponseResult {
+  response: Response;
+  resolvedUrl?: string;
+  followUpAuth?: RequestAuthorization | null;
+}
+
 const resolveLibrarySimplifiedBearerTokenDocument = async (
   response: Response,
   fallbackUrl: string,
-): Promise<Response> => {
+): Promise<FulfillResponseResult> => {
   const contentType = getContentType(response).toLowerCase();
   if (!contentType.includes('application/vnd.librarysimplified.bearer-token+json')) {
-    return response;
+    return { response };
   }
 
   const bodyText = await response.text().catch(() => '');
@@ -103,11 +110,14 @@ const resolveLibrarySimplifiedBearerTokenDocument = async (
   }
 
   const resolvedLocation = new URL(location, response.url || fallbackUrl).href;
+  const followUpAuth: RequestAuthorization | null = String(tokenType).toLowerCase() === 'bearer'
+    ? {
+        scheme: 'bearer',
+        token: accessToken,
+      }
+    : null;
   if (String(tokenType).toLowerCase() === 'bearer') {
-    cachePatronAuthorizationForUrl(resolvedLocation, {
-      scheme: 'bearer',
-      token: accessToken,
-    });
+    cachePatronAuthorizationForUrl(resolvedLocation, followUpAuth);
   }
   const nextUrl = proxiedUrl(resolvedLocation);
   if (typeof nextUrl === 'string' && nextUrl.includes('corsproxy.io')) {
@@ -126,7 +136,27 @@ const resolveLibrarySimplifiedBearerTokenDocument = async (
     throw new Error(`Import failed. The bearer-token follow-up download returned ${followUpResponse.status}.`);
   }
 
-  return followUpResponse;
+  return {
+    response: followUpResponse,
+    resolvedUrl: resolvedLocation,
+    followUpAuth,
+  };
+};
+
+const cacheAudiobookTrackAuthorization = (
+  bookData: ArrayBuffer,
+  manifestUrl: string | undefined,
+  auth: RequestAuthorization | null | undefined,
+) => {
+  if (!manifestUrl || !auth || auth.scheme !== 'bearer') return;
+  try {
+    const manifest = parseAudiobookManifest(bookData, manifestUrl);
+    manifest.tracks.forEach((track) => {
+      cachePatronAuthorizationForUrl(track.href, auth);
+    });
+  } catch (error) {
+    logger.debug('Skipping audiobook track auth cache after manifest parse failure', { error });
+  }
 };
 
 const validateFulfillResponse = (
@@ -283,10 +313,14 @@ export const useAuthAcquisitionCoordinator = ({
         throw new Error(errorMessage);
       }
 
-      response = await resolveLibrarySimplifiedBearerTokenDocument(response, finalUrl);
+      const resolvedFulfill = await resolveLibrarySimplifiedBearerTokenDocument(response, finalUrl);
+      response = resolvedFulfill.response;
       validateFulfillResponse(response, book);
 
       const bookData = await response.arrayBuffer();
+      if (book.format?.toUpperCase() === 'AUDIOBOOK') {
+        cacheAudiobookTrackAuthorization(bookData, resolvedFulfill.resolvedUrl, resolvedFulfill.followUpAuth);
+      }
       const catalogBookMeta = book.format && book.format.toUpperCase() === 'PDF'
         ? {
             summary: book.summary,
@@ -302,7 +336,7 @@ export const useAuthAcquisitionCoordinator = ({
               publicationDate: book.publicationDate,
               subjects: book.subjects,
               coverImage: book.coverImage,
-              downloadUrl: book.downloadUrl,
+              downloadUrl: resolvedFulfill.resolvedUrl || book.downloadUrl,
             }
         : undefined;
 
@@ -385,9 +419,13 @@ export const useAuthAcquisitionCoordinator = ({
         if (!response.ok) {
           throw new Error(`Download failed: ${response.status}`);
         }
-        const finalResponse = await resolveLibrarySimplifiedBearerTokenDocument(response, resolveResult.data);
+        const resolvedFulfill = await resolveLibrarySimplifiedBearerTokenDocument(response, resolveResult.data);
+        const finalResponse = resolvedFulfill.response;
         validateFulfillResponse(finalResponse, credentialPrompt.pendingBook);
         const bookData = await finalResponse.arrayBuffer();
+        if (credentialPrompt.pendingBook.format?.toUpperCase() === 'AUDIOBOOK') {
+          cacheAudiobookTrackAuthorization(bookData, resolvedFulfill.resolvedUrl, resolvedFulfill.followUpAuth);
+        }
         const importResult = await processAndSaveBook(
           bookData,
           credentialPrompt.pendingBook.title,
@@ -404,7 +442,7 @@ export const useAuthAcquisitionCoordinator = ({
                 publicationDate: credentialPrompt.pendingBook.publicationDate,
                 subjects: credentialPrompt.pendingBook.subjects,
                 coverImage: credentialPrompt.pendingBook.coverImage,
-                downloadUrl: credentialPrompt.pendingBook.downloadUrl,
+                downloadUrl: resolvedFulfill.resolvedUrl || credentialPrompt.pendingBook.downloadUrl,
               }
             : undefined,
         );
