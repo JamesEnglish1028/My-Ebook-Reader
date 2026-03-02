@@ -186,6 +186,12 @@ body {
   border-color: var(--accent-soft-border) !important;
 }
 
+.theme-accent-badge {
+  background-color: var(--accent-soft-bg) !important;
+  color: var(--accent-text-emphasis) !important;
+  border-color: var(--accent-soft-border) !important;
+}
+
 .theme-progress-track {
   background-color: color-mix(in srgb, var(--button-primary-bg) 18%, transparent) !important;
 }
@@ -241,6 +247,10 @@ body {
 
 .theme-ring-offset {
   --tw-ring-offset-color: var(--app-bg) !important;
+}
+
+.theme-focus-ring:focus {
+  --tw-ring-color: var(--accent-soft-border) !important;
 }
 
 .theme-divider {

@@ -554,7 +554,7 @@ const PdfReaderView: React.FC<PdfReaderViewProps> = ({ bookId: propBookId, onClo
           <footer className="theme-surface-elevated theme-border theme-text-primary z-20 flex shrink-0 items-center gap-4 border-t p-4">
             <button
               onClick={goToPrev}
-              className="theme-hover-surface shrink-0 rounded-full p-2 transition-colors focus:outline-none focus:ring-2 focus:ring-sky-500"
+              className="theme-hover-surface theme-focus-ring shrink-0 rounded-full p-2 transition-colors focus:outline-none focus:ring-2"
               aria-label="Previous page"
               disabled={currentPage <= 1}
             >
@@ -593,14 +593,14 @@ const PdfReaderView: React.FC<PdfReaderViewProps> = ({ bookId: propBookId, onClo
                   if (isNaN(v) || v < 1) return;
                   setCurrentPage(Math.min(numPages || v, Math.max(1, v)));
                 }}
-                className="theme-input w-full rounded-md px-2 py-1 text-center focus:outline-none focus:ring-2 focus:ring-sky-500"
+                className="theme-input theme-focus-ring w-full rounded-md px-2 py-1 text-center focus:outline-none focus:ring-2"
                 aria-label="Jump to page"
               />
             </div>
 
             <button
               onClick={goToNext}
-              className="theme-hover-surface shrink-0 rounded-full p-2 transition-colors focus:outline-none focus:ring-2 focus:ring-sky-500"
+              className="theme-hover-surface theme-focus-ring shrink-0 rounded-full p-2 transition-colors focus:outline-none focus:ring-2"
               aria-label="Next page"
               disabled={numPages !== null && currentPage >= numPages}
             >
@@ -620,13 +620,13 @@ const PdfReaderView: React.FC<PdfReaderViewProps> = ({ bookId: propBookId, onClo
       <AddedHud message={addedHudMessage || ''} isOpen={!!addedHudMessage} />
       <header className="theme-surface-elevated theme-border theme-text-primary z-20 flex shrink-0 items-center justify-between border-b p-2 shadow-md">
         <div className="flex items-center gap-2">
-          <button onClick={onClose} className="theme-hover-surface rounded-full p-2 transition-colors focus:outline-none focus:ring-2 focus:ring-sky-500" aria-label="Close Reader">
+          <button onClick={onClose} className="theme-hover-surface theme-focus-ring rounded-full p-2 transition-colors focus:outline-none focus:ring-2" aria-label="Close Reader">
             <CloseIcon className="w-6 h-6" />
           </button>
-          <button onClick={() => setShowNavPanel(true)} className="theme-hover-surface relative rounded-full p-2 transition-colors focus:outline-none focus:ring-2 focus:ring-sky-500" aria-label="Contents and Bookmarks">
+          <button onClick={() => setShowNavPanel(true)} className="theme-hover-surface theme-focus-ring relative rounded-full p-2 transition-colors focus:outline-none focus:ring-2" aria-label="Contents and Bookmarks">
             <ListIcon className="w-6 h-6" />
             {(bookmarks.length > 0 || citations.length > 0) && (
-              <span className="absolute top-1 right-1 block h-2 w-2 rounded-full bg-sky-400 ring-2 ring-slate-800" />
+              <span className="theme-progress-fill theme-ring-offset absolute right-1 top-1 block h-2 w-2 rounded-full ring-2" />
             )}
           </button>
         </div>
@@ -640,10 +640,10 @@ const PdfReaderView: React.FC<PdfReaderViewProps> = ({ bookId: propBookId, onClo
             <div className="theme-text-secondary px-2 text-sm">{zoomPercent}%</div>
             <button onClick={() => setZoomPercent(z => Math.min(400, Math.round(z * 1.15)))} className="theme-hover-surface rounded p-2" aria-label="Zoom in">+</button>
       <button onClick={() => setFitMode(m => m === 'page' ? 'width' : 'page')} className="theme-hover-surface rounded p-2" aria-label="Toggle fit mode">{fitMode === 'page' ? 'Fit Page' : 'Fit Width'}</button>
-      <button onClick={() => setShowCitationModal(true)} className="theme-hover-surface rounded-full p-2 transition-colors focus:outline-none focus:ring-2 focus:ring-sky-500" aria-label="Create citation for this page">
+      <button onClick={() => setShowCitationModal(true)} className="theme-hover-surface theme-focus-ring rounded-full p-2 transition-colors focus:outline-none focus:ring-2" aria-label="Create citation for this page">
         <AcademicCapIcon className="w-6 h-6" />
       </button>
-      <button onClick={() => setShowBookmarkModal(true)} className="theme-hover-surface rounded-full p-2 transition-colors focus:outline-none focus:ring-2 focus:ring-sky-500" aria-label="Add bookmark to this page">
+      <button onClick={() => setShowBookmarkModal(true)} className="theme-hover-surface theme-focus-ring rounded-full p-2 transition-colors focus:outline-none focus:ring-2" aria-label="Add bookmark to this page">
         <BookmarkIcon className="w-6 h-6" />
       </button>
       <button onClick={() => setShowHelp(s => !s)} className="theme-hover-surface rounded p-2" aria-label="Keyboard help">?</button>

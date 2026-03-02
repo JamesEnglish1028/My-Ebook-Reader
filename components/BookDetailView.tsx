@@ -157,7 +157,7 @@ const BookAnnotationsAside: React.FC<{
                   {ct.chapter && <div className="theme-text-muted mt-1 text-xs">Chapter: {ct.chapter}</div>}
                   {ct.pageNumber && <div className="theme-text-muted mt-1 text-xs">Page: {ct.pageNumber}</div>}
                   <div className="theme-text-muted text-xs">Created: {formatDate(ct.createdAt)}</div>
-                  <span className="inline-block mt-2 px-2 py-0.5 rounded text-xs font-bold bg-sky-900 text-sky-300">{formatted.format.toUpperCase()}</span>
+                  <span className="theme-accent-badge mt-2 inline-block rounded border px-2 py-0.5 text-xs font-bold">{formatted.format.toUpperCase()}</span>
                 </li>
               );
             })}
@@ -608,7 +608,7 @@ const BookDetailView: React.FC<BookDetailViewProps> = ({ book, onBack, source, c
                 <div className="theme-text-muted mt-1 text-xs">
                   Provider ID: {
                     /^https?:\/\//.test(bookAny.providerId)
-                      ? <a href={bookAny.providerId} target="_blank" rel="noopener noreferrer" className="text-sky-400 underline hover:text-sky-600">{bookAny.providerId}</a>
+                      ? <a href={bookAny.providerId} target="_blank" rel="noopener noreferrer" className="theme-accent-text theme-accent-text-emphasis-hover underline">{bookAny.providerId}</a>
                       : bookAny.providerId
                   }
                 </div>
@@ -658,7 +658,7 @@ export default BookDetailView;
 // BookDetailHeader: handles the header/back button section
 const BookDetailHeader: React.FC<{ onBack: () => void, source: 'library' | 'catalog' }> = ({ onBack, source }) => (
   <header className="mb-8">
-    <button onClick={onBack} className="theme-text-secondary inline-flex items-center gap-2 transition-colors hover:text-sky-400">
+    <button onClick={onBack} className="theme-text-secondary theme-accent-text-emphasis-hover inline-flex items-center gap-2 transition-colors">
       <LeftArrowIcon className="w-5 h-5" />
       <span>Return to {source === 'library' ? 'My Shelf' : 'Catalog'}</span>
     </button>
