@@ -43,7 +43,7 @@ interface UseAuthAcquisitionCoordinatorOptions {
   ) => Promise<{ success: boolean; bookRecord?: BookRecord; existingBook?: BookRecord }>;
   setImportStatus: Dispatch<SetStateAction<ImportStatusState>>;
   setActiveOpdsSource: Dispatch<SetStateAction<Catalog | CatalogRegistry | null>>;
-  setCurrentView: Dispatch<SetStateAction<'library' | 'reader' | 'pdfReader' | 'bookDetail' | 'about'>>;
+  setCurrentView: Dispatch<SetStateAction<'library' | 'reader' | 'pdfReader' | 'audioReader' | 'bookDetail' | 'about'>>;
   pushToast: (message: string, duration?: number) => void;
 }
 
@@ -132,6 +132,9 @@ const validateFulfillResponse = (
   const looksLikeDocument = contentType.includes('json') || contentType.includes('xml') || contentType.includes('html');
   const allowsEpub = contentType.includes('application/epub') || contentType.includes('application/octet-stream') || contentType.includes('application/zip');
   const allowsPdf = contentType.includes('application/pdf') || contentType.includes('application/octet-stream');
+  const allowsAudiobook = contentType.includes('application/audiobook+json')
+    || contentType.includes('application/webpub+json')
+    || contentType.includes('application/json');
   const normalizedFormat = (book.format || '').toUpperCase();
 
   if (normalizedFormat === 'EPUB' && looksLikeDocument && !allowsEpub) {
@@ -140,6 +143,10 @@ const validateFulfillResponse = (
 
   if (normalizedFormat === 'PDF' && looksLikeDocument && !allowsPdf) {
     throw new Error(`Import failed for "${book.title}". The fulfill endpoint returned ${contentType || 'a document response'} instead of a downloadable PDF file.`);
+  }
+
+  if (normalizedFormat === 'AUDIOBOOK' && looksLikeDocument && !allowsAudiobook) {
+    throw new Error(`Import failed for "${book.title}". The fulfill endpoint returned ${contentType || 'a document response'} instead of an audiobook manifest.`);
   }
 };
 
@@ -166,8 +173,8 @@ export const useAuthAcquisitionCoordinator = ({
   };
 
   const handleImportFromCatalog = useCallback(async (book: CatalogBook, catalogName?: string): Promise<ImportResult> => {
-    if (book.format && book.format.toUpperCase() !== 'EPUB' && book.format.toUpperCase() !== 'PDF') {
-      const error = `Cannot import this book. The application currently only supports EPUB and PDF formats, but this book is a ${book.format}.`;
+    if (book.format && !['EPUB', 'PDF', 'AUDIOBOOK'].includes(book.format.toUpperCase())) {
+      const error = `Cannot import this book. The application currently supports EPUB, PDF, and audiobook manifests, but this book is a ${book.format}.`;
       setImportStatus({ isLoading: false, message: '', error });
       return { success: false };
     }

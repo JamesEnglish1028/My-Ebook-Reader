@@ -15,13 +15,14 @@ import type {
     CoverAnimationData,
 } from '../../types';
 import type { BookDetailMetadata } from '../BookDetailView';
+import AudioReaderView from '../AudioReaderView';
 import LibraryView from '../library/LibraryView';
 import PdfReaderView from '../PdfReaderView';
 
 
 export interface ViewRendererProps {
   libraryRefreshFlag: number;
-  currentView: 'library' | 'reader' | 'pdfReader' | 'bookDetail' | 'about';
+  currentView: 'library' | 'reader' | 'pdfReader' | 'audioReader' | 'bookDetail' | 'about';
 
   // Reader view props
   selectedBookId: number | null;
@@ -113,17 +114,19 @@ export const ViewRenderer: React.FC<ViewRendererProps> = (props) => {
   const [view, setView] = React.useState(currentView);
   const [readerBookId, setReaderBookId] = React.useState<number | null>(selectedBookId);
   const [readerAnimationData, setReaderAnimationData] = React.useState<CoverAnimationData | null>(coverAnimationData);
-  // Store which reader to use: 'reader' (EPUB) or 'pdfReader'
-  const [readerType, setReaderType] = React.useState<'reader' | 'pdfReader'>('reader');
+  // Store which reader to use: 'reader' (EPUB), 'pdfReader', or 'audioReader'
+  const [readerType, setReaderType] = React.useState<'reader' | 'pdfReader' | 'audioReader'>('reader');
 
   // Patch: Enhanced onReadBook to select reader based on mediaType/format
   const handleReadBook = React.useCallback((book: any, animationData?: CoverAnimationData) => {
     // Prefer mediaType if available
     const mediaType = book.mediaType || book.acquisitionMediaType || '';
     const format = (book.format || '').toUpperCase();
-    let type: 'reader' | 'pdfReader' = 'reader';
+    let type: 'reader' | 'pdfReader' | 'audioReader' = 'reader';
     if (mediaType.includes('pdf') || format === 'PDF') {
       type = 'pdfReader';
+    } else if (mediaType.includes('audiobook') || mediaType.includes('audio/') || format === 'AUDIOBOOK') {
+      type = 'audioReader';
     } else if (mediaType.includes('epub') || format === 'EPUB') {
       type = 'reader';
     }
@@ -171,6 +174,19 @@ export const ViewRenderer: React.FC<ViewRendererProps> = (props) => {
           fallbackMessage="There was an error while trying to display this PDF. Returning to the library."
         >
           <PdfReaderView
+            bookId={readerBookId}
+            onClose={onCloseReader}
+          />
+        </ErrorBoundary>
+      ) : null;
+
+    case 'audioReader':
+      return readerBookId !== null ? (
+        <ErrorBoundary
+          onReset={onCloseReader}
+          fallbackMessage="There was an error while trying to play this audiobook. Returning to the library."
+        >
+          <AudioReaderView
             bookId={readerBookId}
             onClose={onCloseReader}
           />

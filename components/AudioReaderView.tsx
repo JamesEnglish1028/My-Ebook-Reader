@@ -1,0 +1,227 @@
+import React, { useEffect, useMemo, useRef, useState } from 'react';
+
+import type { BookRecord } from '../types';
+import { db, proxiedUrl } from '../services';
+import { parseAudiobookManifest } from '../services/audiobookManifest';
+import { getLastPositionForBook, saveLastPositionForBook } from '../services/readerUtils';
+
+import { CloseIcon } from './icons';
+import Spinner from './Spinner';
+
+interface AudioReaderViewProps {
+  bookId?: number;
+  onClose?: () => void;
+}
+
+interface SavedAudioPosition {
+  trackIndex: number;
+  time: number;
+}
+
+const AudioReaderView: React.FC<AudioReaderViewProps> = ({ bookId: propBookId, onClose: propOnClose }) => {
+  const bookId = propBookId ?? null;
+  const onClose = propOnClose ?? (() => undefined);
+  const [bookData, setBookData] = useState<BookRecord | null>(null);
+  const [manifestError, setManifestError] = useState<string | null>(null);
+  const [isLoading, setIsLoading] = useState(true);
+  const [currentTrackIndex, setCurrentTrackIndex] = useState(0);
+  const [resumeTime, setResumeTime] = useState(0);
+  const audioRef = useRef<HTMLAudioElement | null>(null);
+  const saveTickRef = useRef(0);
+
+  useEffect(() => {
+    const fetchBook = async () => {
+      if (!bookId) {
+        setManifestError('Missing audiobook id.');
+        setIsLoading(false);
+        return;
+      }
+      const data = await db.getBook(bookId);
+      if (!data) {
+        setManifestError('Could not find this audiobook in your library.');
+        setIsLoading(false);
+        return;
+      }
+      if ((data.format || '').toUpperCase() !== 'AUDIOBOOK') {
+        setManifestError('The selected item is not an audiobook.');
+        setIsLoading(false);
+        return;
+      }
+      setBookData(data);
+      const saved = getLastPositionForBook(bookId);
+      if (saved) {
+        try {
+          const parsed = JSON.parse(saved) as SavedAudioPosition;
+          if (Number.isFinite(parsed.trackIndex)) setCurrentTrackIndex(parsed.trackIndex);
+          if (Number.isFinite(parsed.time)) setResumeTime(parsed.time);
+        } catch {
+          // ignore invalid saved state
+        }
+      }
+      setIsLoading(false);
+    };
+    void fetchBook();
+  }, [bookId]);
+
+  const parsedManifest = useMemo(() => {
+    if (!bookData) return { manifest: null, error: null as string | null };
+    try {
+      return {
+        manifest: parseAudiobookManifest(bookData.epubData, bookData.providerId),
+        error: null,
+      };
+    } catch (error) {
+      return {
+        manifest: null,
+        error: error instanceof Error ? error.message : 'Failed to parse audiobook manifest.',
+      };
+    }
+  }, [bookData]);
+
+  const manifest = parsedManifest.manifest;
+
+  useEffect(() => {
+    setManifestError(parsedManifest.error);
+  }, [parsedManifest.error]);
+
+  const currentTrack = manifest?.tracks[currentTrackIndex] || null;
+  const currentTrackSrc = currentTrack ? proxiedUrl(currentTrack.href) : null;
+
+  useEffect(() => {
+    if (!audioRef.current) return;
+    if (!Number.isFinite(resumeTime) || resumeTime <= 0) return;
+    const audio = audioRef.current;
+    const applyResumeTime = () => {
+      try {
+        if (resumeTime <= (audio.duration || Number.POSITIVE_INFINITY)) {
+          audio.currentTime = resumeTime;
+        }
+      } catch {
+        // ignore
+      }
+    };
+    audio.addEventListener('loadedmetadata', applyResumeTime, { once: true });
+    return () => audio.removeEventListener('loadedmetadata', applyResumeTime);
+  }, [currentTrackIndex, resumeTime]);
+
+  const persistPosition = (time: number) => {
+    if (!bookId) return;
+    saveLastPositionForBook(bookId, JSON.stringify({
+      trackIndex: currentTrackIndex,
+      time,
+    } satisfies SavedAudioPosition));
+  };
+
+  if (isLoading) {
+    return <Spinner message="Loading audiobook..." />;
+  }
+
+  if (manifestError || !manifest || !bookData) {
+    return (
+      <div className="min-h-screen theme-shell theme-text-primary flex flex-col items-center justify-center px-6">
+        <p className="theme-text-secondary mb-4 text-center">{manifestError || 'Could not load the audiobook.'}</p>
+        <button
+          type="button"
+          onClick={onClose}
+          className="rounded bg-sky-700 px-4 py-2 font-semibold text-white hover:bg-sky-600"
+        >
+          Back to Library
+        </button>
+      </div>
+    );
+  }
+
+  return (
+    <div className="min-h-screen theme-shell theme-text-primary px-4 py-6 md:px-8">
+      <div className="mx-auto flex w-full max-w-5xl flex-col gap-6">
+        <div className="flex items-center justify-between gap-4">
+          <button
+            type="button"
+            onClick={onClose}
+            className="inline-flex items-center gap-2 rounded bg-slate-700 px-3 py-2 text-sm font-semibold text-white hover:bg-slate-600"
+          >
+            <CloseIcon className="h-4 w-4" />
+            Close
+          </button>
+          <div className="text-right">
+            <h1 className="text-2xl font-bold md:text-3xl">{manifest.title}</h1>
+            <p className="theme-text-secondary text-sm md:text-base">{manifest.author}</p>
+          </div>
+        </div>
+
+        <div className="grid gap-6 lg:grid-cols-[minmax(0,2fr)_minmax(18rem,1fr)]">
+          <section className="theme-surface-elevated rounded-2xl p-5">
+            <p className="theme-text-secondary mb-2 text-sm uppercase tracking-[0.16em]">Now Playing</p>
+            <h2 className="mb-1 text-xl font-semibold">{currentTrack?.title || 'Track'}</h2>
+            {manifest.description && (
+              <p className="theme-text-secondary mb-4 text-sm">{manifest.description}</p>
+            )}
+
+            <audio
+              key={currentTrackSrc || currentTrackIndex}
+              ref={audioRef}
+              controls
+              autoPlay
+              preload="metadata"
+              className="w-full"
+              src={currentTrackSrc || undefined}
+              onEnded={() => {
+                if (currentTrackIndex < manifest.tracks.length - 1) {
+                  setResumeTime(0);
+                  setCurrentTrackIndex((index) => index + 1);
+                }
+              }}
+              onTimeUpdate={(event) => {
+                const currentTime = event.currentTarget.currentTime;
+                if (!Number.isFinite(currentTime)) return;
+                saveTickRef.current += 1;
+                if (saveTickRef.current % 10 === 0) {
+                  persistPosition(currentTime);
+                }
+              }}
+              onPause={(event) => persistPosition(event.currentTarget.currentTime)}
+            />
+          </section>
+
+          <aside className="theme-surface-elevated rounded-2xl p-5">
+            <p className="theme-text-secondary mb-3 text-sm uppercase tracking-[0.16em]">Tracks</p>
+            <div className="max-h-[60vh] space-y-2 overflow-y-auto">
+              {manifest.tracks.map((track, index) => (
+                <button
+                  key={`${track.href}-${index}`}
+                  type="button"
+                  onClick={() => {
+                    setResumeTime(0);
+                    setCurrentTrackIndex(index);
+                  }}
+                  className={`w-full rounded-lg px-3 py-2 text-left text-sm transition-colors ${
+                    index === currentTrackIndex
+                      ? 'bg-sky-700 text-white'
+                      : 'theme-hover-surface theme-text-secondary'
+                  }`}
+                >
+                  <span className="block font-medium">{track.title}</span>
+                  <span className="theme-text-muted text-xs">{index + 1} of {manifest.tracks.length}</span>
+                </button>
+              ))}
+            </div>
+            {manifest.toc.length > 0 && (
+              <>
+                <p className="theme-text-secondary mt-5 mb-3 text-sm uppercase tracking-[0.16em]">Contents</p>
+                <div className="space-y-1">
+                  {manifest.toc.map((item) => (
+                    <div key={`${item.href}-${item.title}`} className="theme-text-secondary text-sm">
+                      {item.title}
+                    </div>
+                  ))}
+                </div>
+              </>
+            )}
+          </aside>
+        </div>
+      </div>
+    </div>
+  );
+};
+
+export default AudioReaderView;

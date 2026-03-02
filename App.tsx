@@ -76,7 +76,7 @@ const AppInner: React.FC = () => {
     return () => window.removeEventListener('storage', handler);
   }, []);
 
-  const [currentView, setCurrentView] = useState<'library' | 'reader' | 'pdfReader' | 'bookDetail' | 'about'>('library');
+  const [currentView, setCurrentView] = useState<'library' | 'reader' | 'pdfReader' | 'audioReader' | 'bookDetail' | 'about'>('library');
   const [selectedBookId, setSelectedBookId] = useState<number | null>(null);
   const [coverAnimationData, setCoverAnimationData] = useState<CoverAnimationData | null>(null);
   const [activeOpdsSource, setActiveOpdsSource] = useState<Catalog | CatalogRegistry | null>(null);
@@ -190,6 +190,9 @@ const AppInner: React.FC = () => {
           const format = first.format || 'EPUB';
           if (format === 'PDF') {
             navigate(`/pdf/${first.id}`);
+          } else if (format === 'AUDIOBOOK') {
+            setSelectedBookId(first.id as number);
+            setCurrentView('audioReader');
           } else {
             setSelectedBookId(first.id as number);
             setCurrentView('reader');
@@ -274,6 +277,9 @@ const AppInner: React.FC = () => {
     if (format === 'PDF') {
       setCoverAnimationData(null);
       navigate(`/pdf/${id}`);
+    } else if (format === 'AUDIOBOOK') {
+      setCoverAnimationData(null);
+      setCurrentView('audioReader');
     } else {
       setCoverAnimationData(animationData);
       setCurrentView('reader');

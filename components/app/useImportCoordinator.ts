@@ -1,6 +1,7 @@
 import { useCallback, useState } from 'react';
 
 import { db, generatePdfCover, imageUrlToBase64, logger } from '../../services';
+import { parseAudiobookManifest } from '../../services/audiobookManifest';
 import { extractBookMetadataFromOpf } from '../../services/epubParser';
 import { extractCoverImageFromEpub, extractOpfXmlFromEpub } from '../../services/epubZipUtils';
 import type { BookRecord, CatalogBook } from '../../types';
@@ -57,6 +58,57 @@ export const useImportCoordinator = ({ onCatalogImportSuccess }: UseImportCoordi
     }
 
     const effectiveFormat = format || (fileName.toLowerCase().endsWith('.pdf') ? 'PDF' : 'EPUB');
+
+    if (effectiveFormat === 'AUDIOBOOK') {
+      setImportStatus({ isLoading: true, message: 'Saving audiobook to library...', error: null });
+      try {
+        const manifest = parseAudiobookManifest(bookData, providerId || undefined);
+        if (!finalCoverImage && manifest.coverImageUrl) {
+          finalCoverImage = await imageUrlToBase64(manifest.coverImageUrl);
+        }
+
+        const finalProviderId = providerId || fileName;
+        const newBook: BookRecord = {
+          title: manifest.title || fileName,
+          author: manifest.author || authorName || 'Unknown Author',
+          coverImage: finalCoverImage,
+          epubData: bookData,
+          format: 'AUDIOBOOK',
+          providerName,
+          providerId: finalProviderId,
+          description: manifest.description,
+          publisher: normalizePublisher(catalogBookMeta?.publisher),
+          publicationDate: catalogBookMeta?.publicationDate,
+          subjects: catalogBookMeta?.subjects,
+        };
+
+        if (finalProviderId) {
+          const existing = await db.findBookByIdentifier(finalProviderId);
+          if (existing) {
+            setImportStatus(initialImportState);
+            return { success: false, bookRecord: newBook, existingBook: existing };
+          }
+        }
+
+        await db.saveBook(newBook);
+        setImportStatus({ isLoading: false, message: 'Import successful!', error: null });
+        bumpLibraryRefresh();
+        setTimeout(() => setImportStatus(initialImportState), 2000);
+
+        if (source === 'catalog') {
+          onCatalogImportSuccess();
+        }
+
+        return { success: true };
+      } catch (error) {
+        logger.error('Error saving audiobook:', error);
+        const errorMessage = error instanceof Error
+          ? error.message
+          : 'Failed to save the audiobook to the library.';
+        setImportStatus({ isLoading: false, message: '', error: errorMessage });
+        return { success: false };
+      }
+    }
 
     if (effectiveFormat === 'PDF') {
       setImportStatus({ isLoading: true, message: 'Saving PDF to library...', error: null });

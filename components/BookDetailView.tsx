@@ -240,9 +240,12 @@ const BookDetailView: React.FC<BookDetailViewProps> = ({ book, onBack, source, c
   const normalizedFormat = book.format?.toUpperCase() || '';
   const effectiveMediaType = (bookAny.mediaType || bookAny.acquisitionMediaType || '') as string;
   const normalizedMediaType = effectiveMediaType.toLowerCase();
-  const hasSupportedBookFormat = normalizedFormat === 'PDF' || normalizedFormat === 'EPUB';
+  const hasSupportedBookFormat = normalizedFormat === 'PDF' || normalizedFormat === 'EPUB' || normalizedFormat === 'AUDIOBOOK';
   const hasSupportedBookMediaType =
-    normalizedMediaType === 'application/pdf' || normalizedMediaType === 'application/epub+zip';
+    normalizedMediaType === 'application/pdf'
+    || normalizedMediaType === 'application/epub+zip'
+    || normalizedMediaType === 'application/audiobook+json'
+    || normalizedMediaType === 'application/webpub+json';
 
   // Only allow import if format or mediaType is PDF or EPUB
   const isImportable = (() => {
@@ -289,7 +292,7 @@ const BookDetailView: React.FC<BookDetailViewProps> = ({ book, onBack, source, c
           )}
           {source === 'library' ? (
             <button className="mt-2 px-4 py-2 rounded bg-sky-700 text-white font-bold hover:bg-sky-600" onClick={handleReadClick}>
-              Read Book
+              {normalizedFormat === 'AUDIOBOOK' ? 'Listen' : 'Read Book'}
             </button>
           ) : (
             <button
@@ -297,7 +300,7 @@ const BookDetailView: React.FC<BookDetailViewProps> = ({ book, onBack, source, c
               onClick={handleImportClick}
               disabled={isImporting || !isImportable}
             >
-              {isImporting ? 'Importing...' : isImportable ? 'Import to My Library' : 'Cannot Import: Not EPUB or PDF'}
+              {isImporting ? 'Importing...' : isImportable ? 'Import to My Library' : 'Cannot Import: Unsupported format'}
             </button>
           )}
           {showImportSuccess && (
