@@ -126,14 +126,14 @@ const ManageCatalogsModal: React.FC<ManageCatalogsModalProps> = ({
 
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                     {/* Add new form */}
-                    <div className="bg-slate-900/50 p-4 rounded-lg theme-surface-muted">
+                    <div className="theme-surface-muted rounded-lg p-4">
                         <h3 className="text-lg font-semibold mb-4 flex items-center gap-2">
                             <PlusIcon className="w-5 h-5" />
                             Add New {activeTab === 'catalogs' ? 'Catalog' : 'Registry'}
                         </h3>
                         <form onSubmit={handleSubmit} className="space-y-4">
                             <div>
-                                <label htmlFor="item-name" className="block text-sm font-medium text-slate-400 mb-1 theme-text-secondary">Name</label>
+                                <label htmlFor="item-name" className="theme-text-secondary mb-1 block text-sm font-medium">Name</label>
                                 <input
                                     id="item-name"
                                     type="text"
@@ -144,7 +144,7 @@ const ManageCatalogsModal: React.FC<ManageCatalogsModalProps> = ({
                                 />
                             </div>
                             <div>
-                                <label htmlFor="item-url" className="block text-sm font-medium text-slate-400 mb-1 theme-text-secondary">URL</label>
+                                <label htmlFor="item-url" className="theme-text-secondary mb-1 block text-sm font-medium">URL</label>
                                 <input
                                     id="item-url"
                                     type="url"
@@ -156,7 +156,7 @@ const ManageCatalogsModal: React.FC<ManageCatalogsModalProps> = ({
                             </div>
                             {activeTab === 'catalogs' && (
                             <div>
-                                <label htmlFor="opds-version" className="block text-sm font-medium text-slate-400 mb-1 theme-text-secondary">OPDS Version</label>
+                                <label htmlFor="opds-version" className="theme-text-secondary mb-1 block text-sm font-medium">OPDS Version</label>
                                 <select id="opds-version" value={opdsVersion} onChange={(e) => setOpdsVersion(e.target.value as any)} className="theme-input w-full rounded-md p-2 text-sm focus:outline-none focus:ring-2 focus:ring-sky-500">
                                     <option value="auto">Auto-detect (recommended)</option>
                                     <option value="1">OPDS 1 (Atom/XML)</option>
@@ -165,7 +165,7 @@ const ManageCatalogsModal: React.FC<ManageCatalogsModalProps> = ({
                             </div>
                             )}
                             {activeTab === 'registries' && (
-                            <p className="text-sm text-slate-400 theme-text-secondary">Registries are always OPDS 2.0 (JSON) format.</p>
+                            <p className="theme-text-secondary text-sm">Registries are always OPDS 2.0 (JSON) format.</p>
                             )}
                             {error && <p className="theme-text-danger text-sm">{error}</p>}
                             <button type="submit" className="theme-button-primary w-full rounded-md px-4 py-2 text-sm font-bold transition-colors">
@@ -175,7 +175,7 @@ const ManageCatalogsModal: React.FC<ManageCatalogsModalProps> = ({
                     </div>
 
                     {/* Existing items list */}
-                    <div className="bg-slate-900/50 p-4 rounded-lg theme-surface-muted">
+                    <div className="theme-surface-muted rounded-lg p-4">
                         <h3 className="text-lg font-semibold mb-4 flex items-center gap-2"><GlobeIcon className="w-5 h-5" /> Saved {activeTab === 'catalogs' ? 'Catalogs' : 'Registries'}</h3>
                         {currentList.length > 0 ? (
                             <ul className="space-y-2 max-h-60 overflow-y-auto pr-2">
@@ -205,8 +205,8 @@ const ManageCatalogsModal: React.FC<ManageCatalogsModalProps> = ({
                                         ) : (
                                             <>
                                                 <div className="truncate">
-                                                    <p className="font-semibold text-slate-200 truncate theme-text-primary">{item.name}</p>
-                                                    <p className="text-xs text-slate-400 truncate theme-text-secondary">{item.url}</p>
+                                                    <p className="theme-text-primary truncate font-semibold">{item.name}</p>
+                                                    <p className="theme-text-secondary truncate text-xs">{item.url}</p>
                                                 </div>
                                                 <div className="flex items-center flex-shrink-0">
                                                     <button onClick={() => handleStartEdit(item)} className="theme-hover-surface theme-text-muted theme-accent-text-emphasis-hover p-2 rounded-full transition-colors" aria-label={`Edit ${item.name}`}>
@@ -222,7 +222,7 @@ const ManageCatalogsModal: React.FC<ManageCatalogsModalProps> = ({
                                 ))}
                             </ul>
                         ) : (
-                            <p className="text-sm text-slate-400 text-center py-8 theme-text-secondary">No {activeTab === 'catalogs' ? 'catalogs' : 'registries'} added yet.</p>
+                            <p className="theme-text-secondary py-8 text-center text-sm">No {activeTab === 'catalogs' ? 'catalogs' : 'registries'} added yet.</p>
                         )}
                     </div>
                 </div>

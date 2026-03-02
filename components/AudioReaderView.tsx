@@ -688,7 +688,7 @@ const AudioReaderView: React.FC<AudioReaderViewProps> = ({ bookId: propBookId, o
                     const nextTrackTimes = updateTrackTime(currentTrackIndex, nextTime);
                     persistPosition(nextTime, nextTrackTimes);
                   }}
-                  className="w-full accent-sky-600"
+                  className="theme-slider w-full"
                   aria-label="Playback position"
                 />
                 <div className="theme-text-secondary mt-2 flex items-center justify-between text-xs font-semibold">
@@ -841,8 +841,8 @@ const AudioReaderView: React.FC<AudioReaderViewProps> = ({ bookId: propBookId, o
                         }}
                         className={`w-full rounded-xl border px-3 py-3 text-left text-sm transition-colors ${
                           isActive
-                            ? 'border-sky-600 bg-sky-700 text-white'
-                            : 'border-white/10 theme-hover-surface theme-text-secondary'
+                            ? 'theme-button-primary theme-accent-border theme-on-accent-text'
+                            : 'theme-border-soft theme-hover-surface theme-text-secondary'
                         }`}
                       >
                         <span className="block font-medium">{group.title}</span>
@@ -861,9 +861,9 @@ const AudioReaderView: React.FC<AudioReaderViewProps> = ({ bookId: propBookId, o
                                 : 'Not Started'}
                           </span>
                           {typeof progress.progress === 'number' && (
-                            <div className="h-1.5 flex-1 overflow-hidden rounded-full bg-black/20">
+                            <div className="theme-progress-track h-1.5 flex-1 overflow-hidden rounded-full">
                               <div
-                                className="h-full rounded-full bg-sky-400"
+                                className="theme-progress-fill h-full rounded-full"
                                 style={{ width: `${Math.round(progress.progress * 100)}%` }}
                               />
                             </div>
@@ -894,7 +894,7 @@ const AudioReaderView: React.FC<AudioReaderViewProps> = ({ bookId: propBookId, o
                         }}
                         className={`w-full rounded-lg px-3 py-2 text-left text-sm transition-colors ${
                           isActive
-                            ? 'bg-sky-700 text-white'
+                            ? 'theme-button-primary theme-on-accent-text'
                             : 'theme-hover-surface theme-text-secondary'
                         }`}
                       >
@@ -912,9 +912,9 @@ const AudioReaderView: React.FC<AudioReaderViewProps> = ({ bookId: propBookId, o
                                 : 'Not Started'}
                           </span>
                           {typeof progress.progress === 'number' && (
-                            <div className="h-1.5 flex-1 overflow-hidden rounded-full bg-black/20">
+                            <div className="theme-progress-track h-1.5 flex-1 overflow-hidden rounded-full">
                               <div
-                                className="h-full rounded-full bg-sky-400"
+                                className="theme-progress-fill h-full rounded-full"
                                 style={{ width: `${Math.round(progress.progress * 100)}%` }}
                               />
                             </div>

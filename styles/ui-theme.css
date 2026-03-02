@@ -186,6 +186,14 @@ body {
   border-color: var(--accent-soft-border) !important;
 }
 
+.theme-progress-track {
+  background-color: color-mix(in srgb, var(--button-primary-bg) 18%, transparent) !important;
+}
+
+.theme-progress-fill {
+  background-color: var(--button-primary-bg) !important;
+}
+
 .theme-input {
   background-color: var(--input-bg) !important;
   color: var(--input-fg) !important;
