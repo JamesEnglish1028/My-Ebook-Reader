@@ -1443,7 +1443,7 @@ const ReaderView: React.FC<ReaderViewProps> = ({ bookId, onClose, animationData 
           <div ref={viewerRef} id="viewer" className="theme-surface h-full w-full p-4 md:p-8" />
           {selectionMenuPosition && selectedCitationCfi && (
             <div
-              className="theme-surface-elevated theme-border theme-text-primary fixed z-40 flex -translate-x-1/2 -translate-y-full items-center gap-2 rounded-full border px-3 py-2 shadow-lg"
+              className="theme-surface-elevated theme-border theme-text-primary fixed z-40 flex min-w-56 -translate-x-1/2 -translate-y-full items-center justify-center gap-2 rounded-2xl border px-4 py-3 shadow-2xl"
               style={{ left: selectionMenuPosition.x, top: selectionMenuPosition.y }}
             >
               <button
@@ -1452,14 +1452,14 @@ const ReaderView: React.FC<ReaderViewProps> = ({ bookId, onClose, animationData 
                   setShowCitationModal(true);
                   setSelectionMenuPosition(null);
                 }}
-                className="theme-accent-text theme-accent-text-emphasis-hover text-xs font-semibold"
+                className="theme-button-primary rounded-full px-4 py-2 text-sm font-semibold"
               >
                 Add to Citation
               </button>
               <button
                 type="button"
                 onClick={clearSelectedCitation}
-                className="theme-text-muted theme-accent-text-hover text-xs font-medium"
+                className="theme-button-secondary rounded-full px-3 py-2 text-xs font-medium"
               >
                 Dismiss
               </button>

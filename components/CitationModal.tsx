@@ -14,7 +14,6 @@ interface CitationModalProps {
 
 const CitationModal: React.FC<CitationModalProps> = ({ isOpen, onClose, onSave, initialNote = '', helperText }) => {
   const [note, setNote] = useState('');
-  const charLimit = 50;
   const textareaRef = useRef<HTMLTextAreaElement>(null);
 
   // Apply focus trap to modal
@@ -26,17 +25,15 @@ const CitationModal: React.FC<CitationModalProps> = ({ isOpen, onClose, onSave, 
 
   useEffect(() => {
     if (isOpen) {
-      setNote(initialNote.slice(0, charLimit));
+      setNote(initialNote);
     }
-  }, [charLimit, initialNote, isOpen]);
+  }, [initialNote, isOpen]);
 
   if (!isOpen) return null;
 
   const handleSave = () => {
     onSave(note);
   };
-
-  const remainingChars = charLimit - note.length;
 
   return (
     <div
@@ -68,18 +65,14 @@ const CitationModal: React.FC<CitationModalProps> = ({ isOpen, onClose, onSave, 
           <textarea
             ref={textareaRef}
             id="citation-note"
-            rows={3}
+            rows={5}
             value={note}
-            onChange={(e) => {
-              if (e.target.value.length <= charLimit) {
-                setNote(e.target.value);
-              }
-            }}
+            onChange={(e) => setNote(e.target.value)}
             className="theme-input theme-focus-ring w-full rounded-md p-2 text-sm focus:outline-none focus:ring-2"
             placeholder="Add a brief note..."
           />
-          <p className={`mt-1 text-right text-xs ${remainingChars < 10 ? 'theme-text-danger' : 'theme-text-muted'}`}>
-            {remainingChars} characters remaining
+          <p className="theme-text-muted mt-1 text-right text-xs">
+            {note.length} characters
           </p>
         </div>
 
