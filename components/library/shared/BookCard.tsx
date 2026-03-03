@@ -4,6 +4,7 @@ import { proxiedUrl } from '../../../services/utils';
 import type { BookMetadata, CatalogBook } from '../../../types';
 
 import BookBadges from './BookBadges';
+import ExternalReaderBadge from './ExternalReaderBadge';
 
 interface BookCardProps {
   book: BookMetadata | CatalogBook;
@@ -149,9 +150,7 @@ const BookCard = React.forwardRef<HTMLDivElement, BookCardProps>(({
         )}
         {externalReaderApp && (
           <div>
-            <span className="theme-accent-badge inline-flex items-center rounded-full border px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide">
-              {externalReaderApp === 'palace' ? 'Palace' : 'Thorium'}
-            </span>
+            <ExternalReaderBadge app={externalReaderApp} />
           </div>
         )}
         <BookBadges book={book} />

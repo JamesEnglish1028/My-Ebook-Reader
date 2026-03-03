@@ -21,6 +21,10 @@ vi.mock('../../../shared', () => ({
 }));
 
 vi.mock('../../shared', () => ({
+  ExternalReaderBadge: (props: unknown) => {
+    const { app } = props as { app?: 'palace' | 'thorium' };
+    return <span>{app === 'palace' ? 'Palace' : app === 'thorium' ? 'Thorium' : null}</span>;
+  },
   BookGrid: (props: unknown) => {
     bookGridSpy(props);
     const { books } = props as { books: Array<{ title: string }> };

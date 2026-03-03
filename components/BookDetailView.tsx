@@ -35,6 +35,7 @@ import { LeftArrowIcon } from './icons';
 import AccessibilityBadges from './library/shared/AccessibilityBadges';
 import SeriesLane from './library/catalog/SeriesLane';
 import BookBadges from './library/shared/BookBadges';
+import { getReaderLabel } from './library/shared/externalReader';
 import { db, ensureFreshPatronAuthorization, findCredentialForUrl } from '../services';
 
 const handleImgError = (e: React.SyntheticEvent<HTMLImageElement, Event>) => {
@@ -215,14 +216,14 @@ const getLibraryPrimaryActionState = (
 ): PrimaryActionState => {
   if (externalReaderApp === 'palace') {
     return {
-      label: 'Read in Palace',
+      label: getReaderLabel(externalReaderApp),
       disabled: false,
     };
   }
 
   if (externalReaderApp === 'thorium') {
     return {
-      label: 'Read in Thorium',
+      label: getReaderLabel(externalReaderApp),
       disabled: false,
     };
   }

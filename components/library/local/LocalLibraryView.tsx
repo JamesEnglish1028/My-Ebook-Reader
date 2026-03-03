@@ -5,7 +5,8 @@ import type { BookMetadata, CatalogBook, CoverAnimationData } from '../../../typ
 import DeleteConfirmationModal from '../../DeleteConfirmationModal';
 import { AdjustmentsVerticalIcon, ListIcon, Squares2X2Icon } from '../../icons';
 import { Error as ErrorDisplay, Loading } from '../../shared';
-import { BookGrid, EmptyState } from '../shared';
+import { BookGrid, EmptyState, ExternalReaderBadge } from '../shared';
+import { getReaderDestination, getReaderLabel, type ReaderDestination } from '../shared/externalReader';
 
 interface LocalLibraryViewProps {
   libraryRefreshFlag: number;
@@ -36,7 +37,7 @@ const LocalLibraryView: React.FC<LocalLibraryViewProps> = ({
   const [bookToDelete, setBookToDelete] = useState<BookMetadata | null>(null);
   const [selectedFormat, setSelectedFormat] = useState('all');
   const [selectedProvider, setSelectedProvider] = useState('all');
-  const [selectedReader, setSelectedReader] = useState<'all' | 'mebooks' | 'palace' | 'thorium'>('all');
+  const [selectedReader, setSelectedReader] = useState<'all' | ReaderDestination>('all');
   const [isFiltersOpen, setIsFiltersOpen] = useState(false);
   const [layoutMode, setLayoutMode] = useState<'grid' | 'inline'>('grid');
   const [groupByProvider, setGroupByProvider] = useState(false);
@@ -66,18 +67,6 @@ const LocalLibraryView: React.FC<LocalLibraryViewProps> = ({
     return formatValue;
   }, []);
 
-  const getReaderDestination = React.useCallback((book: BookMetadata): 'mebooks' | 'palace' | 'thorium' => {
-    if (book.externalReaderApp === 'palace') return 'palace';
-    if (book.externalReaderApp === 'thorium') return 'thorium';
-    return 'mebooks';
-  }, []);
-
-  const getReaderLabel = React.useCallback((reader: 'mebooks' | 'palace' | 'thorium') => {
-    if (reader === 'palace') return 'Read in Palace';
-    if (reader === 'thorium') return 'Read in Thorium';
-    return 'Read Here';
-  }, []);
-
   const formatOptions = React.useMemo(() => (
     Array.from(new Set(books.map((book) => getFormatValue(book)))).sort()
   ), [books, getFormatValue]);
@@ -86,8 +75,8 @@ const LocalLibraryView: React.FC<LocalLibraryViewProps> = ({
     Array.from(new Set(books.map((book) => getProviderLabel(book)))).sort((a, b) => a.localeCompare(b))
   ), [books, getProviderLabel]);
   const readerOptions = React.useMemo(() => (
-    Array.from(new Set(books.map((book) => getReaderDestination(book))))
-  ), [books, getReaderDestination]);
+    Array.from(new Set(books.map((book) => getReaderDestination(book.externalReaderApp))))
+  ), [books]);
   const showFormatFilter = formatOptions.length > 1;
   const showProviderFilter = providerOptions.length > 1;
   const showReaderFilter = readerOptions.length > 1;
@@ -120,25 +109,25 @@ const LocalLibraryView: React.FC<LocalLibraryViewProps> = ({
       if (selectedProvider !== 'all' && getProviderLabel(book) !== selectedProvider) {
         return false;
       }
-      if (selectedReader !== 'all' && getReaderDestination(book) !== selectedReader) {
+      if (selectedReader !== 'all' && getReaderDestination(book.externalReaderApp) !== selectedReader) {
         return false;
       }
       return true;
     })
-  ), [books, getFormatValue, getProviderLabel, getReaderDestination, selectedFormat, selectedProvider, selectedReader]);
+  ), [books, getFormatValue, getProviderLabel, selectedFormat, selectedProvider, selectedReader]);
 
   const groupedByReader = React.useMemo(() => {
-    const buckets: Record<'mebooks' | 'palace' | 'thorium', BookMetadata[]> = {
+    const buckets: Record<ReaderDestination, BookMetadata[]> = {
       mebooks: [],
       palace: [],
       thorium: [],
     };
 
     filteredBooks.forEach((book) => {
-      buckets[getReaderDestination(book)].push(book);
+      buckets[getReaderDestination(book.externalReaderApp)].push(book);
     });
 
-    const order: Array<'mebooks' | 'palace' | 'thorium'> = ['mebooks', 'palace', 'thorium'];
+    const order: ReaderDestination[] = ['mebooks', 'palace', 'thorium'];
     return order
       .filter((reader) => buckets[reader].length > 0)
       .map((reader) => ({
@@ -146,7 +135,7 @@ const LocalLibraryView: React.FC<LocalLibraryViewProps> = ({
         title: getReaderLabel(reader),
         books: buckets[reader].slice().sort((a, b) => a.title.localeCompare(b.title)),
       }));
-  }, [filteredBooks, getReaderDestination, getReaderLabel]);
+  }, [filteredBooks]);
 
   // Delete book mutation
   const { mutate: deleteBook } = useDeleteBook();
@@ -176,7 +165,7 @@ const LocalLibraryView: React.FC<LocalLibraryViewProps> = ({
   const renderInlineBookRow = (book: BookMetadata) => {
     const providerLabel = getProviderLabel(book);
     const formatLabel = getFormatLabel(getFormatValue(book));
-    const readerDestination = getReaderDestination(book);
+    const readerDestination = getReaderDestination(book.externalReaderApp);
     const formatTone = formatLabel === 'PDF'
       ? 'bg-red-600 text-white'
       : formatLabel === 'Audiobook'
@@ -216,11 +205,7 @@ const LocalLibraryView: React.FC<LocalLibraryViewProps> = ({
           <span className="theme-info inline-flex rounded-full border px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide">
             {providerLabel}
           </span>
-          {readerDestination !== 'mebooks' && (
-            <span className="theme-accent-badge inline-flex rounded-full border px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide">
-              {readerDestination === 'palace' ? 'Palace' : 'Thorium'}
-            </span>
-          )}
+          {readerDestination !== 'mebooks' && <ExternalReaderBadge app={book.externalReaderApp} />}
         </div>
       </button>
     );
