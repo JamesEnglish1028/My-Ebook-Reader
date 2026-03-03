@@ -318,6 +318,16 @@ const ReaderView: React.FC<ReaderViewProps> = ({ bookId, onClose, animationData 
     selectedTextRef.current = '';
   }, []);
 
+  const clearReaderSelection = useCallback(() => {
+    renditionRef.current?.getContents().forEach((content: any) => {
+      const selection = content?.window?.getSelection?.() || content?.document?.getSelection?.();
+      if (selection && typeof selection.removeAllRanges === 'function') {
+        selection.removeAllRanges();
+      }
+    });
+    clearSelectedCitation();
+  }, [clearSelectedCitation]);
+
   const stopSpeech = useCallback(() => {
     if (speechStateRef.current !== 'stopped') {
       saveLastSpokenPosition();
@@ -922,6 +932,8 @@ const ReaderView: React.FC<ReaderViewProps> = ({ bookId, onClose, animationData 
         return Boolean(selection && selection.toString().trim().length > 0);
       });
       if (hasActiveSelection || selectedTextRef.current.trim().length > 0) {
+        clearReaderSelection();
+        setControlsVisible(true);
         return;
       }
       const rect = viewerRef.current.getBoundingClientRect();
@@ -939,7 +951,7 @@ const ReaderView: React.FC<ReaderViewProps> = ({ bookId, onClose, animationData 
     };
     rendition.on('click', clickHandler);
     return () => { rendition.off('click', clickHandler); };
-  }, [rendition, settings.flow, showSettings, showNavPanel, showSearch, prevPage, nextPage]);
+  }, [clearReaderSelection, rendition, settings.flow, showSettings, showNavPanel, showSearch, prevPage, nextPage]);
 
   useEffect(() => {
     if (!rendition) return;
@@ -955,15 +967,39 @@ const ReaderView: React.FC<ReaderViewProps> = ({ bookId, onClose, animationData 
 
       const range = selection.rangeCount > 0 ? selection.getRangeAt(0) : null;
       const rect = range?.getBoundingClientRect?.();
+      const iframeRect = contents?.window?.frameElement?.getBoundingClientRect?.();
+      const viewerRect = viewerRef.current?.getBoundingClientRect();
+      const anchorRect = rect && (rect.width > 0 || rect.height > 0)
+        ? {
+          left: rect.left + (iframeRect?.left || 0),
+          top: rect.top + (iframeRect?.top || 0),
+          width: rect.width,
+          height: rect.height,
+        }
+        : iframeRect
+          ? {
+            left: iframeRect.left + (iframeRect.width / 2) - 1,
+            top: iframeRect.top + 24,
+            width: 2,
+            height: 2,
+          }
+          : viewerRect
+            ? {
+              left: viewerRect.left + (viewerRect.width / 2) - 1,
+              top: viewerRect.top + 32,
+              width: 2,
+              height: 2,
+            }
+            : null;
 
       setSelectedCitationCfi(cfiRange);
       setSelectedCitationText(selectedText);
       selectedTextRef.current = selectedText;
       setSelectionMenuPosition(
-        rect
+        anchorRect
           ? {
-            x: Math.max(24, rect.left + (rect.width / 2)),
-            y: Math.max(24, rect.top - 12),
+            x: Math.max(24, anchorRect.left + (anchorRect.width / 2)),
+            y: Math.max(24, anchorRect.top - 12),
           }
           : null,
       );
@@ -1158,8 +1194,8 @@ const ReaderView: React.FC<ReaderViewProps> = ({ bookId, onClose, animationData 
     }
 
     setShowCitationModal(false);
-    clearSelectedCitation();
-  }, [bookId, citations, clearSelectedCitation, currentChapterLabel, locationInfo.currentPage, selectedCitationCfi]);
+    clearReaderSelection();
+  }, [bookId, citations, clearReaderSelection, currentChapterLabel, locationInfo.currentPage, selectedCitationCfi]);
 
   const deleteCitation = useCallback((citationId: string) => {
     // Delete citation using citationService
@@ -1516,7 +1552,7 @@ const ReaderView: React.FC<ReaderViewProps> = ({ bookId, onClose, animationData 
           isOpen={showCitationModal}
           onClose={() => {
             setShowCitationModal(false);
-            clearSelectedCitation();
+            clearReaderSelection();
           }}
           onSave={handleSaveCitation}
           initialNote={selectedCitationText}
