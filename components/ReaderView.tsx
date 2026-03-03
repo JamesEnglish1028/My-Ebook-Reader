@@ -815,58 +815,91 @@ const ReaderView: React.FC<ReaderViewProps> = ({ bookId, onClose, animationData 
   const nextPage = useCallback(() => { rendition?.next(); setControlsVisible(true); stopSpeech(); }, [rendition, stopSpeech]);
   const prevPage = useCallback(() => { rendition?.prev(); setControlsVisible(true); stopSpeech(); }, [rendition, stopSpeech]);
 
+  const handleShortcutKey = useCallback((e: KeyboardEvent) => {
+    const activeElement = (e.target as HTMLElement | null) || (document.activeElement as HTMLElement | null);
+    const tagName = activeElement?.tagName;
+    if (tagName === 'INPUT' || tagName === 'TEXTAREA' || activeElement?.isContentEditable) {
+      return;
+    }
+
+    if (e.key === 'ArrowLeft') {
+      e.preventDefault();
+      prevPage();
+    } else if (e.key === 'ArrowRight') {
+      e.preventDefault();
+      nextPage();
+    } else if (e.key === ' ') {
+      e.preventDefault();
+      nextPage();
+    } else if (e.key.toLowerCase() === 'c') {
+      setShowNavPanel(s => !s);
+    } else if (e.key === '?') {
+      setShowHelp(s => !s);
+    } else if (e.key === '+' || (e.key === '=' && e.shiftKey)) {
+      e.preventDefault();
+      epubZoomIn();
+    } else if (e.key === '-' || e.key === '_') {
+      e.preventDefault();
+      epubZoomOut();
+    } else if (e.key.toLowerCase() === 'f') {
+      epubToggleFit();
+    } else if (e.key.toLowerCase() === 'b') {
+      if (!latestCfiRef.current) return;
+
+      const addResult = bookmarkService.add(bookId, {
+        cfi: latestCfiRef.current,
+        label: `Page ${locationInfo.currentPage}`,
+        chapter: currentChapterLabel,
+      });
+
+      if (addResult.success) {
+        const updated = [...bookmarks, addResult.data];
+        setBookmarks(updated);
+      }
+    }
+  }, [
+    prevPage,
+    nextPage,
+    epubZoomIn,
+    epubZoomOut,
+    epubToggleFit,
+    bookId,
+    bookmarks,
+    currentChapterLabel,
+    locationInfo.currentPage,
+  ]);
+
   // Keyboard shortcuts for EPUB reader
   useEffect(() => {
-    const onKey = (e: KeyboardEvent) => {
-      const active = document.activeElement && (document.activeElement as HTMLElement).tagName;
-      if (active === 'INPUT' || active === 'TEXTAREA') return;
-
-      if (e.key === 'ArrowLeft') {
-        prevPage();
-      } else if (e.key === 'ArrowRight') {
-        nextPage();
-      } else if (e.key === ' ') {
-        e.preventDefault();
-        nextPage();
-      } else if (e.key.toLowerCase() === 'c') {
-        setShowNavPanel(s => !s);
-      } else if (e.key === '?') {
-        setShowHelp(s => !s);
-      } else if (e.key === '+' || (e.key === '=' && e.shiftKey)) {
-        epubZoomIn();
-      } else if (e.key === '-' || e.key === '_') {
-        epubZoomOut();
-      } else if (e.key.toLowerCase() === 'f') {
-        epubToggleFit();
-      } else if (e.key.toLowerCase() === 'b') {
-        // Quick bookmark the current location
-        if (!latestCfiRef.current) return;
-        const newBookmark = {
-          id: new Date().toISOString(),
-          cfi: latestCfiRef.current,
-          label: `Page ${locationInfo.currentPage}`,
-          chapter: currentChapterLabel,
-          description: undefined,
-          createdAt: Date.now(),
-        };
-
-        // Add bookmark using bookmarkService
-        const addResult = bookmarkService.add(bookId, {
-          cfi: latestCfiRef.current!,
-          label: `Page ${locationInfo.currentPage}`,
-          chapter: currentChapterLabel,
-        });
-
-        if (addResult.success) {
-          const updated = [...bookmarks, addResult.data];
-          setBookmarks(updated);
-        }
-      }
+    const attachContentListeners = () => {
+      renditionRef.current?.getContents().forEach((content: any) => {
+        const doc = content?.document as Document | undefined;
+        doc?.addEventListener('keydown', handleShortcutKey);
+      });
     };
 
-    window.addEventListener('keydown', onKey);
-    return () => window.removeEventListener('keydown', onKey);
-  }, [prevPage, nextPage, bookmarks, bookId, locationInfo.currentPage, currentChapterLabel]);
+    const detachContentListeners = () => {
+      renditionRef.current?.getContents().forEach((content: any) => {
+        const doc = content?.document as Document | undefined;
+        doc?.removeEventListener('keydown', handleShortcutKey);
+      });
+    };
+
+    const handleRendered = () => {
+      detachContentListeners();
+      attachContentListeners();
+    };
+
+    window.addEventListener('keydown', handleShortcutKey);
+    attachContentListeners();
+    renditionRef.current?.on('rendered', handleRendered);
+
+    return () => {
+      window.removeEventListener('keydown', handleShortcutKey);
+      renditionRef.current?.off('rendered', handleRendered);
+      detachContentListeners();
+    };
+  }, [handleShortcutKey]);
 
   useEffect(() => {
     if (!rendition) return;
