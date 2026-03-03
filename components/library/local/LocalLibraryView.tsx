@@ -6,7 +6,7 @@ import DeleteConfirmationModal from '../../DeleteConfirmationModal';
 import { AdjustmentsVerticalIcon, ListIcon, Squares2X2Icon } from '../../icons';
 import { Error as ErrorDisplay, Loading } from '../../shared';
 import { BookGrid, EmptyState, ExternalReaderBadge } from '../shared';
-import { getReaderDestination, getReaderLabel, type ReaderDestination } from '../shared/externalReader';
+import { getPalaceLogoSrc, getReaderDestination, getReaderLabel, type ReaderDestination } from '../shared/externalReader';
 
 interface LocalLibraryViewProps {
   libraryRefreshFlag: number;
@@ -461,7 +461,7 @@ const LocalLibraryView: React.FC<LocalLibraryViewProps> = ({
                       <h3 className="theme-text-primary flex items-center gap-1.5 text-sm font-semibold uppercase tracking-[0.12em]">
                         {group.key === 'palace' && (
                           <img
-                            src="/palace-logo.png"
+                            src={getPalaceLogoSrc()}
                             alt=""
                             aria-hidden="true"
                             className="h-4 w-4 object-contain"
