@@ -967,6 +967,9 @@ const BookDetailView: React.FC<BookDetailViewProps> = ({ book, onBack, source, c
                       }
                       onShowRelatedCatalogBook?.(seriesBook, seriesBooksForLane);
                     }}
+                    onViewMore={primarySeries.url
+                      ? () => onOpenRelatedCatalogFeed?.(`Same Series: ${primarySeries.name}`, primarySeries.url as string)
+                      : undefined}
                   />
                 </div>
               )}

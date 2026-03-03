@@ -1,4 +1,4 @@
-import { cleanup, render, screen } from '@testing-library/react';
+import { cleanup, fireEvent, render, screen } from '@testing-library/react';
 import { afterEach, describe, expect, test, vi } from 'vitest';
 
 import BookDetailView from '../BookDetailView';
@@ -136,6 +136,7 @@ describe('Catalog vs Library BookDetailView Differences', () => {
 
   test('catalog book shows a series lane when related series books are available', () => {
     const onShowRelatedCatalogBook = vi.fn();
+    const onOpenRelatedCatalogFeed = vi.fn();
     const catalogBook = {
       id: 201,
       title: 'Episode 2',
@@ -156,7 +157,8 @@ describe('Catalog vs Library BookDetailView Differences', () => {
       ],
       series: [{ name: 'Great Saga', position: 2, url: 'https://example.com/series/great-saga' }],
       collections: [
-        { title: 'Featured Collection', href: 'https://example.com/collections/featured' },
+        { title: 'Featured Collection', href: 'https://example.com/collections/featured', source: 'link' },
+        { title: 'Series Collection', href: 'https://example.com/collections/series', source: 'belongsTo' },
       ],
     } as any;
 
@@ -179,6 +181,7 @@ describe('Catalog vs Library BookDetailView Differences', () => {
         catalogName="Series Catalog"
         relatedSeriesBooks={relatedSeriesBooks}
         onShowRelatedCatalogBook={onShowRelatedCatalogBook}
+        onOpenRelatedCatalogFeed={onOpenRelatedCatalogFeed}
         onBack={vi.fn()}
         onReadBook={vi.fn()}
         onImportFromCatalog={vi.fn()}
@@ -191,9 +194,14 @@ describe('Catalog vs Library BookDetailView Differences', () => {
     expect(screen.getByText('Series: Great Saga')).toBeInTheDocument();
     expect(screen.getByText('2 books')).toBeInTheDocument();
     expect(screen.getByText('Collections:')).toBeInTheDocument();
-    expect(screen.getAllByText(/Featured Collection/)).toHaveLength(2);
+    expect(screen.getByText(/Featured Collection, Series Collection/)).toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Recommended Works' })).toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Same Series: Great Saga' })).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: 'Featured Collection' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Series Collection' })).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Featured Collection' })).not.toBeInTheDocument();
+    expect(screen.getByText('View more in full series')).toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole('button', { name: /View more in full series/i }));
+    expect(onOpenRelatedCatalogFeed).toHaveBeenCalledWith('Same Series: Great Saga', 'https://example.com/series/great-saga');
   });
 });

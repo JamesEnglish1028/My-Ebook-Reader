@@ -6,6 +6,7 @@ interface SeriesLaneProps {
   series: SeriesInfo;
   books: CatalogBook[];
   onBookClick: (book: CatalogBook) => void;
+  onViewMore?: () => void;
   className?: string;
 }
 
@@ -19,6 +20,7 @@ const SeriesLane: React.FC<SeriesLaneProps> = ({
   series,
   books,
   onBookClick,
+  onViewMore,
   className = '',
 }) => {
   if (!books || books.length === 0) {
@@ -115,6 +117,19 @@ const SeriesLane: React.FC<SeriesLaneProps> = ({
               </button>
             );
           })}
+          {series.url && (
+            <button
+              type="button"
+              onClick={() => onViewMore?.()}
+              className="theme-surface-muted theme-border theme-hover-surface flex w-full items-center justify-between rounded-xl border border-dashed px-4 py-3 text-left transition-colors"
+            >
+              <div>
+                <div className="theme-text-primary text-sm font-semibold">View more in full series</div>
+                <div className="theme-text-muted text-xs">More titles may be available beyond this page.</div>
+              </div>
+              <span className="theme-accent-text text-xs font-semibold uppercase tracking-[0.12em]">View More</span>
+            </button>
+          )}
         </div>
       </div>
     </div>
