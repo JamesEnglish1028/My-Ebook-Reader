@@ -346,8 +346,25 @@ const CatalogView: React.FC<CatalogViewProps> = ({
     try {
       searchUrl = buildOpenSearchUrl(template, searchValues);
     } catch (error) {
-      setSearchActionError(error instanceof Error ? error.message : 'Unable to build search URL.');
-      return;
+      const hasAdvancedOnlySearch = !query && Object.keys(searchValues).length > 0 && primarySearchParam?.required;
+      if (!hasAdvancedOnlySearch) {
+        setSearchActionError(error instanceof Error ? error.message : 'Unable to build search URL.');
+        return;
+      }
+
+      const relaxedTemplate = {
+        ...template,
+        params: (template.params || []).map((param) => (
+          param.name === primarySearchParam?.name ? { ...param, required: false } : param
+        )),
+      };
+
+      try {
+        searchUrl = buildOpenSearchUrl(relaxedTemplate, searchValues);
+      } catch (retryError) {
+        setSearchActionError(retryError instanceof Error ? retryError.message : 'Unable to build search URL.');
+        return;
+      }
     }
 
     logger.info('Submitting catalog search', {
@@ -675,6 +692,7 @@ const CatalogView: React.FC<CatalogViewProps> = ({
             primaryLabel={primarySearchLabel}
             primaryPlaceholder={primarySearchPlaceholder}
             isPrimaryRequired={Boolean(primarySearchParam?.required)}
+            allowPrimaryOmissionWithAdvanced={true}
             advancedFields={advancedSearchFields as CatalogSearchTemplateParameter[]}
             advancedValues={searchAdvancedValues}
             onAdvancedChange={handleAdvancedSearchChange}

@@ -284,7 +284,15 @@ function parseOpds2SearchLink(jsonData: any, baseUrl: string): CatalogSearchMeta
 
   if (templatedLink?.href) {
     const resolvedTemplate = resolveCatalogSearchTemplateUrl(templatedLink.href, baseUrl);
-    const normalizedParams = parseCatalogSearchTemplateParameters(resolvedTemplate);
+    const parsedParams = parseCatalogSearchTemplateParameters(resolvedTemplate);
+    const primaryParamName = parsedParams.find((param) => param.name === 'query')?.name
+      || parsedParams.find((param) => param.name === 'searchTerms')?.name
+      || parsedParams.find((param) => param.required)?.name
+      || parsedParams[0]?.name;
+    const normalizedParams = parsedParams.map((param) => ({
+      ...param,
+      required: param.name === primaryParamName ? param.required : false,
+    }));
     return {
       kind: 'opds2-template',
       template: resolvedTemplate,

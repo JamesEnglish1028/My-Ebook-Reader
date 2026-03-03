@@ -154,8 +154,8 @@ describe('parseOpds2Json - navigation/catalog inference', () => {
       templated: true,
       params: [
         { name: 'query', required: true, namespace: undefined },
-        { name: 'title', required: true, namespace: undefined },
-        { name: 'author', required: true, namespace: undefined },
+        { name: 'title', required: false, namespace: undefined },
+        { name: 'author', required: false, namespace: undefined },
       ],
       type: 'application/opds+json',
       title: 'Search catalog',
@@ -163,7 +163,7 @@ describe('parseOpds2Json - navigation/catalog inference', () => {
     });
   });
 
-  it('preserves required flags from inline OPDS 2 search templates', () => {
+  it('keeps non-primary inline OPDS 2 search params optional by default', () => {
     const json = {
       metadata: { title: 'Feed' },
       links: [
@@ -184,7 +184,7 @@ describe('parseOpds2Json - navigation/catalog inference', () => {
       templated: true,
       params: [
         { name: 'query', required: true, namespace: undefined },
-        { name: 'title', required: true, namespace: undefined },
+        { name: 'title', required: false, namespace: undefined },
       ],
       type: 'application/opds+json',
       title: 'Search catalog',

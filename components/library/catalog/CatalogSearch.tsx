@@ -8,6 +8,7 @@ interface CatalogSearchProps {
   primaryLabel?: string;
   primaryPlaceholder?: string;
   isPrimaryRequired?: boolean;
+  allowPrimaryOmissionWithAdvanced?: boolean;
   advancedFields?: CatalogSearchTemplateParameter[];
   advancedValues?: Record<string, string>;
   onAdvancedChange?: (name: string, value: string) => void;
@@ -25,6 +26,7 @@ const CatalogSearch: React.FC<CatalogSearchProps> = ({
   primaryLabel = 'Search this catalog',
   primaryPlaceholder = 'Search this catalog',
   isPrimaryRequired = false,
+  allowPrimaryOmissionWithAdvanced = false,
   advancedFields = [],
   advancedValues = {},
   onAdvancedChange,
@@ -41,10 +43,11 @@ const CatalogSearch: React.FC<CatalogSearchProps> = ({
   const hasAdvancedValues = advancedFields.some((field) => (advancedValues[field.name] || '').trim().length > 0);
   const hasPrimaryValue = trimmedValue.length > 0;
   const hasAnyValue = hasPrimaryValue || hasAdvancedValues;
+  const canOmitPrimary = allowPrimaryOmissionWithAdvanced && hasAdvancedValues;
   const hasRequiredAdvancedValues = advancedFields
     .filter((field) => field.required)
     .every((field) => (advancedValues[field.name] || '').trim().length > 0);
-  const hasRequiredValues = (!isPrimaryRequired || hasPrimaryValue) && hasRequiredAdvancedValues;
+  const hasRequiredValues = (!isPrimaryRequired || hasPrimaryValue || canOmitPrimary) && hasRequiredAdvancedValues;
   const canSubmit = !disabled && hasAnyValue && hasRequiredValues;
 
   useEffect(() => {
