@@ -37,7 +37,7 @@ const ManageCatalogsModal: React.FC<ManageCatalogsModalProps> = ({
     const [error, setError] = useState('');
     const [editingItemId, setEditingItemId] = useState<string | null>(null);
     const [editedName, setEditedName] = useState('');
-    const [activeTab, setActiveTab] = useState<'catalogs' | 'registries'>('catalogs');
+    const [activeTab, setActiveTab] = useState<'suggested' | 'catalogs' | 'registries'>('suggested');
 
     const modalRef = useFocusTrap<HTMLDivElement>({
         isActive: isOpen,
@@ -64,8 +64,10 @@ const ManageCatalogsModal: React.FC<ManageCatalogsModalProps> = ({
 
         if (activeTab === 'catalogs') {
             onAddCatalog(name, url, opdsVersion);
-        } else {
+        } else if (activeTab === 'registries') {
             onAddRegistry(name, url);
+        } else {
+            return;
         }
         setName('');
         setUrl('');
@@ -85,20 +87,25 @@ const ManageCatalogsModal: React.FC<ManageCatalogsModalProps> = ({
         if (!editingItemId || !editedName.trim()) return;
         if (activeTab === 'catalogs') {
             onUpdateCatalog(editingItemId, editedName.trim());
-        } else {
+        } else if (activeTab === 'registries') {
             onUpdateRegistry(editingItemId, editedName.trim());
+        } else {
+            return;
         }
         handleCancelEdit();
     };
 
     const currentList = activeTab === 'catalogs' ? catalogs : registries;
     const handleDelete = activeTab === 'catalogs' ? onDeleteCatalog : onDeleteRegistry;
-    const presetItems = activeTab === 'catalogs' ? CATALOG_PRESETS : REGISTRY_PRESETS;
-    const existingUrls = new Set(currentList.map((item) => normalizeUrl(item.url)));
+    const existingCatalogUrls = new Set(catalogs.map((item) => normalizeUrl(item.url)));
+    const existingRegistryUrls = new Set(registries.map((item) => normalizeUrl(item.url)));
 
-    const handleAddPreset = (preset: typeof CATALOG_PRESETS[number] | typeof REGISTRY_PRESETS[number]) => {
+    const handleAddPreset = (
+        preset: typeof CATALOG_PRESETS[number] | typeof REGISTRY_PRESETS[number],
+        kind: 'catalog' | 'registry',
+    ) => {
         setError('');
-        if (activeTab === 'catalogs') {
+        if (kind === 'catalog') {
             const catalogPreset = preset as typeof CATALOG_PRESETS[number];
             onAddCatalog(catalogPreset.name, catalogPreset.url, catalogPreset.opdsVersion);
             return;
@@ -118,6 +125,15 @@ const ManageCatalogsModal: React.FC<ManageCatalogsModalProps> = ({
 
                 <div className="theme-divider mb-6 border-b">
                     <nav className="flex -mb-px gap-4">
+                        <button
+                            onClick={() => setActiveTab('suggested')}
+                            className={`border-b-2 px-2 py-3 text-sm font-medium transition-colors duration-200 ${activeTab === 'suggested'
+                                    ? 'theme-accent-border theme-accent-text-emphasis'
+                                    : 'theme-text-secondary border-transparent theme-accent-text-emphasis-hover theme-border-hover'
+                                }`}
+                        >
+                            Suggested
+                        </button>
                         <button
                             onClick={() => setActiveTab('catalogs')}
                             className={`border-b-2 px-2 py-3 text-sm font-medium transition-colors duration-200 ${activeTab === 'catalogs'
@@ -139,17 +155,16 @@ const ManageCatalogsModal: React.FC<ManageCatalogsModalProps> = ({
                     </nav>
                 </div>
 
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                    {/* Add new form */}
-                    <div className="space-y-4">
+                {activeTab === 'suggested' ? (
+                    <div className="space-y-6">
                         <div className="theme-surface-muted rounded-lg p-4">
                             <h3 className="text-lg font-semibold mb-4 flex items-center gap-2">
                                 <GlobeIcon className="w-5 h-5" />
-                                Suggested {activeTab === 'catalogs' ? 'Catalogs' : 'Registries'}
+                                Suggested Catalogs
                             </h3>
-                            <div className="space-y-2 max-h-52 overflow-y-auto pr-2">
-                                {presetItems.map((preset) => {
-                                    const alreadyAdded = existingUrls.has(normalizeUrl(preset.url));
+                            <div className="space-y-2 max-h-60 overflow-y-auto pr-2">
+                                {CATALOG_PRESETS.map((preset) => {
+                                    const alreadyAdded = existingCatalogUrls.has(normalizeUrl(preset.url));
 
                                     return (
                                         <div key={preset.url} className="theme-surface-elevated theme-border flex items-start justify-between gap-3 rounded-lg border p-3">
@@ -160,7 +175,7 @@ const ManageCatalogsModal: React.FC<ManageCatalogsModalProps> = ({
                                             </div>
                                             <button
                                                 type="button"
-                                                onClick={() => handleAddPreset(preset)}
+                                                onClick={() => handleAddPreset(preset, 'catalog')}
                                                 disabled={alreadyAdded}
                                                 className={`rounded-md px-2.5 py-1.5 text-xs font-semibold transition-colors ${
                                                     alreadyAdded
@@ -177,6 +192,42 @@ const ManageCatalogsModal: React.FC<ManageCatalogsModalProps> = ({
                         </div>
 
                         <div className="theme-surface-muted rounded-lg p-4">
+                            <h3 className="text-lg font-semibold mb-4 flex items-center gap-2">
+                                <GlobeIcon className="w-5 h-5" />
+                                Suggested Registries
+                            </h3>
+                            <div className="space-y-2 max-h-52 overflow-y-auto pr-2">
+                                {REGISTRY_PRESETS.map((preset) => {
+                                    const alreadyAdded = existingRegistryUrls.has(normalizeUrl(preset.url));
+
+                                    return (
+                                        <div key={preset.url} className="theme-surface-elevated theme-border flex items-start justify-between gap-3 rounded-lg border p-3">
+                                            <div className="min-w-0">
+                                                <div className="theme-text-primary text-sm font-semibold">{preset.name}</div>
+                                                <div className="theme-text-secondary text-xs">{preset.description}</div>
+                                                <div className="theme-text-muted mt-1 truncate text-[11px]">{preset.url}</div>
+                                            </div>
+                                            <button
+                                                type="button"
+                                                onClick={() => handleAddPreset(preset, 'registry')}
+                                                disabled={alreadyAdded}
+                                                className={`rounded-md px-2.5 py-1.5 text-xs font-semibold transition-colors ${
+                                                    alreadyAdded
+                                                        ? 'theme-button-neutral cursor-not-allowed opacity-70'
+                                                        : 'theme-button-primary'
+                                                }`}
+                                            >
+                                                {alreadyAdded ? 'Added' : 'Quick Add'}
+                                            </button>
+                                        </div>
+                                    );
+                                })}
+                            </div>
+                        </div>
+                    </div>
+                ) : (
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <div className="theme-surface-muted rounded-lg p-4">
                         <h3 className="text-lg font-semibold mb-4 flex items-center gap-2">
                             <PlusIcon className="w-5 h-5" />
                             Add New {activeTab === 'catalogs' ? 'Catalog' : 'Registry'}
@@ -222,7 +273,6 @@ const ManageCatalogsModal: React.FC<ManageCatalogsModalProps> = ({
                                 Add {activeTab === 'catalogs' ? 'Catalog' : 'Registry'}
                             </button>
                         </form>
-                        </div>
                     </div>
 
                     {/* Existing items list */}
@@ -277,6 +327,7 @@ const ManageCatalogsModal: React.FC<ManageCatalogsModalProps> = ({
                         )}
                     </div>
                 </div>
+                )}
             </div>
         </div>
     );

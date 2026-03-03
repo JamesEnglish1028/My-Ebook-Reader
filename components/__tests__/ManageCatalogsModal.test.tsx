@@ -1,6 +1,6 @@
 import React from 'react';
 
-import { fireEvent, render, screen } from '@testing-library/react';
+import { fireEvent, render, screen, within } from '@testing-library/react';
 import { describe, expect, it, vi } from 'vitest';
 
 import ManageCatalogsModal from '../ManageCatalogsModal';
@@ -64,8 +64,9 @@ describe('ManageCatalogsModal presets', () => {
       />,
     );
 
-    fireEvent.click(screen.getByRole('button', { name: 'Registries' }));
-    fireEvent.click(screen.getAllByRole('button', { name: 'Quick Add' })[0]);
+    const palacePreset = screen.getByText('Palace Libraries').closest('div.theme-surface-elevated');
+    expect(palacePreset).not.toBeNull();
+    fireEvent.click(within(palacePreset as HTMLElement).getByRole('button', { name: 'Quick Add' }));
 
     expect(onAddRegistry).toHaveBeenCalledWith(
       'Palace Libraries',
