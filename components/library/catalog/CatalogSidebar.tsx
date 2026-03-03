@@ -40,13 +40,23 @@ const CatalogSidebar: React.FC<CatalogSidebarProps> = ({
   const [showExpandedNavigation, setShowExpandedNavigation] = useState(false);
   const [isNavigationModalOpen, setIsNavigationModalOpen] = useState(false);
   const [modalQuery, setModalQuery] = useState('');
+  const [activeFacetGroup, setActiveFacetGroup] = useState<CatalogFacetGroup | null>(null);
+  const [facetModalQuery, setFacetModalQuery] = useState('');
   const viewAllButtonRef = useRef<HTMLButtonElement>(null);
+  const facetViewAllButtonRef = useRef<HTMLButtonElement>(null);
   const modalSearchRef = useRef<HTMLInputElement>(null);
+  const facetModalSearchRef = useRef<HTMLInputElement>(null);
   const navigationModalRef = useFocusTrap<HTMLDivElement>({
     isActive: isNavigationModalOpen,
     onEscape: () => setIsNavigationModalOpen(false),
     initialFocusRef: modalSearchRef,
     returnFocusRef: viewAllButtonRef as React.RefObject<HTMLElement>,
+  });
+  const facetModalRef = useFocusTrap<HTMLDivElement>({
+    isActive: activeFacetGroup !== null,
+    onEscape: () => setActiveFacetGroup(null),
+    initialFocusRef: facetModalSearchRef,
+    returnFocusRef: facetViewAllButtonRef as React.RefObject<HTMLElement>,
   });
 
   const INLINE_LIMIT = 10;
@@ -81,12 +91,23 @@ const CatalogSidebar: React.FC<CatalogSidebarProps> = ({
     if (!query) return navigationLinks;
     return navigationLinks.filter((link) => link.title.toLowerCase().includes(query));
   }, [modalQuery, navigationLinks]);
+  const modalFacetLinks = useMemo(() => {
+    if (!activeFacetGroup) return [];
+    const query = facetModalQuery.trim().toLowerCase();
+    if (!query) return activeFacetGroup.links;
+    return activeFacetGroup.links.filter((link) => link.title.toLowerCase().includes(query));
+  }, [activeFacetGroup, facetModalQuery]);
 
   useEffect(() => {
     setShowExpandedNavigation(false);
     setIsNavigationModalOpen(false);
     setModalQuery('');
   }, [currentNavigationUrl, navigationLinks]);
+
+  useEffect(() => {
+    setActiveFacetGroup(null);
+    setFacetModalQuery('');
+  }, [facetGroups]);
 
   useEffect(() => {
     setFacetSectionOpen((existing) => (
@@ -112,6 +133,16 @@ const CatalogSidebar: React.FC<CatalogSidebarProps> = ({
   const handleModalNavigationSelect = (link: CatalogNavigationLink) => {
     setIsNavigationModalOpen(false);
     onNavigationSelect(link);
+  };
+
+  const openFacetModal = (group: CatalogFacetGroup) => {
+    setFacetModalQuery('');
+    setActiveFacetGroup(group);
+  };
+
+  const handleModalFacetSelect = (link: CatalogFacetLink) => {
+    setActiveFacetGroup(null);
+    onFacetSelect(link);
   };
 
   const renderNavigationButton = (link: CatalogNavigationLink, index: number, onClick: (item: CatalogNavigationLink) => void) => {
@@ -237,6 +268,8 @@ const CatalogSidebar: React.FC<CatalogSidebarProps> = ({
                   {populatedFacetGroups.map((group, groupIndex) => {
                     const groupKey = `${group.title}-${groupIndex}`;
                     const isGroupOpen = facetSectionOpen[groupKey] ?? true;
+                    const visibleFacetLinks = group.links.slice(0, INLINE_LIMIT);
+                    const hasFacetOverflow = group.links.length > INLINE_LIMIT;
 
                     return (
                       <div key={groupKey} className="theme-border overflow-hidden rounded-md border">
@@ -263,7 +296,7 @@ const CatalogSidebar: React.FC<CatalogSidebarProps> = ({
                         </button>
                         {isGroupOpen && (
                           <nav id={`facet-group-${groupIndex}`} className="theme-surface space-y-1.5 p-2">
-                            {group.links.map((link, index) => (
+                            {visibleFacetLinks.map((link, index) => (
                               <button
                                 key={`${link.url}-${index}`}
                                 onClick={() => onFacetSelect(link)}
@@ -279,6 +312,15 @@ const CatalogSidebar: React.FC<CatalogSidebarProps> = ({
                                 )}
                               </button>
                             ))}
+                            {hasFacetOverflow && (
+                              <button
+                                ref={facetViewAllButtonRef}
+                                onClick={() => openFacetModal(group)}
+                                className="theme-nav-link mt-1 w-full rounded-md border px-2.5 py-2 text-left text-xs font-medium transition-colors"
+                              >
+                                View all ({group.links.length})
+                              </button>
+                            )}
                           </nav>
                         )}
                       </div>
@@ -335,6 +377,72 @@ const CatalogSidebar: React.FC<CatalogSidebarProps> = ({
               ) : (
                 <p className="theme-surface theme-text-muted rounded-md px-3 py-4 text-sm">
                   No navigation links match that search.
+                </p>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
+      {activeFacetGroup && (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 p-4"
+          onClick={() => setActiveFacetGroup(null)}
+          role="dialog"
+          aria-modal="true"
+          aria-label={`All ${activeFacetGroup.title} facet options`}
+        >
+          <div
+            ref={facetModalRef}
+            className="theme-surface-elevated theme-border theme-text-primary flex max-h-[85vh] w-full max-w-2xl flex-col overflow-hidden rounded-xl border shadow-xl"
+            onClick={(event) => event.stopPropagation()}
+          >
+            <div className="theme-divider flex items-center justify-between border-b px-4 py-3">
+              <div>
+                <h4 className="theme-text-primary text-sm font-semibold">All {activeFacetGroup.title}</h4>
+                <p className="theme-text-muted text-xs">{activeFacetGroup.links.length} total options</p>
+              </div>
+              <button
+                onClick={() => setActiveFacetGroup(null)}
+                className="theme-text-muted theme-hover-surface rounded-full p-2 transition-colors hover:text-sky-300"
+                aria-label="Close facet browser"
+              >
+                <CloseIcon className="h-5 w-5" />
+              </button>
+            </div>
+            <div className="theme-divider border-b px-4 py-3">
+              <input
+                ref={facetModalSearchRef}
+                type="search"
+                value={facetModalQuery}
+                onChange={(event) => setFacetModalQuery(event.target.value)}
+                placeholder={`Search ${activeFacetGroup.links.length} options`}
+                className="theme-input w-full rounded-md border px-3 py-2 text-sm focus:border-sky-500/50 focus:outline-none"
+                aria-label={`Search all ${activeFacetGroup.title} facet options`}
+              />
+            </div>
+            <div className="flex-1 overflow-y-auto px-4 py-3">
+              {modalFacetLinks.length > 0 ? (
+                <nav className="space-y-1.5">
+                  {modalFacetLinks.map((link, index) => (
+                    <button
+                      key={`${link.url}-modal-${index}`}
+                      onClick={() => handleModalFacetSelect(link)}
+                      className={`flex w-full items-center justify-between gap-3 rounded-md border px-2.5 py-2 text-left text-sm transition-colors ${
+                        link.isActive
+                          ? 'theme-selection-active'
+                          : 'theme-button-neutral border-transparent'
+                      }`}
+                    >
+                      <span className="truncate">{link.title}</span>
+                      {typeof link.count === 'number' && (
+                        <span className="theme-surface-elevated theme-text-muted rounded-full px-2 py-0.5 text-[11px]">{link.count}</span>
+                      )}
+                    </button>
+                  ))}
+                </nav>
+              ) : (
+                <p className="theme-surface theme-text-muted rounded-md px-3 py-4 text-sm">
+                  No facet options match that search.
                 </p>
               )}
             </div>

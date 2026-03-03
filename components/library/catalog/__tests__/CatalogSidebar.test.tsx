@@ -71,4 +71,34 @@ describe('CatalogSidebar', () => {
     expect(screen.getByRole('button', { name: /Subject/i })).toHaveAttribute('aria-expanded', 'true');
     expect(screen.getByRole('button', { name: /Topic 1/i })).toBeInTheDocument();
   });
+
+  it('shows a view all action for facet groups with more than 10 items', () => {
+    render(
+      <CatalogSidebar
+        navigationLinks={[]}
+        facetGroups={[
+          {
+            title: 'Subject',
+            links: Array.from({ length: 11 }, (_, index) => ({
+              title: `Topic ${index + 1}`,
+              url: `https://example.org/feed?subject=${index + 1}`,
+              count: index + 1,
+            })),
+          },
+        ]}
+        onNavigationSelect={vi.fn()}
+        onFacetSelect={vi.fn()}
+      />,
+    );
+
+    fireEvent.click(screen.getByRole('button', { name: /Subject/i }));
+
+    expect(screen.getByRole('button', { name: 'View all (11)' })).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: /Topic 11/i })).not.toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole('button', { name: 'View all (11)' }));
+
+    expect(screen.getByRole('dialog', { name: /All Subject facet options/i })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /Topic 11/i })).toBeInTheDocument();
+  });
 });
