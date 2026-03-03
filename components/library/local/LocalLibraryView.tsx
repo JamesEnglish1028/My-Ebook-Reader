@@ -36,6 +36,7 @@ const LocalLibraryView: React.FC<LocalLibraryViewProps> = ({
   const [bookToDelete, setBookToDelete] = useState<BookMetadata | null>(null);
   const [selectedFormat, setSelectedFormat] = useState('all');
   const [selectedProvider, setSelectedProvider] = useState('all');
+  const [selectedReader, setSelectedReader] = useState<'all' | 'mebooks' | 'palace' | 'thorium'>('all');
   const [isFiltersOpen, setIsFiltersOpen] = useState(false);
   const [layoutMode, setLayoutMode] = useState<'grid' | 'inline'>('grid');
   const [groupByProvider, setGroupByProvider] = useState(false);
@@ -65,6 +66,18 @@ const LocalLibraryView: React.FC<LocalLibraryViewProps> = ({
     return formatValue;
   }, []);
 
+  const getReaderDestination = React.useCallback((book: BookMetadata): 'mebooks' | 'palace' | 'thorium' => {
+    if (book.externalReaderApp === 'palace') return 'palace';
+    if (book.externalReaderApp === 'thorium') return 'thorium';
+    return 'mebooks';
+  }, []);
+
+  const getReaderLabel = React.useCallback((reader: 'mebooks' | 'palace' | 'thorium') => {
+    if (reader === 'palace') return 'Read in Palace';
+    if (reader === 'thorium') return 'Read in Thorium';
+    return 'Read Here';
+  }, []);
+
   const formatOptions = React.useMemo(() => (
     Array.from(new Set(books.map((book) => getFormatValue(book)))).sort()
   ), [books, getFormatValue]);
@@ -72,10 +85,14 @@ const LocalLibraryView: React.FC<LocalLibraryViewProps> = ({
   const providerOptions = React.useMemo(() => (
     Array.from(new Set(books.map((book) => getProviderLabel(book)))).sort((a, b) => a.localeCompare(b))
   ), [books, getProviderLabel]);
+  const readerOptions = React.useMemo(() => (
+    Array.from(new Set(books.map((book) => getReaderDestination(book))))
+  ), [books, getReaderDestination]);
   const showFormatFilter = formatOptions.length > 1;
   const showProviderFilter = providerOptions.length > 1;
-  const hasFilterControl = showFormatFilter || showProviderFilter;
-  const activeFilterCount = Number(selectedFormat !== 'all') + Number(selectedProvider !== 'all');
+  const showReaderFilter = readerOptions.length > 1;
+  const hasFilterControl = showFormatFilter || showProviderFilter || showReaderFilter;
+  const activeFilterCount = Number(selectedFormat !== 'all') + Number(selectedProvider !== 'all') + Number(selectedReader !== 'all');
 
   React.useEffect(() => {
     if (selectedFormat !== 'all' && !formatOptions.includes(selectedFormat)) {
@@ -89,6 +106,12 @@ const LocalLibraryView: React.FC<LocalLibraryViewProps> = ({
     }
   }, [providerOptions, selectedProvider]);
 
+  React.useEffect(() => {
+    if (selectedReader !== 'all' && !readerOptions.includes(selectedReader)) {
+      setSelectedReader('all');
+    }
+  }, [readerOptions, selectedReader]);
+
   const filteredBooks = React.useMemo(() => (
     books.filter((book) => {
       if (selectedFormat !== 'all' && getFormatValue(book) !== selectedFormat) {
@@ -97,29 +120,33 @@ const LocalLibraryView: React.FC<LocalLibraryViewProps> = ({
       if (selectedProvider !== 'all' && getProviderLabel(book) !== selectedProvider) {
         return false;
       }
+      if (selectedReader !== 'all' && getReaderDestination(book) !== selectedReader) {
+        return false;
+      }
       return true;
     })
-  ), [books, getFormatValue, getProviderLabel, selectedFormat, selectedProvider]);
+  ), [books, getFormatValue, getProviderLabel, getReaderDestination, selectedFormat, selectedProvider, selectedReader]);
 
-  const groupedBooks = React.useMemo(() => {
-    const groups = new Map<string, BookMetadata[]>();
+  const groupedByReader = React.useMemo(() => {
+    const buckets: Record<'mebooks' | 'palace' | 'thorium', BookMetadata[]> = {
+      mebooks: [],
+      palace: [],
+      thorium: [],
+    };
+
     filteredBooks.forEach((book) => {
-      const key = getProviderLabel(book);
-      const existing = groups.get(key);
-      if (existing) {
-        existing.push(book);
-      } else {
-        groups.set(key, [book]);
-      }
+      buckets[getReaderDestination(book)].push(book);
     });
 
-    return Array.from(groups.entries())
-      .sort((a, b) => a[0].localeCompare(b[0]))
-      .map(([provider, booksForProvider]) => ({
-        provider,
-        books: [...booksForProvider].sort((a, b) => a.title.localeCompare(b.title)),
+    const order: Array<'mebooks' | 'palace' | 'thorium'> = ['mebooks', 'palace', 'thorium'];
+    return order
+      .filter((reader) => buckets[reader].length > 0)
+      .map((reader) => ({
+        key: reader,
+        title: getReaderLabel(reader),
+        books: buckets[reader].slice().sort((a, b) => a.title.localeCompare(b.title)),
       }));
-  }, [filteredBooks, getProviderLabel]);
+  }, [filteredBooks, getReaderDestination, getReaderLabel]);
 
   // Delete book mutation
   const { mutate: deleteBook } = useDeleteBook();
@@ -149,6 +176,7 @@ const LocalLibraryView: React.FC<LocalLibraryViewProps> = ({
   const renderInlineBookRow = (book: BookMetadata) => {
     const providerLabel = getProviderLabel(book);
     const formatLabel = getFormatLabel(getFormatValue(book));
+    const readerDestination = getReaderDestination(book);
     const formatTone = formatLabel === 'PDF'
       ? 'bg-red-600 text-white'
       : formatLabel === 'Audiobook'
@@ -188,16 +216,39 @@ const LocalLibraryView: React.FC<LocalLibraryViewProps> = ({
           <span className="theme-info inline-flex rounded-full border px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide">
             {providerLabel}
           </span>
+          {readerDestination !== 'mebooks' && (
+            <span className="theme-accent-badge inline-flex rounded-full border px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide">
+              {readerDestination === 'palace' ? 'Palace' : 'Thorium'}
+            </span>
+          )}
         </div>
       </button>
     );
   };
 
-  const renderInlineList = () => {
+  const renderInlineList = (booksToRender: BookMetadata[]) => {
     if (groupByProvider) {
+      const groupedBooks = new Map<string, BookMetadata[]>();
+      booksToRender.forEach((book) => {
+        const key = getProviderLabel(book);
+        const existing = groupedBooks.get(key);
+        if (existing) {
+          existing.push(book);
+        } else {
+          groupedBooks.set(key, [book]);
+        }
+      });
+
+      const providerGroups = Array.from(groupedBooks.entries())
+        .sort((a, b) => a[0].localeCompare(b[0]))
+        .map(([provider, providerBooks]) => ({
+          provider,
+          books: [...providerBooks].sort((a, b) => a.title.localeCompare(b.title)),
+        }));
+
       return (
         <div className="space-y-5">
-          {groupedBooks.map((group) => (
+          {providerGroups.map((group) => (
             <section key={group.provider} className="space-y-2">
               <div className="flex items-center justify-between">
                 <h3 className="theme-text-primary text-sm font-semibold">{group.provider}</h3>
@@ -214,7 +265,7 @@ const LocalLibraryView: React.FC<LocalLibraryViewProps> = ({
 
     return (
       <div className="space-y-2">
-        {filteredBooks.map(renderInlineBookRow)}
+        {booksToRender.map(renderInlineBookRow)}
       </div>
     );
   };
@@ -355,6 +406,35 @@ const LocalLibraryView: React.FC<LocalLibraryViewProps> = ({
                       </div>
                     )}
 
+                    {showReaderFilter && (
+                      <div className="flex flex-wrap items-center gap-2">
+                        <span className="theme-text-muted text-xs font-medium uppercase tracking-[0.12em]">Reading App</span>
+                        <div className="flex flex-wrap gap-1.5">
+                          <button
+                            type="button"
+                            onClick={() => setSelectedReader('all')}
+                            className={`rounded-full px-2.5 py-1 text-xs font-medium transition-colors ${
+                              selectedReader === 'all' ? 'theme-nav-link-active border' : 'theme-pill theme-hover-surface'
+                            }`}
+                          >
+                            All
+                          </button>
+                          {readerOptions.map((reader) => (
+                            <button
+                              key={reader}
+                              type="button"
+                              onClick={() => setSelectedReader(reader)}
+                              className={`rounded-full px-2.5 py-1 text-xs font-medium transition-colors ${
+                                selectedReader === reader ? 'theme-nav-link-active border' : 'theme-pill theme-hover-surface'
+                              }`}
+                            >
+                              {getReaderLabel(reader)}
+                            </button>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+
                     <div className="flex flex-wrap items-center gap-2">
                       <span className="theme-text-muted text-xs font-medium uppercase tracking-[0.12em]">Grouping</span>
                       <div className="flex flex-wrap gap-1.5">
@@ -388,15 +468,27 @@ const LocalLibraryView: React.FC<LocalLibraryViewProps> = ({
           )}
 
           {filteredBooks.length > 0 ? (
-            layoutMode === 'grid' ? (
-              <BookGrid
-                books={filteredBooks}
-                onBookClick={handleLocalBookClick}
-                onBookContextMenu={handleBookContextMenu}
-              />
-            ) : (
-              renderInlineList()
-            )
+            <div className="space-y-6">
+              {groupedByReader.map((group) => (
+                <section key={group.key} className="space-y-3">
+                  {groupedByReader.length > 1 && (
+                    <div className="flex items-center justify-between">
+                      <h3 className="theme-text-primary text-sm font-semibold uppercase tracking-[0.12em]">{group.title}</h3>
+                      <span className="theme-text-muted text-xs">{group.books.length} title{group.books.length === 1 ? '' : 's'}</span>
+                    </div>
+                  )}
+                  {layoutMode === 'grid' ? (
+                    <BookGrid
+                      books={group.books}
+                      onBookClick={handleLocalBookClick}
+                      onBookContextMenu={handleBookContextMenu}
+                    />
+                  ) : (
+                    renderInlineList(group.books)
+                  )}
+                </section>
+              ))}
+            </div>
           ) : (
             <EmptyState
               variant="library"

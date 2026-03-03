@@ -87,6 +87,7 @@ const BookCard = React.forwardRef<HTMLDivElement, BookCardProps>(({
   const categories = isCatalogBook(book)
     ? (book.categories ?? []).map((cat) => cat.label || cat.term).filter(Boolean)
     : [];
+  const externalReaderApp = !isCatalogBook(book) ? book.externalReaderApp : undefined;
 
   return (
     <div
@@ -143,6 +144,13 @@ const BookCard = React.forwardRef<HTMLDivElement, BookCardProps>(({
           <div>
             <span className="theme-info inline-flex items-center rounded-full border px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide">
               In My Shelf
+            </span>
+          </div>
+        )}
+        {externalReaderApp && (
+          <div>
+            <span className="theme-accent-badge inline-flex items-center rounded-full border px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide">
+              {externalReaderApp === 'palace' ? 'Palace' : 'Thorium'}
             </span>
           </div>
         )}
