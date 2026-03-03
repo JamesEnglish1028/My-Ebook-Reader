@@ -72,6 +72,12 @@ export const CATALOG_PRESETS: CatalogPreset[] = [
     opdsVersion: '2',
     description: 'Scholarly publishing and digital collections from Fulcrum.',
   },
+  {
+    name: 'OAPEN',
+    url: 'https://oapen-opds-feed-generator.onrender.com/opds',
+    opdsVersion: 'auto',
+    description: 'Open-access academic books and long-form scholarship.',
+  },
 ];
 
 export const REGISTRY_PRESETS: RegistryPreset[] = [
