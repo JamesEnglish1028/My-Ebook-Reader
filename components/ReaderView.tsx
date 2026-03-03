@@ -135,6 +135,9 @@ const ReaderView: React.FC<ReaderViewProps> = ({ bookId, onClose, animationData 
   const [currentCfi, setCurrentCfi] = useState<string | null>(null);
   const [currentChapterLabel, setCurrentChapterLabel] = useState<string>('');
   const [currentHighlightCfi, setCurrentHighlightCfi] = useState<string | null>(null);
+  const [selectedCitationCfi, setSelectedCitationCfi] = useState<string | null>(null);
+  const [selectedCitationText, setSelectedCitationText] = useState('');
+  const [selectionMenuPosition, setSelectionMenuPosition] = useState<{ x: number; y: number } | null>(null);
   const [animationState, setAnimationState] = useState<'start' | 'expanding' | 'fading' | 'finished'>(
     animationData ? 'start' : 'finished',
   );
@@ -178,6 +181,7 @@ const ReaderView: React.FC<ReaderViewProps> = ({ bookId, onClose, animationData 
   const renditionResizeTimerRef = useRef<number | null>(null);
   const locationsReadyRef = useRef(false);
   const highlightedCfiRef = useRef<string | null>(null);
+  const selectedTextRef = useRef('');
   const utteranceRef = useRef<SpeechSynthesisUtterance | null>(null);
   const lastSpokenCfiRef = useRef<string | null>(null);
   const speechStartCfiRef = useRef<string | null>(null);
@@ -305,6 +309,13 @@ const ReaderView: React.FC<ReaderViewProps> = ({ bookId, onClose, animationData 
       renditionRef.current.annotations.remove(highlightedCfiRef.current, 'highlight');
       highlightedCfiRef.current = null;
     }
+  }, []);
+
+  const clearSelectedCitation = useCallback(() => {
+    setSelectedCitationCfi(null);
+    setSelectedCitationText('');
+    setSelectionMenuPosition(null);
+    selectedTextRef.current = '';
   }, []);
 
   const stopSpeech = useCallback(() => {
@@ -906,6 +917,13 @@ const ReaderView: React.FC<ReaderViewProps> = ({ bookId, onClose, animationData 
 
     const clickHandler = (event: PointerEvent) => {
       if (showSettings || showNavPanel || showSearch || !viewerRef.current) return;
+      const hasActiveSelection = rendition.getContents().some((content: any) => {
+        const selection = content?.window?.getSelection?.() || content?.document?.getSelection?.();
+        return Boolean(selection && selection.toString().trim().length > 0);
+      });
+      if (hasActiveSelection || selectedTextRef.current.trim().length > 0) {
+        return;
+      }
       const rect = viewerRef.current.getBoundingClientRect();
       const x = event.clientX - rect.left;
       const width = rect.width;
@@ -922,6 +940,40 @@ const ReaderView: React.FC<ReaderViewProps> = ({ bookId, onClose, animationData 
     rendition.on('click', clickHandler);
     return () => { rendition.off('click', clickHandler); };
   }, [rendition, settings.flow, showSettings, showNavPanel, showSearch, prevPage, nextPage]);
+
+  useEffect(() => {
+    if (!rendition) return;
+
+    const handleSelected = (cfiRange: string, contents: any) => {
+      const selection = contents?.window?.getSelection?.() || contents?.document?.getSelection?.();
+      const selectedText = selection?.toString?.().trim() || '';
+
+      if (!selectedText) {
+        clearSelectedCitation();
+        return;
+      }
+
+      const range = selection.rangeCount > 0 ? selection.getRangeAt(0) : null;
+      const rect = range?.getBoundingClientRect?.();
+
+      setSelectedCitationCfi(cfiRange);
+      setSelectedCitationText(selectedText);
+      selectedTextRef.current = selectedText;
+      setSelectionMenuPosition(
+        rect
+          ? {
+            x: Math.max(24, rect.left + (rect.width / 2)),
+            y: Math.max(24, rect.top - 12),
+          }
+          : null,
+      );
+    };
+
+    rendition.on('selected', handleSelected);
+    return () => {
+      rendition.off('selected', handleSelected);
+    };
+  }, [clearSelectedCitation, rendition]);
 
   const handleSettingsChange = (newSettings: Partial<ReaderSettings>) => {
     setSettings(prev => {
@@ -1072,9 +1124,9 @@ const ReaderView: React.FC<ReaderViewProps> = ({ bookId, onClose, animationData 
   }, [bookId, bookmarks]);
 
   const handleSaveCitation = useCallback(async (note: string) => {
-    if (!latestCfiRef.current) return;
+    const cfi = selectedCitationCfi || latestCfiRef.current;
+    if (!cfi) return;
 
-    const cfi = latestCfiRef.current;
     let chapter = currentChapterLabel;
 
     if (navigationRef.current) {
@@ -1106,7 +1158,8 @@ const ReaderView: React.FC<ReaderViewProps> = ({ bookId, onClose, animationData 
     }
 
     setShowCitationModal(false);
-  }, [bookId, citations, locationInfo.currentPage, currentChapterLabel]);
+    clearSelectedCitation();
+  }, [bookId, citations, clearSelectedCitation, currentChapterLabel, locationInfo.currentPage, selectedCitationCfi]);
 
   const deleteCitation = useCallback((citationId: string) => {
     // Delete citation using citationService
@@ -1347,6 +1400,30 @@ const ReaderView: React.FC<ReaderViewProps> = ({ bookId, onClose, animationData 
           )}
           {/* Viewer receives epub.js rendered content; add subtle padding and max-width for readability */}
           <div ref={viewerRef} id="viewer" className="theme-surface h-full w-full p-4 md:p-8" />
+          {selectionMenuPosition && selectedCitationCfi && (
+            <div
+              className="theme-surface-elevated theme-border theme-text-primary fixed z-40 flex -translate-x-1/2 -translate-y-full items-center gap-2 rounded-full border px-3 py-2 shadow-lg"
+              style={{ left: selectionMenuPosition.x, top: selectionMenuPosition.y }}
+            >
+              <button
+                type="button"
+                onClick={() => {
+                  setShowCitationModal(true);
+                  setSelectionMenuPosition(null);
+                }}
+                className="theme-accent-text theme-accent-text-emphasis-hover text-xs font-semibold"
+              >
+                Add to Citation
+              </button>
+              <button
+                type="button"
+                onClick={clearSelectedCitation}
+                className="theme-text-muted theme-accent-text-hover text-xs font-medium"
+              >
+                Dismiss
+              </button>
+            </div>
+          )}
         </div>
 
         <footer
@@ -1437,8 +1514,15 @@ const ReaderView: React.FC<ReaderViewProps> = ({ bookId, onClose, animationData 
         />
         <CitationModal
           isOpen={showCitationModal}
-          onClose={() => setShowCitationModal(false)}
+          onClose={() => {
+            setShowCitationModal(false);
+            clearSelectedCitation();
+          }}
           onSave={handleSaveCitation}
+          initialNote={selectedCitationText}
+          helperText={selectedCitationText
+            ? 'The selected text has been added to the note field. You can edit it before saving.'
+            : undefined}
         />
         <BookmarkModal
           isOpen={showBookmarkModal}

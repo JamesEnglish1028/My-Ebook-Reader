@@ -8,9 +8,11 @@ interface CitationModalProps {
   isOpen: boolean;
   onClose: () => void;
   onSave: (note: string) => void;
+  initialNote?: string;
+  helperText?: string;
 }
 
-const CitationModal: React.FC<CitationModalProps> = ({ isOpen, onClose, onSave }) => {
+const CitationModal: React.FC<CitationModalProps> = ({ isOpen, onClose, onSave, initialNote = '', helperText }) => {
   const [note, setNote] = useState('');
   const charLimit = 50;
   const textareaRef = useRef<HTMLTextAreaElement>(null);
@@ -24,9 +26,9 @@ const CitationModal: React.FC<CitationModalProps> = ({ isOpen, onClose, onSave }
 
   useEffect(() => {
     if (isOpen) {
-      setNote(''); // Reset note when modal opens
+      setNote(initialNote.slice(0, charLimit));
     }
-  }, [isOpen]);
+  }, [charLimit, initialNote, isOpen]);
 
   if (!isOpen) return null;
 
@@ -56,7 +58,7 @@ const CitationModal: React.FC<CitationModalProps> = ({ isOpen, onClose, onSave }
         </div>
 
         <p className="theme-text-secondary mb-4 text-sm">
-          A citation for the current location will be created. You can add an optional note below.
+          {helperText || 'A citation for the current location will be created. You can add an optional note below.'}
         </p>
 
         <div>
