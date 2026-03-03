@@ -443,7 +443,7 @@ const LibraryView: React.FC<LibraryViewProps> = ({
             {/* Source Dropdown */}
             {isCatalogDropdownOpen && (
               <div className="theme-surface-elevated theme-border absolute top-full z-20 mt-2 w-72 rounded-lg border shadow-xl">
-                <ul className="theme-text-primary max-h-96 overflow-y-auto p-1">
+                <ul className="theme-text-primary p-1">
                   <li>
                     <button onClick={() => handleSelectSource('library')} className={`w-full rounded-md px-3 py-2 text-left text-sm ${!isBrowsingOpds ? 'theme-nav-link-active' : 'theme-hover-surface'}`}>
                       My Shelf
