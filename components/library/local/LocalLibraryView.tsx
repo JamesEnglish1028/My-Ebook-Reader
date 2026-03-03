@@ -458,7 +458,17 @@ const LocalLibraryView: React.FC<LocalLibraryViewProps> = ({
                 <section key={group.key} className="space-y-3">
                   {groupedByReader.length > 1 && (
                     <div className="flex items-center justify-between">
-                      <h3 className="theme-text-primary text-sm font-semibold uppercase tracking-[0.12em]">{group.title}</h3>
+                      <h3 className="theme-text-primary flex items-center gap-1.5 text-sm font-semibold uppercase tracking-[0.12em]">
+                        {group.key === 'palace' && (
+                          <img
+                            src="/palace-logo.png"
+                            alt=""
+                            aria-hidden="true"
+                            className="h-4 w-4 object-contain"
+                          />
+                        )}
+                        <span>{group.title}</span>
+                      </h3>
                       <span className="theme-text-muted text-xs">{group.books.length} title{group.books.length === 1 ? '' : 's'}</span>
                     </div>
                   )}
