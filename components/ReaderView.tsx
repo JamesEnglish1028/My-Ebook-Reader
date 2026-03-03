@@ -182,6 +182,7 @@ const ReaderView: React.FC<ReaderViewProps> = ({ bookId, onClose, animationData 
   const locationsReadyRef = useRef(false);
   const highlightedCfiRef = useRef<string | null>(null);
   const selectedTextRef = useRef('');
+  const selectionActivatedAtRef = useRef(0);
   const utteranceRef = useRef<SpeechSynthesisUtterance | null>(null);
   const lastSpokenCfiRef = useRef<string | null>(null);
   const speechStartCfiRef = useRef<string | null>(null);
@@ -932,7 +933,10 @@ const ReaderView: React.FC<ReaderViewProps> = ({ bookId, onClose, animationData 
         return Boolean(selection && selection.toString().trim().length > 0);
       });
       if (hasActiveSelection || selectedTextRef.current.trim().length > 0) {
-        clearReaderSelection();
+        const recentlySelected = Date.now() - selectionActivatedAtRef.current < 250;
+        if (selectionMenuPosition && !recentlySelected) {
+          clearReaderSelection();
+        }
         setControlsVisible(true);
         return;
       }
@@ -995,6 +999,7 @@ const ReaderView: React.FC<ReaderViewProps> = ({ bookId, onClose, animationData 
       setSelectedCitationCfi(cfiRange);
       setSelectedCitationText(selectedText);
       selectedTextRef.current = selectedText;
+      selectionActivatedAtRef.current = Date.now();
       setSelectionMenuPosition(
         anchorRect
           ? {
