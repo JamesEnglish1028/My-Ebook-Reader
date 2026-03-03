@@ -36,6 +36,7 @@ import AccessibilityBadges from './library/shared/AccessibilityBadges';
 import SeriesLane from './library/catalog/SeriesLane';
 import BookBadges from './library/shared/BookBadges';
 import { getReaderLabel } from './library/shared/externalReader';
+import PalaceLogoIcon from './library/shared/PalaceLogoIcon';
 import { db, ensureFreshPatronAuthorization, findCredentialForUrl } from '../services';
 
 const handleImgError = (e: React.SyntheticEvent<HTMLImageElement, Event>) => {
@@ -626,6 +627,9 @@ const BookDetailView: React.FC<BookDetailViewProps> = ({ book, onBack, source, c
       blockedDrmReason,
       isLcpProtected,
     );
+  const showPalacePrimaryActionIcon = (source === 'library' && externalReaderApp === 'palace')
+    || (source === 'catalog' && usesPalaceProtectedAction);
+  const useAudiobookCoverContain = normalizedFormat === 'AUDIOBOOK';
 
   React.useEffect(() => {
     setProtectedActionState('idle');
@@ -767,7 +771,7 @@ const BookDetailView: React.FC<BookDetailViewProps> = ({ book, onBack, source, c
               ref={coverRef}
               src={book.coverImage}
               alt={book.title}
-              className="w-full max-w-xs h-auto object-cover rounded-lg shadow-2xl aspect-[2/3] mb-4"
+              className={`mb-4 h-auto w-full max-w-xs rounded-lg shadow-2xl aspect-[2/3] ${useAudiobookCoverContain ? 'object-contain p-3 theme-surface-elevated' : 'object-cover'}`}
               onError={handleImgError}
             />
           ) : (
@@ -776,7 +780,7 @@ const BookDetailView: React.FC<BookDetailViewProps> = ({ book, onBack, source, c
             </div>
           )}
           <button
-            className="theme-button-primary mt-2 rounded px-4 py-2 font-bold disabled:cursor-not-allowed disabled:opacity-60"
+            className="theme-button-primary mt-2 inline-flex items-center justify-center gap-2 rounded px-4 py-2 font-bold disabled:cursor-not-allowed disabled:opacity-60"
             onClick={
               source === 'library'
                 ? handleReadClick
@@ -786,7 +790,8 @@ const BookDetailView: React.FC<BookDetailViewProps> = ({ book, onBack, source, c
             }
             disabled={primaryAction.disabled}
           >
-            {primaryAction.label}
+            {showPalacePrimaryActionIcon && <PalaceLogoIcon className="h-4 w-4 flex-shrink-0 text-current" />}
+            <span>{primaryAction.label}</span>
           </button>
           {source === 'catalog' && usesPalaceProtectedAction && (
             <a

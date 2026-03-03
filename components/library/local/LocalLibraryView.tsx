@@ -167,6 +167,7 @@ const LocalLibraryView: React.FC<LocalLibraryViewProps> = ({
     const providerLabel = getProviderLabel(book);
     const formatLabel = getFormatLabel(getFormatValue(book));
     const readerDestination = getReaderDestination(book.externalReaderApp);
+    const isAudiobook = getFormatValue(book) === 'AUDIOBOOK';
     const formatTone = formatLabel === 'PDF'
       ? 'bg-red-600 text-white'
       : formatLabel === 'Audiobook'
@@ -186,7 +187,7 @@ const LocalLibraryView: React.FC<LocalLibraryViewProps> = ({
             <img
               src={book.coverImage}
               alt={book.title}
-              className="h-full w-full object-cover"
+              className={`h-full w-full ${isAudiobook ? 'object-contain p-1' : 'object-cover'}`}
               loading="lazy"
             />
           ) : (

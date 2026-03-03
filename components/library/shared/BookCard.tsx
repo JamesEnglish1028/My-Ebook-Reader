@@ -89,6 +89,11 @@ const BookCard = React.forwardRef<HTMLDivElement, BookCardProps>(({
     ? (book.categories ?? []).map((cat) => cat.label || cat.term).filter(Boolean)
     : [];
   const externalReaderApp = !isCatalogBook(book) ? book.externalReaderApp : undefined;
+  const normalizedFormat = String(book.format || '').trim().toUpperCase();
+  const normalizedMediaType = isCatalogBook(book) ? String(book.mediaType || '').trim().toLowerCase() : '';
+  const isAudiobookCover = normalizedFormat === 'AUDIOBOOK'
+    || normalizedMediaType.includes('application/audiobook+json')
+    || normalizedMediaType.includes('application/webpub+json');
 
   return (
     <div
@@ -106,7 +111,7 @@ const BookCard = React.forwardRef<HTMLDivElement, BookCardProps>(({
           <img
             src={coverImageSrc}
             alt={book.title}
-            className="w-full h-full object-cover"
+            className={`h-full w-full ${isAudiobookCover ? 'object-contain p-2' : 'object-cover'}`}
             loading="lazy"
             onError={() => {
               if (proxiedCatalogCoverImage && coverImageSrc !== proxiedCatalogCoverImage) {
