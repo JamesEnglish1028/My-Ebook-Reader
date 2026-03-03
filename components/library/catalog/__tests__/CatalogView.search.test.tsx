@@ -356,6 +356,82 @@ describe('CatalogView search', () => {
     ]);
   });
 
+  it('surfaces advanced fields from fetched OpenSearch templates', async () => {
+    mockUseCatalogContent.mockReturnValue(createCatalogContentResult({
+      search: {
+        kind: 'opensearch',
+        descriptionUrl: 'https://example.com/opensearch.xml',
+        type: 'application/opensearchdescription+xml',
+        title: 'Search catalog',
+        rel: 'search',
+      },
+    }));
+    mockUseResolvedCatalogSearch.mockReturnValue(createResolvedSearchResult({
+      data: {
+        activeTemplate: {
+          template: 'https://example.com/opds/search{?searchTerms,count?,startIndex?}',
+          type: 'application/atom+xml;profile=opds-catalog',
+          method: 'GET',
+          params: [
+            { name: 'searchTerms', required: true },
+            { name: 'count', required: false },
+            { name: 'startIndex', required: false },
+          ],
+        },
+      },
+    }));
+
+    const setCatalogNavPath = vi.fn();
+
+    render(
+      <CatalogView
+        activeOpdsSource={activeCatalog as any}
+        catalogNavPath={[{ name: activeCatalog.name, url: activeCatalog.url }]}
+        setCatalogNavPath={setCatalogNavPath}
+        onShowBookDetail={() => {}}
+      />,
+    );
+
+    await act(async () => {
+      fireEvent.click(await screen.findByRole('button', { name: /open catalog search/i }));
+    });
+
+    await act(async () => {
+      fireEvent.change(
+        await screen.findByRole('searchbox', { name: /search this catalog/i }),
+        { target: { value: 'history' } },
+      );
+    });
+
+    await act(async () => {
+      fireEvent.click(screen.getByRole('button', { name: 'Show Advanced' }));
+    });
+
+    expect(screen.getByRole('textbox', { name: 'Count' })).toBeInTheDocument();
+    expect(screen.getByRole('textbox', { name: 'Start Index' })).toBeInTheDocument();
+
+    await act(async () => {
+      fireEvent.change(screen.getByRole('textbox', { name: 'Count' }), {
+        target: { value: '25' },
+      });
+      fireEvent.change(screen.getByRole('textbox', { name: 'Start Index' }), {
+        target: { value: '51' },
+      });
+    });
+
+    await act(async () => {
+      fireEvent.click(screen.getByRole('button', { name: 'Search' }));
+    });
+
+    expect(setCatalogNavPath).toHaveBeenCalledWith([
+      { name: activeCatalog.name, url: activeCatalog.url },
+      {
+        name: 'Search: history',
+        url: 'https://example.com/opds/search?searchTerms=history&count=25&startIndex=51',
+      },
+    ]);
+  });
+
   it('allows advanced-only OPDS 2 search when the primary query field is optional', async () => {
     mockUseCatalogContent.mockReturnValue(createCatalogContentResult({
       search: {
