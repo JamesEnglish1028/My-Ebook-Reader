@@ -100,7 +100,7 @@ describe('LibraryView local import menu', () => {
     confirmSpy.mockResolvedValue(true);
   });
 
-  it('opens Manage Sources from the main menu', () => {
+  it('opens Manage Sources from the source selector and not the main menu', () => {
     const queryClient = new QueryClient();
 
     render(
@@ -126,6 +126,9 @@ describe('LibraryView local import menu', () => {
     );
 
     fireEvent.click(screen.getByRole('button', { name: /Open main menu/i }));
+    expect(screen.queryByRole('button', { name: /^Manage Sources$/i })).toBeNull();
+
+    fireEvent.click(screen.getByRole('button', { name: /Select book source/i }));
     fireEvent.click(screen.getByRole('button', { name: /^Manage Sources$/i }));
 
     expect(manageCatalogsModalSpy).toHaveBeenCalled();

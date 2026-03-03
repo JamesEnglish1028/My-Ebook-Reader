@@ -523,6 +523,19 @@ const LibraryView: React.FC<LibraryViewProps> = ({
                     ))}
                   </>}
 
+                  <li className="theme-divider my-1 border-t" />
+                  <li>
+                    <button
+                      onClick={() => {
+                        setIsManageCatalogsOpen(true);
+                        setIsCatalogDropdownOpen(false);
+                      }}
+                      className="theme-text-secondary theme-hover-surface flex w-full items-center gap-2 rounded-md px-3 py-2 text-left text-sm"
+                    >
+                      <PlusIcon className="h-3.5 w-3.5" />
+                      <span>Manage Sources</span>
+                    </button>
+                  </li>
                 </ul>
               </div>
             )}
@@ -647,19 +660,6 @@ const LibraryView: React.FC<LibraryViewProps> = ({
                       className="theme-text-secondary theme-hover-surface block w-full rounded-sm px-2.5 py-2 text-left text-[13px]"
                     >
                       About
-                    </button>
-                  </li>
-                  <li className="theme-divider my-1 border-t" />
-                  <li>
-                    <button
-                      onClick={() => {
-                        setIsManageCatalogsOpen(true);
-                        setIsSettingsMenuOpen(false);
-                      }}
-                      className="theme-text-secondary theme-hover-surface flex w-full items-center gap-2 rounded-sm px-2.5 py-2 text-left text-[13px]"
-                    >
-                      <PlusIcon className="h-3.5 w-3.5" />
-                      <span>Manage Sources</span>
                     </button>
                   </li>
                 </ul>
