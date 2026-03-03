@@ -432,6 +432,57 @@ describe('CatalogView search', () => {
     ]);
   });
 
+  it('keeps search disabled when a required OpenSearch primary field is blank', async () => {
+    mockUseCatalogContent.mockReturnValue(createCatalogContentResult({
+      search: {
+        kind: 'opensearch',
+        descriptionUrl: 'https://example.com/opensearch.xml',
+        type: 'application/opensearchdescription+xml',
+        title: 'Search catalog',
+        rel: 'search',
+      },
+    }));
+    mockUseResolvedCatalogSearch.mockReturnValue(createResolvedSearchResult({
+      data: {
+        activeTemplate: {
+          template: 'https://example.com/opds/search{?query,count?}',
+          type: 'application/atom+xml;profile=opds-catalog',
+          method: 'GET',
+          params: [
+            { name: 'query', required: true },
+            { name: 'count', required: false },
+          ],
+        },
+      },
+    }));
+
+    render(
+      <CatalogView
+        activeOpdsSource={activeCatalog as any}
+        catalogNavPath={[{ name: activeCatalog.name, url: activeCatalog.url }]}
+        setCatalogNavPath={vi.fn()}
+        onShowBookDetail={() => {}}
+      />,
+    );
+
+    await act(async () => {
+      fireEvent.click(await screen.findByRole('button', { name: /open catalog search/i }));
+    });
+
+    await act(async () => {
+      fireEvent.click(screen.getByRole('button', { name: 'Show Advanced' }));
+    });
+
+    await act(async () => {
+      fireEvent.change(await screen.findByRole('textbox', { name: 'Count' }), {
+        target: { value: '25' },
+      });
+    });
+
+    expect(screen.getByRole('button', { name: 'Search' })).toBeDisabled();
+    expect(screen.getByText(/Fill in all required search fields before submitting\./i)).toBeInTheDocument();
+  });
+
   it('allows advanced-only OPDS 2 search when the primary query field is optional', async () => {
     mockUseCatalogContent.mockReturnValue(createCatalogContentResult({
       search: {

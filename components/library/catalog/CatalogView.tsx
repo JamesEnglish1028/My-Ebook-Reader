@@ -674,6 +674,7 @@ const CatalogView: React.FC<CatalogViewProps> = ({
             onChange={setSearchInput}
             primaryLabel={primarySearchLabel}
             primaryPlaceholder={primarySearchPlaceholder}
+            isPrimaryRequired={Boolean(primarySearchParam?.required)}
             advancedFields={advancedSearchFields as CatalogSearchTemplateParameter[]}
             advancedValues={searchAdvancedValues}
             onAdvancedChange={handleAdvancedSearchChange}
