@@ -8,6 +8,7 @@ import LibraryView from '../LibraryView';
 
 const importButtonSpy = vi.fn();
 const localLibraryViewSpy = vi.fn();
+const manageCatalogsModalSpy = vi.fn();
 const authState = {
   user: null,
   isLoggedIn: false,
@@ -60,7 +61,10 @@ vi.mock('../catalog', () => ({
 }));
 
 vi.mock('../../ManageCatalogsModal', () => ({
-  default: () => null,
+  default: (props: unknown) => {
+    manageCatalogsModalSpy(props);
+    return null;
+  },
 }));
 
 vi.mock('../../DuplicateBookModal', () => ({
@@ -94,6 +98,41 @@ describe('LibraryView local import menu', () => {
     authState.authStatus = 'ready';
     authState.authError = null;
     confirmSpy.mockResolvedValue(true);
+  });
+
+  it('opens Manage Sources from the source dropdown instead of the main menu', () => {
+    const queryClient = new QueryClient();
+
+    render(
+      <QueryClientProvider client={queryClient}>
+        <LibraryView
+          libraryRefreshFlag={0}
+          syncStatus={{ state: 'idle', message: '' }}
+          onAutoBackupToDrive={vi.fn().mockResolvedValue(undefined)}
+          onOpenBook={vi.fn()}
+          onShowBookDetail={vi.fn()}
+          processAndSaveBook={vi.fn().mockResolvedValue({ success: true })}
+          importStatus={{ isLoading: false, message: '', error: null }}
+          setImportStatus={vi.fn()}
+          activeOpdsSource={null}
+          setActiveOpdsSource={vi.fn()}
+          catalogNavPath={[]}
+          setCatalogNavPath={vi.fn()}
+          onOpenCloudSyncModal={vi.fn()}
+          onOpenLocalStorageModal={vi.fn()}
+          onShowAbout={vi.fn()}
+        />
+      </QueryClientProvider>,
+    );
+
+    fireEvent.click(screen.getByRole('button', { name: /Open main menu/i }));
+    expect(screen.queryByRole('button', { name: /^Manage Sources$/i })).toBeNull();
+
+    fireEvent.click(screen.getByRole('button', { name: /Select book source/i }));
+    fireEvent.click(screen.getByRole('button', { name: /^Manage Sources$/i }));
+
+    expect(manageCatalogsModalSpy).toHaveBeenCalled();
+    expect(manageCatalogsModalSpy.mock.calls.at(-1)?.[0]).toMatchObject({ isOpen: true });
   });
 
   it('backs up to Drive after a successful local import', async () => {
