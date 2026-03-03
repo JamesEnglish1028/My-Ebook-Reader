@@ -36,6 +36,8 @@ const CatalogSearch: React.FC<CatalogSearchProps> = ({
   const [showAdvanced, setShowAdvanced] = useState(false);
   const trimmedValue = value.trim();
   const hasAdvancedFields = advancedFields.length > 0;
+  const hasAdvancedValues = advancedFields.some((field) => (advancedValues[field.name] || '').trim().length > 0);
+  const canSubmit = !disabled && (trimmedValue.length > 0 || hasAdvancedValues);
 
   useEffect(() => {
     if (!hasAdvancedFields) {
@@ -63,7 +65,7 @@ const CatalogSearch: React.FC<CatalogSearchProps> = ({
         className="flex flex-col gap-2 sm:flex-row"
         onSubmit={(event) => {
           event.preventDefault();
-          if (disabled || trimmedValue.length === 0) return;
+          if (!canSubmit) return;
           onSubmit();
         }}
       >
@@ -79,7 +81,7 @@ const CatalogSearch: React.FC<CatalogSearchProps> = ({
         <div className="flex gap-2">
           <button
             type="submit"
-            disabled={disabled || trimmedValue.length === 0}
+            disabled={!canSubmit}
             className="theme-button-primary rounded-lg px-3 py-2 text-sm font-medium transition-colors disabled:cursor-not-allowed disabled:opacity-60"
           >
             Search

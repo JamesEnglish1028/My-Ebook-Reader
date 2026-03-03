@@ -284,11 +284,7 @@ function parseOpds2SearchLink(jsonData: any, baseUrl: string): CatalogSearchMeta
 
   if (templatedLink?.href) {
     const resolvedTemplate = resolveCatalogSearchTemplateUrl(templatedLink.href, baseUrl);
-    const normalizedParams = parseCatalogSearchTemplateParameters(resolvedTemplate)
-      .map((param) => ({
-        ...param,
-        required: param.name === 'query',
-      }));
+    const normalizedParams = parseCatalogSearchTemplateParameters(resolvedTemplate);
     return {
       kind: 'opds2-template',
       template: resolvedTemplate,

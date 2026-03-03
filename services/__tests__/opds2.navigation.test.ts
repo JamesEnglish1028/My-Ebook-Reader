@@ -154,8 +154,37 @@ describe('parseOpds2Json - navigation/catalog inference', () => {
       templated: true,
       params: [
         { name: 'query', required: true, namespace: undefined },
-        { name: 'title', required: false, namespace: undefined },
-        { name: 'author', required: false, namespace: undefined },
+        { name: 'title', required: true, namespace: undefined },
+        { name: 'author', required: true, namespace: undefined },
+      ],
+      type: 'application/opds+json',
+      title: 'Search catalog',
+      rel: 'search',
+    });
+  });
+
+  it('preserves required flags from inline OPDS 2 search templates', () => {
+    const json = {
+      metadata: { title: 'Feed' },
+      links: [
+        {
+          rel: 'search',
+          href: '/search{?query,title}',
+          type: 'application/opds+json',
+          templated: true,
+          title: 'Search catalog',
+        },
+      ],
+    };
+
+    const { search } = parseOpds2Json(json, 'https://example.org/catalog/');
+    expect(search).toEqual({
+      kind: 'opds2-template',
+      template: 'https://example.org/search{?query,title}',
+      templated: true,
+      params: [
+        { name: 'query', required: true, namespace: undefined },
+        { name: 'title', required: true, namespace: undefined },
       ],
       type: 'application/opds+json',
       title: 'Search catalog',

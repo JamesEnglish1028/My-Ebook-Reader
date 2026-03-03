@@ -8,6 +8,7 @@ import {
   getAuthorizationForAuthDocument,
   getCachedAuthDocumentForUrl,
   getCachedPatronAuthorizationForUrl,
+  logger,
   saveOpdsCredential,
 } from '../../../services';
 import {
@@ -313,10 +314,10 @@ const CatalogView: React.FC<CatalogViewProps> = ({
   };
 
   const handleSearchSubmit = () => {
-    const query = searchInput.trim();
     const template = resolvedSearch?.activeTemplate;
-    if (!query || !template) return;
+    if (!template) return;
 
+    const query = searchInput.trim();
     const templateParams = template.params || [];
     const primaryParam = templateParams.find((param) => param.name === 'searchTerms')?.name
       || templateParams.find((param) => param.name === 'query')?.name
@@ -324,13 +325,22 @@ const CatalogView: React.FC<CatalogViewProps> = ({
       || templateParams[0]?.name
       || 'searchTerms';
     const searchValues = templateParams.reduce<Record<string, string>>((values, param) => {
-      if (param.name === primaryParam) return values;
+      if (param.name === primaryParam) {
+        if (query) {
+          values[param.name] = query;
+        }
+        return values;
+      }
       const nextValue = searchAdvancedValues[param.name]?.trim();
       if (nextValue) {
         values[param.name] = nextValue;
       }
       return values;
-    }, { [primaryParam]: query });
+    }, {});
+
+    if (Object.keys(searchValues).length === 0) {
+      return;
+    }
 
     let searchUrl: string;
     try {
@@ -339,15 +349,24 @@ const CatalogView: React.FC<CatalogViewProps> = ({
       setSearchActionError(error instanceof Error ? error.message : 'Unable to build search URL.');
       return;
     }
+
+    logger.info('Submitting catalog search', {
+      url: searchUrl,
+      values: searchValues,
+      kind: catalogSearch?.kind || 'unknown',
+    });
+    const searchLabel = query || Object.entries(searchValues)
+      .map(([key, value]) => `${key}: ${value}`)
+      .join(', ');
     const basePath = activeSearchQuery && searchOriginPath
       ? searchOriginPath
       : (catalogNavPath.length > 0
         ? catalogNavPath
         : [{ name: activeOpdsSource.name, url: activeOpdsSource.url }]);
-    const nextPath = [...basePath, { name: `Search: ${query}`, url: searchUrl }];
+    const nextPath = [...basePath, { name: `Search: ${searchLabel}`, url: searchUrl }];
 
     setSearchOriginPath(basePath);
-    setActiveSearchQuery(query);
+    setActiveSearchQuery(searchLabel);
     setSearchActionError(null);
     setCatalogNavPath(nextPath);
     setPageHistory([]);

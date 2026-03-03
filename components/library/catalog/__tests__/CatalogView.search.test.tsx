@@ -355,4 +355,75 @@ describe('CatalogView search', () => {
       },
     ]);
   });
+
+  it('allows advanced-only OPDS 2 search when the primary query field is optional', async () => {
+    mockUseCatalogContent.mockReturnValue(createCatalogContentResult({
+      search: {
+        kind: 'opds2-template',
+        template: 'https://example.com/opds2/search{?query?,title?,author?}',
+        templated: true,
+        type: 'application/opds+json',
+        title: 'Search catalog',
+        rel: 'search',
+        params: [
+          { name: 'query', required: false },
+          { name: 'title', required: false },
+          { name: 'author', required: false },
+        ],
+      },
+    }));
+    mockUseResolvedCatalogSearch.mockReturnValue(createResolvedSearchResult({
+      data: {
+        activeTemplate: {
+          template: 'https://example.com/opds2/search{?query?,title?,author?}',
+          type: 'application/opds+json',
+          method: 'GET',
+          params: [
+            { name: 'query', required: false },
+            { name: 'title', required: false },
+            { name: 'author', required: false },
+          ],
+        },
+      },
+    }));
+
+    const setCatalogNavPath = vi.fn();
+
+    render(
+      <CatalogView
+        activeOpdsSource={activeCatalog as any}
+        catalogNavPath={[{ name: activeCatalog.name, url: activeCatalog.url }]}
+        setCatalogNavPath={setCatalogNavPath}
+        onShowBookDetail={() => {}}
+      />,
+    );
+
+    await act(async () => {
+      fireEvent.click(await screen.findByRole('button', { name: /open catalog search/i }));
+    });
+
+    await screen.findByRole('searchbox', { name: /search query/i });
+
+    await act(async () => {
+      fireEvent.click(screen.getByRole('button', { name: 'Show Advanced' }));
+    });
+
+    await act(async () => {
+      fireEvent.change(screen.getByRole('textbox', { name: 'Title' }), {
+        target: { value: 'Caliban' },
+      });
+    });
+
+    await act(async () => {
+      fireEvent.click(screen.getByRole('button', { name: 'Search' }));
+    });
+
+    expect(setCatalogNavPath).toHaveBeenCalledWith([
+      { name: activeCatalog.name, url: activeCatalog.url },
+      {
+        name: 'Search: title: Caliban',
+        url: 'https://example.com/opds2/search?title=Caliban',
+      },
+    ]);
+  });
 });
