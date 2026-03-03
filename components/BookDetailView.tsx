@@ -336,13 +336,43 @@ const BookDetailView: React.FC<BookDetailViewProps> = ({ book, onBack, source, c
   const [localCitations, setLocalCitations] = React.useState<Citation[]>([]);
   const primarySeries = 'downloadUrl' in book && Array.isArray(book.series) ? book.series[0] : undefined;
   const relatedCatalogLinks = 'downloadUrl' in book && Array.isArray(book.relatedLinks) ? book.relatedLinks : [];
+  const relatedFeedLinks = React.useMemo(() => {
+    if (!('downloadUrl' in book)) {
+      return [] as Array<{ title: string; url: string; rel: string; type?: string }>;
+    }
+
+    const opds2SeriesLinks = Array.isArray(book.series)
+      ? book.series
+        .filter((series) => typeof series?.url === 'string' && series.url.trim().length > 0)
+        .map((series) => ({
+          title: `Same Series: ${series.name}`,
+          url: String(series.url),
+          rel: 'series',
+          type: 'application/opds+json',
+        }))
+      : [];
+
+    const opds2CollectionLinks = Array.isArray(book.collections)
+      ? book.collections
+        .filter((collection) => typeof collection?.href === 'string' && collection.href.trim().length > 0)
+        .map((collection) => ({
+          title: collection.title,
+          url: collection.href,
+          rel: 'collection',
+          type: 'application/opds+json',
+        }))
+      : [];
+
+    return [...relatedCatalogLinks, ...opds2SeriesLinks, ...opds2CollectionLinks]
+      .filter((link, index, collection) => collection.findIndex((candidate) => candidate.url === link.url) === index);
+  }, [book, relatedCatalogLinks]);
   const seriesBooksForLane = source === 'catalog'
     && primarySeries
     && Array.isArray(relatedSeriesBooks)
     && relatedSeriesBooks.length > 1
       ? relatedSeriesBooks
       : null;
-  const hasRelatedWorksSection = relatedCatalogLinks.length > 0 || Boolean(primarySeries && seriesBooksForLane);
+  const hasRelatedWorksSection = relatedFeedLinks.length > 0 || Boolean(primarySeries && seriesBooksForLane);
 
   React.useEffect(() => {
     if (bookAny.id) {
@@ -727,11 +757,11 @@ const BookDetailView: React.FC<BookDetailViewProps> = ({ book, onBack, source, c
             <h3 className="theme-text-primary mb-3 text-xl font-bold">Related Works</h3>
             <div className="theme-divider mb-5 border-t" />
             <div className="theme-surface-elevated space-y-6 rounded-lg p-6 md:p-8">
-              {relatedCatalogLinks.length > 0 && (
+              {relatedFeedLinks.length > 0 && (
                 <div className="space-y-3">
                   <h4 className="theme-text-primary text-sm font-semibold uppercase tracking-[0.14em]">Browse Related Feeds</h4>
                   <div className="flex flex-wrap gap-2">
-                    {relatedCatalogLinks.map((link) => (
+                    {relatedFeedLinks.map((link) => (
                       <button
                         key={link.url}
                         type="button"

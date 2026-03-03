@@ -154,7 +154,10 @@ describe('Catalog vs Library BookDetailView Differences', () => {
           type: 'application/atom+xml;profile=opds-catalog;kind=acquisition',
         },
       ],
-      series: [{ name: 'Great Saga', position: 2 }],
+      series: [{ name: 'Great Saga', position: 2, url: 'https://example.com/series/great-saga' }],
+      collections: [
+        { title: 'Featured Collection', href: 'https://example.com/collections/featured' },
+      ],
     } as any;
 
     const relatedSeriesBooks = [
@@ -164,7 +167,7 @@ describe('Catalog vs Library BookDetailView Differences', () => {
         title: 'Episode 1',
         providerId: 'series-1',
         downloadUrl: 'https://example.com/download-1',
-        series: [{ name: 'Great Saga', position: 1 }],
+        series: [{ name: 'Great Saga', position: 1, url: 'https://example.com/series/great-saga' }],
       },
       catalogBook,
     ];
@@ -188,5 +191,7 @@ describe('Catalog vs Library BookDetailView Differences', () => {
     expect(screen.getByText('Series: Great Saga')).toBeInTheDocument();
     expect(screen.getByText('2 books')).toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Recommended Works' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Same Series: Great Saga' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Featured Collection' })).toBeInTheDocument();
   });
 });
