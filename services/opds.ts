@@ -577,17 +577,6 @@ export const parseOpds1Xml = (xmlText: string, baseUrl: string): { books: Catalo
             if (href && title) {
                 const fullUrl = new URL(href, baseUrl).href;
                 const normalizedTitle = title.trim();
-                const isDistributorMirror = palaceFeed && distributor
-                    && normalizedTitle.toLowerCase() === distributor.toLowerCase();
-                if (!isDistributorMirror) {
-                    addNavLink({
-                        title: normalizedTitle,
-                        url: fullUrl,
-                        rel: 'collection',
-                        type: link.getAttribute('type') || undefined,
-                        source: 'navigation',
-                    });
-                }
                 return {
                     title: normalizedTitle,
                     href: fullUrl,
@@ -599,7 +588,12 @@ export const parseOpds1Xml = (xmlText: string, baseUrl: string): { books: Catalo
         const collectionNavLink = collectionLinks.find((link) => {
             const title = link.getAttribute('title')?.trim();
             if (!title) return false;
-            return !(palaceFeed && distributor && title.toLowerCase() === distributor.toLowerCase());
+            if (palaceFeed && distributor && title.toLowerCase() === distributor.toLowerCase()) {
+                return false;
+            }
+            const type = (link.getAttribute('type') || '').toLowerCase();
+            return type.includes('profile=opds-catalog')
+                && (type.includes('kind=navigation') || type.includes('kind=acquisition'));
         }) || null;
         const kindNavigationLink = allLinks.find((link) => {
             const rel = (link.getAttribute('rel') || '').toLowerCase();
