@@ -103,6 +103,7 @@ const AppInner: React.FC = () => {
     setImportStatus,
     libraryRefreshFlag,
     processAndSaveBook,
+    saveExternalReaderPlaceholder,
   } = useImportCoordinator({ onCatalogImportSuccess: handleReturnToLibrary });
 
   const {
@@ -118,6 +119,7 @@ const AppInner: React.FC = () => {
     setShowNetworkDebug,
   } = useAuthAcquisitionCoordinator({
     processAndSaveBook,
+    saveExternalReaderPlaceholder,
     setImportStatus,
     setActiveOpdsSource,
     setCurrentView,

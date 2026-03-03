@@ -211,7 +211,22 @@ const getLibraryPrimaryActionState = (
   isPreparingPlayback: boolean,
   isSyncedPlaceholder: boolean,
   requiresReauthorization: boolean,
+  externalReaderApp?: 'palace' | 'thorium',
 ): PrimaryActionState => {
+  if (externalReaderApp === 'palace') {
+    return {
+      label: 'Read in Palace',
+      disabled: false,
+    };
+  }
+
+  if (externalReaderApp === 'thorium') {
+    return {
+      label: 'Read in Thorium',
+      disabled: false,
+    };
+  }
+
   if (isSyncedPlaceholder) {
     return {
       label: requiresReauthorization ? 'Reauthorize Access Required' : 'Re-download to Read',
@@ -271,6 +286,7 @@ const getPrimaryActionNotice = (
   isContentExcludedFromSync: boolean,
   requiresReauthorization: boolean,
   restoredFromSync: boolean,
+  externalReaderApp: 'palace' | 'thorium' | undefined,
   providerName: string | undefined,
   hasCatalogCredential: boolean | null,
   drmBlockReason: string | null,
@@ -296,6 +312,20 @@ const getPrimaryActionNotice = (
     return {
       tone: 'warning',
       message: 'This protected title was synced as a record only. Re-download it from its source to read it on this device.',
+    };
+  }
+
+  if (source === 'library' && externalReaderApp === 'palace') {
+    return {
+      tone: 'default',
+      message: 'This title was borrowed to your Palace account. Open the Palace app to read it.',
+    };
+  }
+
+  if (source === 'library' && externalReaderApp === 'thorium') {
+    return {
+      tone: 'default',
+      message: 'This title is intended for Thorium Reader. Open it there to continue reading.',
     };
   }
 
@@ -491,6 +521,16 @@ const BookDetailView: React.FC<BookDetailViewProps> = ({ book, onBack, source, c
   }, [prepareAudiobookPlayback]);
 
   const handleReadClick = async () => {
+    if (externalReaderApp === 'palace') {
+      window.open('https://thepalaceproject.org/app/', '_blank', 'noopener,noreferrer');
+      return;
+    }
+
+    if (externalReaderApp === 'thorium') {
+      window.open('https://thorium.edrlab.org/', '_blank', 'noopener,noreferrer');
+      return;
+    }
+
     if (restoredFromSync && isContentExcludedFromSync) {
       return;
     }
@@ -511,6 +551,7 @@ const BookDetailView: React.FC<BookDetailViewProps> = ({ book, onBack, source, c
   const isContentExcludedFromSync = Boolean(bookAny.contentExcludedFromSync);
   const requiresReauthorization = Boolean(bookAny.requiresReauthorization);
   const restoredFromSync = Boolean(bookAny.restoredFromSync);
+  const externalReaderApp = (bookAny.externalReaderApp || undefined) as 'palace' | 'thorium' | undefined;
   const isSyncedPlaceholder = restoredFromSync && isContentExcludedFromSync;
   const hasSupportedBookFormat = normalizedFormat === 'PDF' || normalizedFormat === 'EPUB' || normalizedFormat === 'AUDIOBOOK';
   const hasSupportedBookMediaType =
@@ -550,7 +591,7 @@ const BookDetailView: React.FC<BookDetailViewProps> = ({ book, onBack, source, c
     return hasSupportedBookFormat || hasSupportedBookMediaType;
   })();
   const primaryAction = source === 'library'
-    ? getLibraryPrimaryActionState(normalizedFormat, isPreparingPlayback, isSyncedPlaceholder, requiresReauthorization)
+    ? getLibraryPrimaryActionState(normalizedFormat, isPreparingPlayback, isSyncedPlaceholder, requiresReauthorization, externalReaderApp)
     : usesExternalProtectedAction
       ? {
         label: protectedActionState === 'working'
@@ -578,6 +619,7 @@ const BookDetailView: React.FC<BookDetailViewProps> = ({ book, onBack, source, c
       isContentExcludedFromSync,
       requiresReauthorization,
       restoredFromSync,
+      externalReaderApp,
       bookAny.providerName,
       hasCatalogCredential,
       blockedDrmReason,

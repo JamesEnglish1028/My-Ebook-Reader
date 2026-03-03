@@ -11,6 +11,7 @@ import type { AuthDocument } from '../catalog/types';
  * Book format enumeration
  */
 export type BookFormat = 'EPUB' | 'PDF' | string;
+export type ExternalReaderApp = 'palace' | 'thorium';
 
 /**
  * Book metadata - represents a book in the user's library.
@@ -28,6 +29,7 @@ export interface BookMetadata {
   contentExcludedFromSync?: boolean;
   requiresReauthorization?: boolean;
   restoredFromSync?: boolean;
+  externalReaderApp?: ExternalReaderApp;
   publisher?: string;
   publicationDate?: string;
   isbn?: string; // Kept for backwards compatibility
@@ -74,6 +76,7 @@ export interface BookRecord {
   contentExcludedFromSync?: boolean;
   requiresReauthorization?: boolean;
   restoredFromSync?: boolean;
+  externalReaderApp?: ExternalReaderApp;
   publisher?: string;
   publicationDate?: string;
   isbn?: string;

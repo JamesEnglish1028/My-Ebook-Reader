@@ -1,4 +1,4 @@
-import { cleanup, render, screen } from '@testing-library/react';
+import { cleanup, fireEvent, render, screen } from '@testing-library/react';
 import { afterEach, describe, expect, test, vi } from 'vitest';
 
 import BookDetailView from '../BookDetailView';
@@ -85,5 +85,35 @@ describe('BookDetailView Library Book UI', () => {
     const button = screen.getByRole('button', { name: /Read Book/i });
     expect(button).toBeEnabled();
     expect(screen.queryByText(/Reauthorize Access Required/i)).not.toBeInTheDocument();
+  });
+
+  test('shows Read in Palace for locally saved Palace placeholders', () => {
+    const openSpy = vi.spyOn(window, 'open').mockImplementation(() => null);
+    const mockProps = {
+      book: {
+        ...libraryBook,
+        externalReaderApp: 'palace' as const,
+        contentExcludedFromSync: true,
+      },
+      source: 'library' as const,
+      onBack: vi.fn(),
+      onReadBook: vi.fn(),
+      onImportFromCatalog: vi.fn(),
+      importStatus: defaultImportStatus,
+      setImportStatus: vi.fn(),
+      userCitationFormat: 'apa' as 'apa' | 'mla',
+    };
+
+    render(<BookDetailView {...mockProps} />);
+
+    const button = screen.getByRole('button', { name: /Read in Palace/i });
+    expect(button).toBeEnabled();
+    expect(
+      screen.getByText(/This title was borrowed to your Palace account\. Open the Palace app to read it\./i),
+    ).toBeInTheDocument();
+
+    fireEvent.click(button);
+    expect(openSpy).toHaveBeenCalledWith('https://thepalaceproject.org/app/', '_blank', 'noopener,noreferrer');
+    openSpy.mockRestore();
   });
 });

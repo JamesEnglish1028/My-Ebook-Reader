@@ -24,6 +24,12 @@ interface ImportResult {
   existingBook?: BookRecord;
 }
 
+interface PlaceholderSaveResult {
+  success: boolean;
+  bookRecord?: BookRecord;
+  existingBook?: BookRecord;
+}
+
 const initialImportState: ImportStatusState = {
   isLoading: false,
   message: '',
@@ -348,10 +354,61 @@ export const useImportCoordinator = ({ onCatalogImportSuccess }: UseImportCoordi
     }
   }, [bumpLibraryRefresh, onCatalogImportSuccess]);
 
+  const saveExternalReaderPlaceholder = useCallback(async (
+    book: CatalogBook,
+    providerName?: string,
+    externalReaderApp: 'palace' | 'thorium' = 'palace',
+  ): Promise<PlaceholderSaveResult> => {
+    try {
+      const finalProviderId = book.providerId || book.downloadUrl;
+      const storedProviderName = getStoredProviderName('catalog', providerName);
+      const newBook: BookRecord = {
+        title: book.title,
+        author: book.author,
+        coverImage: book.coverImage,
+        epubData: new ArrayBuffer(0),
+        providerId: finalProviderId,
+        providerName: storedProviderName,
+        distributor: book.distributor,
+        description: book.summary || undefined,
+        subjects: book.subjects,
+        publisher: normalizePublisher(book.publisher),
+        publicationDate: book.publicationDate,
+        format: book.format,
+        sourceUrl: book.downloadUrl,
+        fulfillmentUrl: book.downloadUrl,
+        contentExcludedFromSync: true,
+        externalReaderApp,
+      };
+
+      if (finalProviderId) {
+        const existing = await db.findBookByIdentifier(finalProviderId);
+        if (existing) {
+          if (shouldReplaceSyncedPlaceholder(existing)) {
+            const replacement = mergeWithReplacementRecord(newBook, existing);
+            await db.saveBook(replacement);
+            bumpLibraryRefresh();
+            return { success: true, bookRecord: replacement };
+          }
+          return { success: true, bookRecord: existing, existingBook: existing };
+        }
+      }
+
+      const savedId = await db.saveBook(newBook);
+      const savedBook: BookRecord = { ...newBook, id: savedId };
+      bumpLibraryRefresh();
+      return { success: true, bookRecord: savedBook };
+    } catch (error) {
+      logger.error('Error saving external reader placeholder:', error);
+      return { success: false };
+    }
+  }, [bumpLibraryRefresh]);
+
   return {
     importStatus,
     setImportStatus,
     libraryRefreshFlag,
     processAndSaveBook,
+    saveExternalReaderPlaceholder,
   };
 };

@@ -27,6 +27,7 @@ describe('useAuthAcquisitionCoordinator', () => {
     const setActiveOpdsSource = vi.fn();
     const setCurrentView = vi.fn();
     const pushToast = vi.fn();
+    const saveExternalReaderPlaceholder = vi.fn(async () => ({ success: true }));
     const resolveSpy = vi.spyOn(opdsAcquisitionService, 'resolve').mockResolvedValue({
       success: true,
       data: 'https://minotaur.dev.palaceproject.io/minotaur-test-library/works/1/fulfill/1',
@@ -61,6 +62,7 @@ describe('useAuthAcquisitionCoordinator', () => {
 
     const { result } = renderHook(() => useAuthAcquisitionCoordinator({
       processAndSaveBook,
+      saveExternalReaderPlaceholder,
       setImportStatus,
       setActiveOpdsSource,
       setCurrentView,
@@ -98,6 +100,7 @@ describe('useAuthAcquisitionCoordinator', () => {
     const setActiveOpdsSource = vi.fn();
     const setCurrentView = vi.fn();
     const pushToast = vi.fn();
+    const saveExternalReaderPlaceholder = vi.fn(async () => ({ success: true }));
     vi.spyOn(opdsAcquisitionService, 'resolve').mockResolvedValue({
       success: true,
       data: 'https://minotaur.dev.palaceproject.io/minotaur-test-library/works/1/fulfill/9',
@@ -151,6 +154,7 @@ describe('useAuthAcquisitionCoordinator', () => {
 
     const { result } = renderHook(() => useAuthAcquisitionCoordinator({
       processAndSaveBook,
+      saveExternalReaderPlaceholder,
       setImportStatus,
       setActiveOpdsSource,
       setCurrentView,
@@ -184,6 +188,7 @@ describe('useAuthAcquisitionCoordinator', () => {
     const setActiveOpdsSource = vi.fn();
     const setCurrentView = vi.fn();
     const pushToast = vi.fn();
+    const saveExternalReaderPlaceholder = vi.fn(async () => ({ success: true }));
     const resolveSpy = vi.spyOn(opdsAcquisitionService, 'resolve').mockResolvedValue({
       success: true,
       data: 'https://minotaur.dev.palaceproject.io/minotaur-test-library/works/3/fulfill/3',
@@ -209,6 +214,7 @@ describe('useAuthAcquisitionCoordinator', () => {
 
     const { result } = renderHook(() => useAuthAcquisitionCoordinator({
       processAndSaveBook,
+      saveExternalReaderPlaceholder,
       setImportStatus,
       setActiveOpdsSource,
       setCurrentView,
@@ -226,6 +232,7 @@ describe('useAuthAcquisitionCoordinator', () => {
       { scheme: 'bearer', token: 'palace-token' },
     );
     expect(actionResult).toEqual({ success: true, action: 'palace-borrow' });
+    expect(saveExternalReaderPlaceholder).toHaveBeenCalledWith(book, 'Palace', 'palace');
     expect(processAndSaveBook).not.toHaveBeenCalled();
   });
 
@@ -238,6 +245,7 @@ describe('useAuthAcquisitionCoordinator', () => {
     const setActiveOpdsSource = vi.fn();
     const setCurrentView = vi.fn();
     const pushToast = vi.fn();
+    const saveExternalReaderPlaceholder = vi.fn(async () => ({ success: true }));
     vi.spyOn(opdsAcquisitionService, 'resolve').mockResolvedValue({
       success: true,
       data: 'https://generic.example.org/fulfill/lcp',
@@ -288,6 +296,7 @@ describe('useAuthAcquisitionCoordinator', () => {
 
     const { result } = renderHook(() => useAuthAcquisitionCoordinator({
       processAndSaveBook,
+      saveExternalReaderPlaceholder,
       setImportStatus,
       setActiveOpdsSource,
       setCurrentView,

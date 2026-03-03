@@ -45,6 +45,11 @@ interface UseAuthAcquisitionCoordinatorOptions {
     coverImageUrl?: string | null,
     catalogBookMeta?: CatalogImportMeta,
   ) => Promise<{ success: boolean; bookRecord?: BookRecord; existingBook?: BookRecord }>;
+  saveExternalReaderPlaceholder: (
+    book: CatalogBook,
+    providerName?: string,
+    externalReaderApp?: 'palace' | 'thorium',
+  ) => Promise<{ success: boolean; bookRecord?: BookRecord; existingBook?: BookRecord }>;
   setImportStatus: Dispatch<SetStateAction<ImportStatusState>>;
   setActiveOpdsSource: Dispatch<SetStateAction<Catalog | CatalogRegistry | null>>;
   setCurrentView: Dispatch<SetStateAction<'library' | 'reader' | 'pdfReader' | 'audioReader' | 'bookDetail' | 'about'>>;
@@ -265,6 +270,7 @@ const validateFulfillResponse = (
 
 export const useAuthAcquisitionCoordinator = ({
   processAndSaveBook,
+  saveExternalReaderPlaceholder,
   setImportStatus,
   setActiveOpdsSource,
   setCurrentView,
@@ -422,6 +428,7 @@ export const useAuthAcquisitionCoordinator = ({
       if (!prepared.success) {
         return { success: false, error: 'error' in prepared ? prepared.error : undefined };
       }
+      await saveExternalReaderPlaceholder(book, catalogName, 'palace');
       setImportStatus({ isLoading: false, message: '', error: null });
       return { success: true, action: 'palace-borrow' };
     } catch (error) {
@@ -430,7 +437,7 @@ export const useAuthAcquisitionCoordinator = ({
       setImportStatus({ isLoading: false, message: '', error: message });
       return { success: false, error: message };
     }
-  }, [resolveCatalogAcquisition, setImportStatus]);
+  }, [resolveCatalogAcquisition, saveExternalReaderPlaceholder, setImportStatus]);
 
   const handleDownloadForThorium = useCallback(async (book: CatalogBook, catalogName?: string): Promise<ProtectedActionResult> => {
     setImportStatus({ isLoading: true, message: `Preparing ${book.title} for Thorium...`, error: null });
