@@ -137,6 +137,7 @@ describe('parseOpds2Json', () => {
               collection: [
                 'SciFi Classics',
                 { name: 'Award Winners', url: 'https://example.org/collections/awards' },
+                { name: 'Editor Picks', links: { href: '/collections/editor-picks' } },
               ],
             },
           },
@@ -153,6 +154,7 @@ describe('parseOpds2Json', () => {
       { title: 'Featured Collection', href: 'https://example.org/collections/featured' },
       { title: 'SciFi Classics', href: '' },
       { title: 'Award Winners', href: 'https://example.org/collections/awards' },
+      { title: 'Editor Picks', href: 'https://example.org/collections/editor-picks' },
     ]);
   });
 

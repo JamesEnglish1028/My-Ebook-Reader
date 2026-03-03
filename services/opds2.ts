@@ -61,12 +61,15 @@ function parseSeriesMetadata(metadata: any): Series[] | undefined {
         const rawPosition = typeof entry === 'object' && entry
           ? (entry.position ?? entry.ordinal ?? entry.index)
           : undefined;
+        const rawHref = typeof entry === 'object' && entry
+          ? resolveBelongsToEntryHref(entry)
+          : undefined;
 
         return {
           name: String(name).trim(),
           position: typeof rawPosition === 'number' ? rawPosition : undefined,
           volume: entry?.volume,
-          url: entry?.uri || entry?.url,
+          url: rawHref,
         };
       })
       .filter((entry): entry is Series => entry !== undefined);
@@ -75,6 +78,28 @@ function parseSeriesMetadata(metadata: any): Series[] | undefined {
   } catch {
     return undefined;
   }
+}
+
+function resolveBelongsToEntryHref(entry: any): string | undefined {
+  if (!entry || typeof entry !== 'object') return undefined;
+
+  if (entry.href || entry.uri || entry.url) {
+    return String(entry.href || entry.uri || entry.url);
+  }
+
+  const rawLinks = entry.links;
+  if (!rawLinks) return undefined;
+
+  if (Array.isArray(rawLinks)) {
+    const firstLinkedHref = rawLinks.find((link) => link?.href)?.href;
+    return firstLinkedHref ? String(firstLinkedHref) : undefined;
+  }
+
+  if (typeof rawLinks === 'object' && rawLinks.href) {
+    return String(rawLinks.href);
+  }
+
+  return undefined;
 }
 
 function parseCollectionMetadata(metadata: any, baseUrl: string): { title: string; href: string }[] | undefined {
@@ -92,7 +117,7 @@ function parseCollectionMetadata(metadata: any, baseUrl: string): { title: strin
         const title = String(entry?.name || entry?.title || '').trim();
         if (!title) return undefined;
 
-        const rawHref = entry?.href || entry?.uri || entry?.url;
+        const rawHref = resolveBelongsToEntryHref(entry);
         const href = rawHref ? new URL(String(rawHref), baseUrl).href : '';
         return { title, href };
       })
