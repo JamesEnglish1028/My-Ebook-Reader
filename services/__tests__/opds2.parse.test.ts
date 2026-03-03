@@ -124,6 +124,38 @@ describe('parseOpds2Json', () => {
     ]);
   });
 
+  it('extracts belongsTo collection metadata and preserves linked collections', () => {
+    const feed = {
+      metadata: { title: 'Collection Catalog' },
+      publications: [
+        {
+          metadata: {
+            title: 'Collected Story',
+            author: 'J. Writer',
+            identifier: 'col-1',
+            belongsTo: {
+              collection: [
+                'SciFi Classics',
+                { name: 'Award Winners', url: 'https://example.org/collections/awards' },
+              ],
+            },
+          },
+          links: [
+            { href: '/works/col-1', rel: 'http://opds-spec.org/acquisition/open-access', type: 'application/epub+zip' },
+            { href: '/collections/featured', rel: 'collection', title: 'Featured Collection', type: 'application/opds+json' },
+          ],
+        },
+      ],
+    };
+
+    const { books } = parseOpds2Json(feed, 'https://example.org/');
+    expect(books[0].collections).toEqual([
+      { title: 'Featured Collection', href: 'https://example.org/collections/featured' },
+      { title: 'SciFi Classics', href: '' },
+      { title: 'Award Winners', href: 'https://example.org/collections/awards' },
+    ]);
+  });
+
   it('maps subject objects into subjects and categories', () => {
     const feed = {
       metadata: { title: 'Subj Catalog' },

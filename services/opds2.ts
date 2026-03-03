@@ -77,6 +77,36 @@ function parseSeriesMetadata(metadata: any): Series[] | undefined {
   }
 }
 
+function parseCollectionMetadata(metadata: any, baseUrl: string): { title: string; href: string }[] | undefined {
+  try {
+    const rawCollections = metadata?.belongsTo?.collection;
+    if (!rawCollections) return undefined;
+
+    const normalizedCollections = (Array.isArray(rawCollections) ? rawCollections : [rawCollections])
+      .map((entry: any) => {
+        if (typeof entry === 'string') {
+          const title = entry.trim();
+          return title ? { title, href: '' } : undefined;
+        }
+
+        const title = String(entry?.name || entry?.title || '').trim();
+        if (!title) return undefined;
+
+        const rawHref = entry?.href || entry?.uri || entry?.url;
+        const href = rawHref ? new URL(String(rawHref), baseUrl).href : '';
+        return { title, href };
+      })
+      .filter((entry): entry is { title: string; href: string } => entry !== undefined)
+      .filter((entry, index, collection) => (
+        collection.findIndex((candidate) => candidate.title === entry.title && candidate.href === entry.href) === index
+      ));
+
+    return normalizedCollections.length > 0 ? normalizedCollections : undefined;
+  } catch {
+    return undefined;
+  }
+}
+
 function parseRelatedCatalogLinks(links: Opds2Link[], baseUrl: string): CatalogRelatedLink[] | undefined {
   const relatedLinks = links
     .filter((link) => {
@@ -932,6 +962,11 @@ function processOpds2Publication(pub: Opds2Publication, baseUrl: string): Catalo
     : undefined;
 
   const series = parseSeriesMetadata(metadata);
+  const metadataCollections = parseCollectionMetadata(metadata, baseUrl);
+  const mergedCollections = [...collections, ...(metadataCollections || [])]
+    .filter((entry, index, collection) => (
+      collection.findIndex((candidate) => candidate.title === entry.title && candidate.href === entry.href) === index
+    ));
   const relatedLinks = parseRelatedCatalogLinks(links, baseUrl);
 
   if (title && (downloadUrl || coverImage)) {
@@ -947,7 +982,7 @@ function processOpds2Publication(pub: Opds2Publication, baseUrl: string): Catalo
       subjects: subjectNames && subjectNames.length > 0 ? subjectNames : undefined,
       contributors: contributorNames && contributorNames.length > 0 ? contributorNames : undefined,
       categories: categories || undefined,
-      collections: collections.length > 0 ? collections : undefined,
+      collections: mergedCollections.length > 0 ? mergedCollections : undefined,
       relatedLinks,
       format: format || undefined,
       acquisitionType,

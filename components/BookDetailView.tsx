@@ -336,6 +336,13 @@ const BookDetailView: React.FC<BookDetailViewProps> = ({ book, onBack, source, c
   const [localCitations, setLocalCitations] = React.useState<Citation[]>([]);
   const primarySeries = 'downloadUrl' in book && Array.isArray(book.series) ? book.series[0] : undefined;
   const relatedCatalogLinks = 'downloadUrl' in book && Array.isArray(book.relatedLinks) ? book.relatedLinks : [];
+  const collectionTitles = Array.isArray(bookAny.collections)
+    ? Array.from(new Set(
+      bookAny.collections
+        .map((collection: any) => String(collection?.title || '').trim())
+        .filter((title: string) => title.length > 0),
+    ))
+    : [];
   const relatedFeedLinks = React.useMemo(() => {
     if (!('downloadUrl' in book)) {
       return [] as Array<{ title: string; url: string; rel: string; type?: string }>;
@@ -729,6 +736,12 @@ const BookDetailView: React.FC<BookDetailViewProps> = ({ book, onBack, source, c
                   )}
                   {bookAny.language && (
                     <li><span className="theme-text-primary font-semibold">Language:</span> <span className="theme-text-secondary">{bookAny.language}</span></li>
+                  )}
+                  {collectionTitles.length > 0 && (
+                    <li>
+                      <span className="theme-text-primary font-semibold">Collections:</span>{' '}
+                      <span className="theme-text-secondary">{collectionTitles.join(', ')}</span>
+                    </li>
                   )}
                   {bookAny.categories && bookAny.categories.length > 0 && (
                     <li>
