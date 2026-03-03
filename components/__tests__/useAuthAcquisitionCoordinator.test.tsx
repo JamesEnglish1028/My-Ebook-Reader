@@ -174,4 +174,143 @@ describe('useAuthAcquisitionCoordinator', () => {
     });
     expect(processAndSaveBook).toHaveBeenCalled();
   });
+
+  it('borrows protected Palace titles without importing them locally', async () => {
+    const processAndSaveBook = vi.fn(async () => ({
+      success: true,
+      bookRecord: { id: 'book-3' } as any,
+    }));
+    const setImportStatus = vi.fn();
+    const setActiveOpdsSource = vi.fn();
+    const setCurrentView = vi.fn();
+    const pushToast = vi.fn();
+    const resolveSpy = vi.spyOn(opdsAcquisitionService, 'resolve').mockResolvedValue({
+      success: true,
+      data: 'https://minotaur.dev.palaceproject.io/minotaur-test-library/works/3/fulfill/3',
+    });
+    vi.spyOn(services, 'findCredentialForUrl').mockResolvedValue(null);
+    vi.spyOn(services, 'getCachedAuthDocumentForUrl').mockReturnValue(null);
+    vi.spyOn(services, 'getCachedPatronAuthorizationForUrl').mockReturnValue({
+      scheme: 'bearer',
+      token: 'palace-token',
+    });
+
+    const book: CatalogBook = {
+      title: 'Protected Palace Book',
+      author: 'Author',
+      coverImage: null,
+      downloadUrl: 'https://minotaur.dev.palaceproject.io/minotaur-test-library/works/3/fulfill/3',
+      summary: null,
+      providerId: 'palace-protected-1',
+      format: 'EPUB',
+      isLcpProtected: true,
+      isOpenAccess: false,
+    };
+
+    const { result } = renderHook(() => useAuthAcquisitionCoordinator({
+      processAndSaveBook,
+      setImportStatus,
+      setActiveOpdsSource,
+      setCurrentView,
+      pushToast,
+    }));
+
+    let actionResult: any;
+    await act(async () => {
+      actionResult = await result.current.handleBorrowForPalace(book, 'Palace');
+    });
+
+    expect(resolveSpy).toHaveBeenCalledWith(
+      book.downloadUrl,
+      '1',
+      { scheme: 'bearer', token: 'palace-token' },
+    );
+    expect(actionResult).toEqual({ success: true, action: 'palace-borrow' });
+    expect(processAndSaveBook).not.toHaveBeenCalled();
+  });
+
+  it('downloads protected LCP titles for Thorium instead of importing them', async () => {
+    const processAndSaveBook = vi.fn(async () => ({
+      success: true,
+      bookRecord: { id: 'book-4' } as any,
+    }));
+    const setImportStatus = vi.fn();
+    const setActiveOpdsSource = vi.fn();
+    const setCurrentView = vi.fn();
+    const pushToast = vi.fn();
+    vi.spyOn(opdsAcquisitionService, 'resolve').mockResolvedValue({
+      success: true,
+      data: 'https://generic.example.org/fulfill/lcp',
+    });
+    vi.spyOn(services, 'findCredentialForUrl').mockResolvedValue(null);
+    vi.spyOn(services, 'getCachedAuthDocumentForUrl').mockReturnValue(null);
+    vi.spyOn(services, 'getCachedPatronAuthorizationForUrl').mockReturnValue(null);
+    vi.spyOn(services, 'maybeProxyForCors').mockResolvedValue('https://my-ebook-reader.onrender.com/proxy?url=lcp');
+
+    const nativeCreateElement = document.createElement.bind(document);
+    const anchorClick = vi.fn();
+    const createSpy = vi.spyOn(document, 'createElement').mockImplementation((tagName: string) => {
+      if (tagName.toLowerCase() === 'a') {
+        const link = nativeCreateElement('a');
+        link.click = anchorClick;
+        return link;
+      }
+      return nativeCreateElement(tagName);
+    });
+    const originalCreateObjectURL = URL.createObjectURL;
+    const originalRevokeObjectURL = URL.revokeObjectURL;
+    URL.createObjectURL = vi.fn(() => 'blob:test') as any;
+    URL.revokeObjectURL = vi.fn() as any;
+
+    globalThis.fetch = vi.fn(async () => ({
+      ok: true,
+      headers: {
+        get: (name: string) => {
+          if (name === 'Content-Type') return 'application/vnd.readium.lcp.license.v1.0+json';
+          if (name === 'Content-Disposition') return 'attachment; filename="protected-book.lcpl"';
+          return null;
+        },
+      },
+      blob: async () => new Blob(['lcp'], { type: 'application/vnd.readium.lcp.license.v1.0+json' }),
+    })) as any;
+
+    const book: CatalogBook = {
+      title: 'Protected LCP Book',
+      author: 'Author',
+      coverImage: null,
+      downloadUrl: 'https://generic.example.org/borrow/lcp',
+      summary: null,
+      providerId: 'generic-lcp-1',
+      format: 'EPUB',
+      isLcpProtected: true,
+      isOpenAccess: false,
+    };
+
+    const { result } = renderHook(() => useAuthAcquisitionCoordinator({
+      processAndSaveBook,
+      setImportStatus,
+      setActiveOpdsSource,
+      setCurrentView,
+      pushToast,
+    }));
+
+    let actionResult: any;
+    await act(async () => {
+      actionResult = await result.current.handleDownloadForThorium(book, 'Generic');
+    });
+
+    expect(actionResult).toEqual({ success: true, action: 'thorium-download' });
+    expect(globalThis.fetch).toHaveBeenCalled();
+    expect(URL.createObjectURL).toHaveBeenCalled();
+    expect(anchorClick).toHaveBeenCalled();
+    expect(processAndSaveBook).not.toHaveBeenCalled();
+
+    await act(async () => {
+      await new Promise((resolve) => window.setTimeout(resolve, 0));
+    });
+
+    createSpy.mockRestore();
+    URL.createObjectURL = originalCreateObjectURL;
+    URL.revokeObjectURL = originalRevokeObjectURL;
+  });
 });

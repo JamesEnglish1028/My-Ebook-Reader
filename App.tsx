@@ -109,6 +109,8 @@ const AppInner: React.FC = () => {
     credentialPrompt,
     setCredentialPrompt,
     handleImportFromCatalog,
+    handleBorrowForPalace,
+    handleDownloadForThorium,
     handleCredentialSubmit,
     handleOpenAuthLink,
     handleRetryAfterProviderLogin,
@@ -349,6 +351,8 @@ const AppInner: React.FC = () => {
             onReturnToLibrary={handleReturnToLibrary}
             onReadBook={handleOpenBook}
             onImportFromCatalog={handleImportFromCatalog}
+            onBorrowForPalace={handleBorrowForPalace}
+            onDownloadForThorium={handleDownloadForThorium}
             onAutoBackupToDrive={handleUploadToDrive}
             onOpenBook={handleOpenBook}
             onShowBookDetail={handleShowBookDetail}

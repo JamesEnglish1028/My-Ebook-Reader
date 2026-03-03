@@ -90,6 +90,7 @@ export interface Collection {
   title: string;
   href: string;
   description?: string;
+  source?: 'link' | 'belongsTo';
 }
 
 export interface CatalogRelatedLink {
@@ -334,6 +335,7 @@ export interface CredentialPrompt {
   pendingHref?: string | null;
   pendingBook?: CatalogBook | null;
   pendingCatalogName?: string;
+  pendingAction?: 'import' | 'palace-borrow' | 'thorium-download';
   authDocument?: AuthDocument | null;
 }
 

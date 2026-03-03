@@ -106,11 +106,12 @@ describe('BookDetailView format badge and import button', () => {
 
     render(<BookDetailView {...baseProps} book={book} source="catalog" onImportFromCatalog={async () => ({ success: false })} />);
 
-    const button = screen.getByRole('button', { name: /Cannot Import: LCP Protected/i });
-    expect(button).toBeDisabled();
+    const button = screen.getByRole('button', { name: /Download for Thorium/i });
+    expect(button).toBeEnabled();
     expect(
-      screen.getByText(/This title is protected with Readium LCP and cannot be imported by this application\./i),
+      screen.getByText(/This title cannot be read in MeBooks. Download the LCP file and open it in Thorium Reader\./i),
     ).toBeInTheDocument();
+    expect(screen.getByRole('link', { name: /Get Thorium Reader/i })).toBeInTheDocument();
   });
 
   it('disables catalog import for Adobe DRM titles', () => {
@@ -133,5 +134,62 @@ describe('BookDetailView format badge and import button', () => {
     expect(
       screen.getByText(/This title is protected with Adobe DRM and cannot be imported by this application\./i),
     ).toBeInTheDocument();
+  });
+
+  it('offers Borrow for Palace for Palace-hosted LCP titles', () => {
+    const book: CatalogBook = {
+      title: 'Palace Locked EPUB',
+      author: 'Catalog Author',
+      coverImage: null,
+      downloadUrl: 'https://minotaur.dev.palaceproject.io/minotaur-test-library/works/1/fulfill/1',
+      summary: 'A Palace LCP-protected EPUB book',
+      providerId: 'p6',
+      format: 'EPUB',
+      acquisitionMediaType: 'application/vnd.readium.lcp.license.v1.0+json',
+      isLcpProtected: true,
+    };
+
+    render(
+      <BookDetailView
+        {...baseProps}
+        book={book}
+        source="catalog"
+        onImportFromCatalog={async () => ({ success: false })}
+        onBorrowForPalace={async () => ({ success: true, action: 'palace-borrow' })}
+      />,
+    );
+
+    expect(screen.getByRole('button', { name: /Borrow for Palace/i })).toBeEnabled();
+    expect(screen.getByRole('link', { name: /Get Palace App/i })).toBeInTheDocument();
+    expect(
+      screen.getByText(/This protected title will be borrowed to your Palace account\. Read it in the Palace app after borrowing\./i),
+    ).toBeInTheDocument();
+  });
+
+  it('offers Borrow for Palace for Palace-hosted Adobe DRM titles', () => {
+    const book: CatalogBook = {
+      title: 'Palace Adobe EPUB',
+      author: 'Catalog Author',
+      coverImage: null,
+      downloadUrl: 'https://minotaur.dev.palaceproject.io/minotaur-test-library/works/2/fulfill/2',
+      summary: 'A Palace Adobe-protected EPUB book',
+      providerId: 'p7',
+      format: 'EPUB',
+      acquisitionMediaType: 'application/adobe+epub',
+      isAdobeDrmProtected: true,
+    };
+
+    render(
+      <BookDetailView
+        {...baseProps}
+        book={book}
+        source="catalog"
+        onImportFromCatalog={async () => ({ success: false })}
+        onBorrowForPalace={async () => ({ success: true, action: 'palace-borrow' })}
+      />,
+    );
+
+    expect(screen.getByRole('button', { name: /Borrow for Palace/i })).toBeEnabled();
+    expect(screen.getByRole('link', { name: /Get Palace App/i })).toBeInTheDocument();
   });
 });

@@ -24,6 +24,8 @@ export interface BookDetailViewProps {
   onBack: () => void;
   onReadBook: (book: BookDetailMetadata) => void;
   onImportFromCatalog?: (book: CatalogBook | BookDetailMetadata, catalogName?: string) => Promise<{ success: boolean; bookRecord?: BookRecord; existingBook?: BookRecord }>;
+  onBorrowForPalace?: (book: CatalogBook, catalogName?: string) => Promise<{ success: boolean; action?: 'palace-borrow' | 'thorium-download'; error?: string }>;
+  onDownloadForThorium?: (book: CatalogBook, catalogName?: string) => Promise<{ success: boolean; action?: 'palace-borrow' | 'thorium-download'; error?: string }>;
   importStatus?: ImportStatus | LegacyImportStatus;
   setImportStatus?: ((status: ImportStatus) => void) | React.Dispatch<React.SetStateAction<LegacyImportStatus>>;
   userCitationFormat?: 'apa' | 'mla' | 'chicago' | string;
@@ -37,6 +39,20 @@ import { db, ensureFreshPatronAuthorization, findCredentialForUrl } from '../ser
 
 const handleImgError = (e: React.SyntheticEvent<HTMLImageElement, Event>) => {
   (e.target as HTMLImageElement).src = '/default-cover.png';
+};
+
+const isPalaceHostedUrl = (url: string | undefined | null): boolean => {
+  if (!url) return false;
+  try {
+    const hostname = new URL(url).hostname.toLowerCase();
+    return hostname.endsWith('palace.io')
+      || hostname.endsWith('palaceproject.io')
+      || hostname.endsWith('thepalaceproject.org')
+      || hostname.endsWith('.palace.io')
+      || hostname.endsWith('.thepalaceproject.org');
+  } catch {
+    return false;
+  }
 };
 
 // Utility: format date for display
@@ -295,7 +311,7 @@ const getPrimaryActionNotice = (
   return null;
 };
 
-const BookDetailView: React.FC<BookDetailViewProps> = ({ book, onBack, source, catalogName, relatedSeriesBooks, onShowRelatedCatalogBook, onOpenRelatedCatalogFeed, userCitationFormat = 'apa', onReadBook, onImportFromCatalog, importStatus, setImportStatus }) => {
+const BookDetailView: React.FC<BookDetailViewProps> = ({ book, onBack, source, catalogName, relatedSeriesBooks, onShowRelatedCatalogBook, onOpenRelatedCatalogFeed, userCitationFormat = 'apa', onReadBook, onImportFromCatalog, onBorrowForPalace, onDownloadForThorium, importStatus, setImportStatus }) => {
   const bookAny = book as any;
   const publisherText = typeof bookAny.publisher === 'string' ? bookAny.publisher : undefined;
   const publicationDateText = formatPublicationDate(bookAny.publicationDate);
@@ -361,7 +377,11 @@ const BookDetailView: React.FC<BookDetailViewProps> = ({ book, onBack, source, c
 
     const opds2CollectionLinks = Array.isArray(book.collections)
       ? book.collections
-        .filter((collection) => typeof collection?.href === 'string' && collection.href.trim().length > 0)
+        .filter((collection) => (
+          collection?.source === 'belongsTo'
+          && typeof collection?.href === 'string'
+          && collection.href.trim().length > 0
+        ))
         .map((collection) => ({
           title: collection.title,
           url: collection.href,
@@ -485,6 +505,9 @@ const BookDetailView: React.FC<BookDetailViewProps> = ({ book, onBack, source, c
   const [isImporting, setIsImporting] = React.useState(false);
   const [isAlreadyInLibrary, setIsAlreadyInLibrary] = React.useState(false);
   const [hasCatalogCredential, setHasCatalogCredential] = React.useState<boolean | null>(null);
+  const [protectedActionState, setProtectedActionState] = React.useState<'idle' | 'working' | 'palace-borrowed' | 'thorium-downloaded'>('idle');
+  const [protectedActionMessage, setProtectedActionMessage] = React.useState<string | null>(null);
+  const [protectedActionError, setProtectedActionError] = React.useState<string | null>(null);
   const isContentExcludedFromSync = Boolean(bookAny.contentExcludedFromSync);
   const requiresReauthorization = Boolean(bookAny.requiresReauthorization);
   const restoredFromSync = Boolean(bookAny.restoredFromSync);
@@ -515,26 +538,57 @@ const BookDetailView: React.FC<BookDetailViewProps> = ({ book, onBack, source, c
     : isAdobeDrmProtected
       ? 'Adobe DRM'
       : null;
+  const isPalaceCatalog = source === 'catalog' && isPalaceHostedUrl(('downloadUrl' in book ? book.downloadUrl : '') as string);
+  const usesPalaceProtectedAction = source === 'catalog' && isPalaceCatalog && (isLcpProtected || isAdobeDrmProtected);
+  const usesThoriumProtectedAction = source === 'catalog' && !isPalaceCatalog && isLcpProtected;
+  const usesExternalProtectedAction = usesPalaceProtectedAction || usesThoriumProtectedAction;
+  const blockedDrmReason = !usesExternalProtectedAction ? drmBlockReason : (!isPalaceCatalog && isAdobeDrmProtected ? 'Adobe DRM' : null);
 
   // Only allow import if format or mediaType is PDF or EPUB
   const isImportable = (() => {
-    if (drmBlockReason) return false;
+    if (blockedDrmReason) return false;
     return hasSupportedBookFormat || hasSupportedBookMediaType;
   })();
   const primaryAction = source === 'library'
     ? getLibraryPrimaryActionState(normalizedFormat, isPreparingPlayback, isSyncedPlaceholder, requiresReauthorization)
-    : getCatalogPrimaryActionState(isImporting, isAlreadyInLibrary, isImportable, drmBlockReason);
-  const primaryActionNotice = getPrimaryActionNotice(
-    source,
-    isAlreadyInLibrary,
-    isContentExcludedFromSync,
-    requiresReauthorization,
-    restoredFromSync,
-    bookAny.providerName,
-    hasCatalogCredential,
-    drmBlockReason,
-    isLcpProtected,
-  );
+    : usesExternalProtectedAction
+      ? {
+        label: protectedActionState === 'working'
+          ? usesPalaceProtectedAction
+            ? 'Borrowing for Palace...'
+            : 'Preparing Thorium Download...'
+          : usesPalaceProtectedAction
+            ? (protectedActionState === 'palace-borrowed' ? 'Open Palace App' : 'Borrow for Palace')
+            : (protectedActionState === 'thorium-downloaded' ? 'Download Again' : 'Download for Thorium'),
+        disabled: protectedActionState === 'working',
+      }
+      : getCatalogPrimaryActionState(isImporting, isAlreadyInLibrary, isImportable, blockedDrmReason);
+  const primaryActionNotice = usesExternalProtectedAction
+    ? {
+      tone: protectedActionError ? 'warning' : 'default',
+      message: protectedActionError || protectedActionMessage || (
+        usesPalaceProtectedAction
+          ? 'This protected title will be borrowed to your Palace account. Read it in the Palace app after borrowing.'
+          : 'This title cannot be read in MeBooks. Download the LCP file and open it in Thorium Reader.'
+      ),
+    } as PrimaryActionNotice
+    : getPrimaryActionNotice(
+      source,
+      isAlreadyInLibrary,
+      isContentExcludedFromSync,
+      requiresReauthorization,
+      restoredFromSync,
+      bookAny.providerName,
+      hasCatalogCredential,
+      blockedDrmReason,
+      isLcpProtected,
+    );
+
+  React.useEffect(() => {
+    setProtectedActionState('idle');
+    setProtectedActionMessage(null);
+    setProtectedActionError(null);
+  }, [bookAny.providerId, book.title, source]);
 
   React.useEffect(() => {
     let cancelled = false;
@@ -618,6 +672,46 @@ const BookDetailView: React.FC<BookDetailViewProps> = ({ book, onBack, source, c
     setIsImporting(false);
   };
 
+  const handleProtectedActionClick = async () => {
+    if (source !== 'catalog' || !('downloadUrl' in book) || protectedActionState === 'working') return;
+
+    if (usesPalaceProtectedAction && protectedActionState === 'palace-borrowed') {
+      window.open('https://thepalaceproject.org/app/', '_blank', 'noopener,noreferrer');
+      return;
+    }
+
+    setProtectedActionState('working');
+    setProtectedActionError(null);
+    setProtectedActionMessage(null);
+
+    if (usesPalaceProtectedAction && onBorrowForPalace) {
+      const result = await onBorrowForPalace(book as CatalogBook, catalogName);
+      if (result.success) {
+        setProtectedActionState('palace-borrowed');
+        setProtectedActionMessage('Borrow complete. This title is now on your Palace shelf. Open the Palace app and read it there.');
+      } else {
+        setProtectedActionState('idle');
+        setProtectedActionError(result.error || 'Borrow failed.');
+      }
+      return;
+    }
+
+    if (usesThoriumProtectedAction && onDownloadForThorium) {
+      const result = await onDownloadForThorium(book as CatalogBook, catalogName);
+      if (result.success) {
+        setProtectedActionState('thorium-downloaded');
+        setProtectedActionMessage('Downloaded the protected file. Open it in Thorium Reader to continue.');
+      } else {
+        setProtectedActionState('idle');
+        setProtectedActionError(result.error || 'Protected download failed.');
+      }
+      return;
+    }
+
+    setProtectedActionState('idle');
+    setProtectedActionError('This protected action is not available.');
+  };
+
   return (
     <div className="flex flex-col md:flex-row gap-8 items-start px-4 md:px-12 md:pr-16 theme-text-primary">
       {/* Left column: cover, buttons, bookmarks, citations */}
@@ -640,11 +734,37 @@ const BookDetailView: React.FC<BookDetailViewProps> = ({ book, onBack, source, c
           )}
           <button
             className="theme-button-primary mt-2 rounded px-4 py-2 font-bold disabled:cursor-not-allowed disabled:opacity-60"
-            onClick={source === 'library' ? handleReadClick : handleImportClick}
+            onClick={
+              source === 'library'
+                ? handleReadClick
+                : usesExternalProtectedAction
+                  ? handleProtectedActionClick
+                  : handleImportClick
+            }
             disabled={primaryAction.disabled}
           >
             {primaryAction.label}
           </button>
+          {source === 'catalog' && usesPalaceProtectedAction && (
+            <a
+              className="theme-button-secondary mt-2 rounded px-4 py-2 text-sm font-semibold"
+              href="https://thepalaceproject.org/app/"
+              target="_blank"
+              rel="noopener noreferrer"
+            >
+              Get Palace App
+            </a>
+          )}
+          {source === 'catalog' && usesThoriumProtectedAction && (
+            <a
+              className="theme-button-secondary mt-2 rounded px-4 py-2 text-sm font-semibold"
+              href="https://thorium.edrlab.org/"
+              target="_blank"
+              rel="noopener noreferrer"
+            >
+              Get Thorium Reader
+            </a>
+          )}
           {primaryActionNotice && (
             <div className={`${primaryActionNotice.tone === 'warning' ? 'theme-text-warning' : 'theme-text-secondary'} mt-3 max-w-xs text-center text-sm`}>
               {primaryActionNotice.message}
@@ -753,7 +873,7 @@ const BookDetailView: React.FC<BookDetailViewProps> = ({ book, onBack, source, c
                     <li>
                       <span className="theme-text-primary font-semibold">Subjects:</span>{' '}
                       <span className="theme-text-secondary">
-                        {book.subjects.map(s => typeof s === 'string' ? s : s.name).join(', ')}
+                        {book.subjects.join(', ')}
                       </span>
                     </li>
                   )}

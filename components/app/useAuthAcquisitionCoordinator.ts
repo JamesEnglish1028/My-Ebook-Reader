@@ -78,6 +78,80 @@ interface FulfillResponseResult {
   followUpAuth?: RequestAuthorization | null;
 }
 
+interface ProtectedActionResult {
+  success: boolean;
+  action?: 'palace-borrow' | 'thorium-download';
+  error?: string;
+}
+
+const extractFileNameFromContentDisposition = (value: string | null): string | null => {
+  if (!value) return null;
+
+  const utf8Match = value.match(/filename\*\s*=\s*UTF-8''([^;]+)/i);
+  if (utf8Match?.[1]) {
+    try {
+      return decodeURIComponent(utf8Match[1].trim());
+    } catch {
+      return utf8Match[1].trim();
+    }
+  }
+
+  const quotedMatch = value.match(/filename\s*=\s*"([^"]+)"/i);
+  if (quotedMatch?.[1]) {
+    return quotedMatch[1].trim();
+  }
+
+  const plainMatch = value.match(/filename\s*=\s*([^;]+)/i);
+  if (plainMatch?.[1]) {
+    return plainMatch[1].trim();
+  }
+
+  return null;
+};
+
+const inferProtectedDownloadFileName = (
+  response: Response,
+  book: Pick<CatalogBook, 'title'>,
+): string => {
+  const contentDisposition = response.headers?.get?.('Content-Disposition') || null;
+  const contentType = getContentType(response).toLowerCase();
+  const providedName = extractFileNameFromContentDisposition(contentDisposition);
+  if (providedName) {
+    return providedName;
+  }
+
+  const safeTitle = (book.title || 'book')
+    .replace(/[^\w\d-]+/g, '_')
+    .replace(/_+/g, '_')
+    .replace(/^_+|_+$/g, '')
+    || 'book';
+
+  if (contentType.includes('application/vnd.readium.lcp.license.v1.0+json') || contentType.includes('readium.lcp')) {
+    return `${safeTitle}.lcpl`;
+  }
+  if (contentType.includes('pdf')) {
+    return `${safeTitle}.pdf`;
+  }
+  if (contentType.includes('epub')) {
+    return `${safeTitle}.epub`;
+  }
+
+  return `${safeTitle}.lcpl`;
+};
+
+const triggerBrowserDownload = (blob: Blob, fileName: string) => {
+  const objectUrl = URL.createObjectURL(blob);
+  const link = document.createElement('a');
+  link.href = objectUrl;
+  link.download = fileName;
+  document.body.appendChild(link);
+  link.click();
+  window.setTimeout(() => {
+    document.body.removeChild(link);
+    URL.revokeObjectURL(objectUrl);
+  }, 0);
+};
+
 const resolveLibrarySimplifiedBearerTokenDocument = async (
   response: Response,
   fallbackUrl: string,
@@ -211,6 +285,188 @@ export const useAuthAcquisitionCoordinator = ({
     }
   };
 
+  const openCredentialPromptForAction = useCallback((
+    book: CatalogBook,
+    catalogName: string | undefined,
+    authDocument: any | null,
+    pendingAction: 'import' | 'palace-borrow' | 'thorium-download',
+  ) => {
+    setImportStatus({ isLoading: false, message: '', error: null });
+    setCredentialPrompt({
+      isOpen: true,
+      host: new URL(book.downloadUrl).host,
+      pendingHref: book.downloadUrl,
+      pendingBook: book,
+      pendingCatalogName: catalogName,
+      pendingAction,
+      authDocument,
+    });
+  }, [setImportStatus]);
+
+  const resolveCatalogAcquisition = useCallback(async (
+    book: CatalogBook,
+    catalogName: string | undefined,
+    pendingAction: 'import' | 'palace-borrow' | 'thorium-download',
+  ): Promise<{ success: true; finalUrl: string; requestAuth: RequestAuthorization | null; activeAuthDocument: any | null } | { success: false; pendingPrompt?: boolean; error?: string }> => {
+    let finalUrl = book.downloadUrl;
+    let requestAuth: RequestAuthorization | null = null;
+    let activeAuthDocument = getCachedAuthDocumentForUrl(book.downloadUrl);
+
+    if (!book.isOpenAccess) {
+      const cred = await findCredentialForUrl(book.downloadUrl);
+      const cachedTokenAuth = getCachedPatronAuthorizationForUrl(book.downloadUrl);
+      requestAuth = cachedTokenAuth;
+
+      if (!requestAuth && !cred && activeAuthDocument) {
+        openCredentialPromptForAction(book, catalogName, activeAuthDocument, pendingAction);
+        return { success: false, pendingPrompt: true };
+      }
+
+      if (!requestAuth && cred) {
+        requestAuth = activeAuthDocument
+          ? await getAuthorizationForAuthDocument(activeAuthDocument, book.downloadUrl, cred.username, cred.password)
+          : {
+            scheme: 'basic',
+            username: cred.username,
+            password: cred.password,
+          };
+      }
+
+      const resolveResult = await opdsAcquisitionService.resolve(
+        book.downloadUrl,
+        (isPalaceUrl(book.downloadUrl) || requestAuth?.scheme === 'bearer') ? '1' : 'auto',
+        requestAuth,
+      );
+
+      if (resolveResult.success) {
+        finalUrl = resolveResult.data;
+      } else {
+        const errorResult = resolveResult as { success: false; error: string; status?: number; authDocument?: any };
+        if (errorResult.status === 401 || errorResult.status === 403) {
+          openCredentialPromptForAction(book, catalogName, errorResult.authDocument || activeAuthDocument || null, pendingAction);
+          return { success: false, pendingPrompt: true };
+        }
+        if (!isPalaceUrl(book.downloadUrl)) {
+          logger.warn('Failed to resolve acquisition chain, using original URL', errorResult.error);
+        } else {
+          logger.debug('Using original Palace fulfill URL after unresolved acquisition chain', {
+            url: book.downloadUrl,
+            error: errorResult.error,
+          });
+        }
+      }
+    }
+
+    activeAuthDocument = getCachedAuthDocumentForUrl(book.downloadUrl);
+    return { success: true, finalUrl, requestAuth, activeAuthDocument };
+  }, [openCredentialPromptForAction]);
+
+  const fetchResolvedCatalogResponse = useCallback(async (
+    book: CatalogBook,
+    finalUrl: string,
+    requestAuthOverride?: RequestAuthorization | null,
+  ) => {
+    let proxyUrl = await maybeProxyForCors(finalUrl, book.isOpenAccess === true);
+    const bearerAuth = requestAuthOverride?.scheme === 'bearer'
+      ? requestAuthOverride
+      : getCachedPatronAuthorizationForUrl(book.downloadUrl);
+    const basicAuth = requestAuthOverride?.scheme === 'basic'
+      ? requestAuthOverride
+      : null;
+    const storedCred = basicAuth ? null : await findCredentialForUrl(book.downloadUrl);
+    const downloadHeaders: Record<string, string> = {};
+    if (bearerAuth) {
+      downloadHeaders.Authorization = buildAuthorizationHeader(bearerAuth);
+    } else if (basicAuth) {
+      downloadHeaders.Authorization = buildAuthorizationHeader(basicAuth);
+    } else if (storedCred) {
+      downloadHeaders.Authorization = `Basic ${btoa(`${storedCred.username}:${storedCred.password}`)}`;
+    }
+
+    let response: Response;
+    if (book.isOpenAccess) {
+      try {
+        response = await fetch(finalUrl, { headers: downloadHeaders, credentials: 'include', redirect: 'follow' });
+      } catch {
+        proxyUrl = proxiedUrl(finalUrl);
+        response = await fetch(proxyUrl, { headers: {}, credentials: 'omit', redirect: 'follow' });
+      }
+    } else {
+      response = await fetch(proxyUrl, { headers: downloadHeaders, credentials: proxyUrl === finalUrl ? 'include' : 'omit' });
+    }
+
+    if (!response.ok) {
+      const statusInfo = `${response.status}${response.statusText ? ` ${response.statusText}` : ''}`;
+      let errorMessage = `Download failed. The server responded with an error (${statusInfo}). The book might not be available at this address.`;
+      if (response.status === 401 || response.status === 403) {
+        errorMessage = `Download failed (${statusInfo}). This catalog or book requires authentication (a login or password), which is not supported by this application.`;
+      }
+      if (response.status === 429) {
+        errorMessage = `Download failed (${statusInfo}). The request was rate-limited by the server or the proxy. Please wait a moment and try again.`;
+      }
+      throw new Error(errorMessage);
+    }
+
+    const resolvedFulfill = await resolveLibrarySimplifiedBearerTokenDocument(response, finalUrl);
+    return {
+      response: resolvedFulfill.response,
+      resolvedFulfill,
+      activeAuthDocument: getCachedAuthDocumentForUrl(book.downloadUrl),
+    };
+  }, []);
+
+  const handleBorrowForPalace = useCallback(async (book: CatalogBook, catalogName?: string): Promise<ProtectedActionResult> => {
+    setImportStatus({ isLoading: true, message: `Borrowing ${book.title} to Palace...`, error: null });
+    try {
+      const prepared = await resolveCatalogAcquisition(book, catalogName, 'palace-borrow');
+      if (!prepared.success) {
+        return { success: false, error: 'error' in prepared ? prepared.error : undefined };
+      }
+      setImportStatus({ isLoading: false, message: '', error: null });
+      return { success: true, action: 'palace-borrow' };
+    } catch (error) {
+      logger.error('Error borrowing protected Palace title:', error);
+      const message = error instanceof Error ? error.message : 'Borrow failed.';
+      setImportStatus({ isLoading: false, message: '', error: message });
+      return { success: false, error: message };
+    }
+  }, [resolveCatalogAcquisition, setImportStatus]);
+
+  const handleDownloadForThorium = useCallback(async (book: CatalogBook, catalogName?: string): Promise<ProtectedActionResult> => {
+    setImportStatus({ isLoading: true, message: `Preparing ${book.title} for Thorium...`, error: null });
+    try {
+      const prepared = await resolveCatalogAcquisition(book, catalogName, 'thorium-download');
+      if (!prepared.success) {
+        return { success: false, error: 'error' in prepared ? prepared.error : undefined };
+      }
+
+      const downloadResult = await fetchResolvedCatalogResponse(book, prepared.finalUrl, prepared.requestAuth);
+      const contentType = getContentType(downloadResult.response).toLowerCase();
+      if (
+        contentType
+        && !contentType.includes('application/vnd.readium.lcp.license.v1.0+json')
+        && !contentType.includes('readium.lcp')
+        && !contentType.includes('+lcp')
+        && !contentType.includes('application/octet-stream')
+        && !contentType.includes('application/epub+zip')
+        && !contentType.includes('application/pdf')
+      ) {
+        throw new Error(`Download failed for "${book.title}". The fulfill endpoint returned ${contentType} instead of an LCP-compatible file.`);
+      }
+
+      const blob = await downloadResult.response.blob();
+      const fileName = inferProtectedDownloadFileName(downloadResult.response, book);
+      triggerBrowserDownload(blob, fileName);
+      setImportStatus({ isLoading: false, message: '', error: null });
+      return { success: true, action: 'thorium-download' };
+    } catch (error) {
+      logger.error('Error preparing Thorium download:', error);
+      const message = error instanceof Error ? error.message : 'Protected download failed.';
+      setImportStatus({ isLoading: false, message: '', error: message });
+      return { success: false, error: message };
+    }
+  }, [fetchResolvedCatalogResponse, resolveCatalogAcquisition, setImportStatus]);
+
   const handleImportFromCatalog = useCallback(async (book: CatalogBook, catalogName?: string): Promise<ImportResult> => {
     if (book.isLcpProtected) {
       const error = `Cannot import "${book.title}". This title is protected with Readium LCP, which is not supported by this application.`;
@@ -232,112 +488,23 @@ export const useAuthAcquisitionCoordinator = ({
 
     setImportStatus({ isLoading: true, message: `Downloading ${book.title}...`, error: null });
     try {
-      let finalUrl = book.downloadUrl;
-
-      if (!book.isOpenAccess) {
-        const cred = await findCredentialForUrl(book.downloadUrl);
-        const cachedAuthDocument = getCachedAuthDocumentForUrl(book.downloadUrl);
-        const cachedTokenAuth = getCachedPatronAuthorizationForUrl(book.downloadUrl);
-        let requestAuth: RequestAuthorization | null = cachedTokenAuth;
-        if (!requestAuth && !cred && cachedAuthDocument) {
-          setImportStatus({ isLoading: false, message: '', error: null });
-          setCredentialPrompt({
-            isOpen: true,
-            host: new URL(book.downloadUrl).host,
-            pendingHref: book.downloadUrl,
-            pendingBook: book,
-            pendingCatalogName: catalogName,
-            authDocument: cachedAuthDocument,
-          });
-          return { success: false };
-        }
-        if (!requestAuth && cred) {
-          requestAuth = cachedAuthDocument
-            ? await getAuthorizationForAuthDocument(cachedAuthDocument, book.downloadUrl, cred.username, cred.password)
-            : {
-              scheme: 'basic',
-              username: cred.username,
-              password: cred.password,
-            };
-        }
-        const resolveResult = await opdsAcquisitionService.resolve(
-          book.downloadUrl,
-          (isPalaceUrl(book.downloadUrl) || requestAuth?.scheme === 'bearer') ? '1' : 'auto',
-          requestAuth,
-        );
-
-        if (resolveResult.success) {
-          finalUrl = resolveResult.data;
-        } else {
-          const errorResult = resolveResult as { success: false; error: string; status?: number; authDocument?: any };
-          if (errorResult.status === 401 || errorResult.status === 403) {
-            setImportStatus({ isLoading: false, message: '', error: null });
-            setCredentialPrompt({
-              isOpen: true,
-              host: new URL(book.downloadUrl).host,
-              pendingHref: book.downloadUrl,
-              pendingBook: book,
-              pendingCatalogName: catalogName,
-              authDocument: errorResult.authDocument || null,
-            });
-            return { success: false };
-          }
-          if (!isPalaceUrl(book.downloadUrl)) {
-            logger.warn('Failed to resolve acquisition chain, using original URL', errorResult.error);
-          } else {
-            logger.debug('Using original Palace fulfill URL after unresolved acquisition chain', {
-              url: book.downloadUrl,
-              error: errorResult.error,
-            });
-          }
-        }
+      const prepared = await resolveCatalogAcquisition(book, catalogName, 'import');
+      if (!prepared.success) {
+        return { success: false };
       }
 
-      let proxyUrl = await maybeProxyForCors(finalUrl, book.isOpenAccess === true);
-      const cachedTokenAuth = getCachedPatronAuthorizationForUrl(book.downloadUrl);
-      const storedCred = await findCredentialForUrl(book.downloadUrl);
-      const downloadHeaders: Record<string, string> = {};
-      if (cachedTokenAuth) {
-        downloadHeaders.Authorization = buildAuthorizationHeader(cachedTokenAuth);
-      } else if (storedCred) {
-        downloadHeaders.Authorization = `Basic ${btoa(`${storedCred.username}:${storedCred.password}`)}`;
-      }
-
-      let response: Response;
-      if (book.isOpenAccess) {
-        try {
-          response = await fetch(finalUrl, { headers: downloadHeaders, credentials: 'include', redirect: 'follow' });
-        } catch {
-          proxyUrl = proxiedUrl(finalUrl);
-          response = await fetch(proxyUrl, { headers: {}, credentials: 'omit', redirect: 'follow' });
-        }
-      } else {
-        response = await fetch(proxyUrl, { headers: downloadHeaders, credentials: proxyUrl === finalUrl ? 'include' : 'omit' });
-      }
-
-      if (!response.ok) {
-        const statusInfo = `${response.status}${response.statusText ? ` ${response.statusText}` : ''}`;
-        let errorMessage = `Download failed. The server responded with an error (${statusInfo}). The book might not be available at this address.`;
-        if (response.status === 401 || response.status === 403) {
-          errorMessage = `Download failed (${statusInfo}). This catalog or book requires authentication (a login or password), which is not supported by this application.`;
-        }
-        if (response.status === 429) {
-          errorMessage = `Download failed (${statusInfo}). The request was rate-limited by the server or the proxy. Please wait a moment and try again.`;
-        }
-        throw new Error(errorMessage);
-      }
-
-      const resolvedFulfill = await resolveLibrarySimplifiedBearerTokenDocument(response, finalUrl);
-      response = resolvedFulfill.response;
+      const downloadResult = await fetchResolvedCatalogResponse(book, prepared.finalUrl, prepared.requestAuth);
+      let response = downloadResult.response;
+      const resolvedFulfill = downloadResult.resolvedFulfill;
       validateFulfillResponse(response, book);
-      const activeAuthDocument = getCachedAuthDocumentForUrl(book.downloadUrl);
+      const activeAuthDocument = downloadResult.activeAuthDocument;
 
       const bookData = await response.arrayBuffer();
       if (book.format?.toUpperCase() === 'AUDIOBOOK') {
         cacheAudiobookTrackAuthorization(bookData, resolvedFulfill.resolvedUrl, resolvedFulfill.followUpAuth);
       }
       const catalogBookMeta = buildCatalogImportMeta(book, {
-        resolvedDownloadUrl: resolvedFulfill.resolvedUrl || finalUrl,
+        resolvedDownloadUrl: resolvedFulfill.resolvedUrl || prepared.finalUrl,
         fulfillmentUrl: book.downloadUrl,
         authDocument: activeAuthDocument,
       });
@@ -377,7 +544,7 @@ export const useAuthAcquisitionCoordinator = ({
       setImportStatus({ isLoading: false, message: '', error: message });
       return { success: false };
     }
-  }, [processAndSaveBook, setActiveOpdsSource, setCurrentView, setImportStatus]);
+  }, [fetchResolvedCatalogResponse, processAndSaveBook, resolveCatalogAcquisition, setActiveOpdsSource, setCurrentView, setImportStatus]);
 
   const handleCredentialSubmit = useCallback(async (username: string, password: string, save: boolean) => {
     if (!credentialPrompt.pendingHref) {
@@ -406,23 +573,31 @@ export const useAuthAcquisitionCoordinator = ({
         requestAuth,
       );
       if (resolveResult.success && credentialPrompt.pendingBook) {
+        const pendingAction = credentialPrompt.pendingAction || 'import';
         if (save && credentialPrompt.host) {
           saveOpdsCredential(credentialPrompt.host, normalizedUsername, normalizedPassword);
         }
         setCredentialPrompt(initialCredentialPrompt);
-        setImportStatus({ isLoading: true, message: `Downloading ${credentialPrompt.pendingBook.title}...`, error: null });
-        const proxyUrl = await maybeProxyForCors(resolveResult.data);
-        const downloadHeaders: Record<string, string> = {};
-        downloadHeaders.Authorization = buildAuthorizationHeader(requestAuth);
-        const response = await fetch(proxyUrl, {
-          headers: downloadHeaders,
-          credentials: proxyUrl === resolveResult.data ? 'include' : 'omit',
-        });
-        if (!response.ok) {
-          throw new Error(`Download failed: ${response.status}`);
+
+        if (pendingAction === 'palace-borrow') {
+          setImportStatus({ isLoading: false, message: '', error: null });
+          return;
         }
-        const resolvedFulfill = await resolveLibrarySimplifiedBearerTokenDocument(response, resolveResult.data);
-        const finalResponse = resolvedFulfill.response;
+
+        if (pendingAction === 'thorium-download') {
+          setImportStatus({ isLoading: true, message: `Preparing ${credentialPrompt.pendingBook.title} for Thorium...`, error: null });
+          const downloadResult = await fetchResolvedCatalogResponse(credentialPrompt.pendingBook, resolveResult.data, requestAuth);
+          const blob = await downloadResult.response.blob();
+          const fileName = inferProtectedDownloadFileName(downloadResult.response, credentialPrompt.pendingBook);
+          triggerBrowserDownload(blob, fileName);
+          setImportStatus({ isLoading: false, message: '', error: null });
+          return;
+        }
+
+        setImportStatus({ isLoading: true, message: `Downloading ${credentialPrompt.pendingBook.title}...`, error: null });
+        const downloadResult = await fetchResolvedCatalogResponse(credentialPrompt.pendingBook, resolveResult.data, requestAuth);
+        const finalResponse = downloadResult.response;
+        const resolvedFulfill = downloadResult.resolvedFulfill;
         validateFulfillResponse(finalResponse, credentialPrompt.pendingBook);
         const bookData = await finalResponse.arrayBuffer();
         if (credentialPrompt.pendingBook.format?.toUpperCase() === 'AUDIOBOOK') {
@@ -465,7 +640,7 @@ export const useAuthAcquisitionCoordinator = ({
       setImportStatus({ isLoading: false, message: '', error: error instanceof Error ? error.message : 'Failed to authenticate and download the book.' });
       setCredentialPrompt(initialCredentialPrompt);
     }
-  }, [credentialPrompt, processAndSaveBook, setImportStatus]);
+  }, [credentialPrompt, fetchResolvedCatalogResponse, processAndSaveBook, setImportStatus]);
 
   const handleOpenAuthLink = useCallback((href: string) => {
     void href;
@@ -474,11 +649,26 @@ export const useAuthAcquisitionCoordinator = ({
 
   const handleRetryAfterProviderLogin = useCallback(async () => {
     if (!credentialPrompt.pendingHref || !credentialPrompt.pendingBook) return;
-    setImportStatus({ isLoading: true, message: 'Retrying download after provider login...', error: null });
+    const pendingAction = credentialPrompt.pendingAction || 'import';
+    setImportStatus({
+      isLoading: true,
+      message: pendingAction === 'palace-borrow'
+        ? 'Retrying Palace borrow after provider login...'
+        : pendingAction === 'thorium-download'
+          ? 'Retrying protected download after provider login...'
+          : 'Retrying download after provider login...',
+      error: null,
+    });
     try {
       const resolveResult = await opdsAcquisitionService.resolve(credentialPrompt.pendingHref, 'auto', null);
       if (!resolveResult.success) {
         throw new Error('Failed to resolve after login');
+      }
+
+      if (pendingAction === 'palace-borrow') {
+        setImportStatus({ isLoading: false, message: '', error: null });
+        setCredentialPrompt(initialCredentialPrompt);
+        return;
       }
 
       const proxyUrl = await maybeProxyForCors(resolveResult.data);
@@ -490,6 +680,16 @@ export const useAuthAcquisitionCoordinator = ({
       const response = await fetch(proxyUrl, { credentials: proxyUrl === resolveResult.data ? 'include' : 'omit' });
       if (!response.ok) {
         throw new Error(`Download failed: ${response.status}`);
+      }
+
+      if (pendingAction === 'thorium-download') {
+        const resolvedFulfill = await resolveLibrarySimplifiedBearerTokenDocument(response, resolveResult.data);
+        const blob = await resolvedFulfill.response.blob();
+        const fileName = inferProtectedDownloadFileName(resolvedFulfill.response, credentialPrompt.pendingBook);
+        triggerBrowserDownload(blob, fileName);
+        setCredentialPrompt(initialCredentialPrompt);
+        setImportStatus({ isLoading: false, message: '', error: null });
+        return;
       }
 
       const bookData = await response.arrayBuffer();
@@ -526,6 +726,8 @@ export const useAuthAcquisitionCoordinator = ({
     credentialPrompt,
     setCredentialPrompt,
     handleImportFromCatalog,
+    handleBorrowForPalace,
+    handleDownloadForThorium,
     handleCredentialSubmit,
     handleOpenAuthLink,
     handleRetryAfterProviderLogin,

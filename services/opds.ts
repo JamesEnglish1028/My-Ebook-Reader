@@ -1044,7 +1044,12 @@ export const fetchCatalogContent = async (
 export const resolveAcquisitionChainOpds1 = async (href: string, auth?: RequestAuthorization | null, maxRedirects = 5): Promise<string | null> => {
     let attempts = 0;
     // Known Palace-related media types that some feeds use for indirect acquisition
-    const palaceTypes = ['application/adobe+epub', 'application/pdf+lcp', 'application/vnd.readium.license.status.v1.0+json'];
+    const palaceTypes = [
+        'application/adobe+epub',
+        'application/pdf+lcp',
+        'application/vnd.readium.license.status.v1.0+json',
+        'application/vnd.readium.lcp.license.v1.0+json',
+    ];
     // Keep the original href as the canonical base for resolving relative
     // links returned by the server. We may fetch via a proxied URL (current)
     // but any relative hrefs in responses should be resolved against the
@@ -1121,7 +1126,12 @@ export const resolveAcquisitionChainOpds1 = async (href: string, auth?: RequestA
                     const xml = parser.parseFromString(text, 'application/xml');
                     const links = Array.from(xml.querySelectorAll('link')) as Element[];
                     // prefer explicit acquisition links with known media types
-                    const palaceTypes = ['application/adobe+epub', 'application/pdf+lcp', 'application/vnd.readium.license.status.v1.0+json'];
+                    const palaceTypes = [
+                        'application/adobe+epub',
+                        'application/pdf+lcp',
+                        'application/vnd.readium.license.status.v1.0+json',
+                        'application/vnd.readium.lcp.license.v1.0+json',
+                    ];
                     const candidate = links.find(l => {
                         const rel = (l.getAttribute('rel') || '').toLowerCase();
                         const type = (l.getAttribute('type') || '').toLowerCase();

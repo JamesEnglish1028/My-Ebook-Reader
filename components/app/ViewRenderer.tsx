@@ -40,6 +40,8 @@ export interface ViewRendererProps {
   onReturnToLibrary: () => void;
   onReadBook: (id: number, animationData: CoverAnimationData, format?: string) => void;
   onImportFromCatalog: (book: CatalogBook, catalogName?: string) => Promise<{ success: boolean; bookRecord?: BookRecord; existingBook?: BookRecord }>;
+  onBorrowForPalace: (book: CatalogBook, catalogName?: string) => Promise<{ success: boolean; action?: 'palace-borrow' | 'thorium-download'; error?: string }>;
+  onDownloadForThorium: (book: CatalogBook, catalogName?: string) => Promise<{ success: boolean; action?: 'palace-borrow' | 'thorium-download'; error?: string }>;
 
   // Library view props
   syncStatus: {
@@ -96,6 +98,8 @@ export const ViewRenderer: React.FC<ViewRendererProps> = (props) => {
     onOpenRelatedCatalogFeed,
     onReturnToLibrary,
     onImportFromCatalog,
+    onBorrowForPalace,
+    onDownloadForThorium,
     onAutoBackupToDrive,
     onOpenBook,
     onShowBookDetail,
@@ -217,6 +221,8 @@ export const ViewRenderer: React.FC<ViewRendererProps> = (props) => {
             onBack={onReturnToLibrary}
             onReadBook={handleReadBook}
             onImportFromCatalog={onImportFromCatalog}
+            onBorrowForPalace={onBorrowForPalace}
+            onDownloadForThorium={onDownloadForThorium}
             importStatus={importStatus}
             setImportStatus={setImportStatus}
             userCitationFormat={userCitationFormat as 'apa' | 'mla' | 'chicago'}
