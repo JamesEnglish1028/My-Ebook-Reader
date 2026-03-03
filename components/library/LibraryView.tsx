@@ -2,7 +2,6 @@ import React, { useCallback, useEffect, useRef, useState } from 'react';
 
 import { useQueryClient } from '@tanstack/react-query';
 
-import { CATALOG_PRESETS, REGISTRY_PRESETS } from '../../constants/opdsPresets';
 import { useAuth } from '../../contexts/AuthContext';
 import { bookKeys, useCatalogs, useUiTheme } from '../../hooks';
 import { db, logger } from '../../services';
@@ -17,6 +16,7 @@ import { getPalaceLogoSrc } from '../library/shared/externalReader';
 import { CatalogView } from './catalog';
 import { ImportButton, LocalLibraryView } from './local';
 import PalaceCatalogPickerModal from './PalaceCatalogPickerModal';
+import { getCommunityCatalogPresets, getPalaceRegistryUrl, isPalaceCatalogUrl, normalizeSourceUrl } from './sourceSelection';
 
 interface LibraryViewProps {
   libraryRefreshFlag: number;
@@ -372,30 +372,7 @@ const LibraryView: React.FC<LibraryViewProps> = ({
         : 'theme-text-muted';
   const canSignIn = isInitialized && authStatus !== 'initializing' && authStatus !== 'not_configured';
   const currentThemeLabel = uiTheme.charAt(0).toUpperCase() + uiTheme.slice(1);
-  const normalizeSourceUrl = useCallback((value: string) => value.trim().replace(/\/+$/, '').toLowerCase(), []);
-  const isPalaceCatalogUrl = useCallback((value: string) => {
-    try {
-      const hostname = new URL(value).hostname.toLowerCase();
-      return hostname.endsWith('palace.io')
-        || hostname.endsWith('palaceproject.io')
-        || hostname.endsWith('thepalaceproject.org')
-        || hostname.endsWith('.palace.io')
-        || hostname.endsWith('.thepalaceproject.org');
-    } catch {
-      return false;
-    }
-  }, []);
-  const communityCatalogNames = React.useMemo(() => new Set([
-    'OAPEN',
-    'Open Research Library',
-    'PressBooks',
-    'Project Gutenberg',
-    'UPLOpen',
-  ]), []);
-  const communityCatalogPresets = React.useMemo(
-    () => CATALOG_PRESETS.filter((preset) => communityCatalogNames.has(preset.name)),
-    [communityCatalogNames],
-  );
+  const communityCatalogPresets = React.useMemo(() => getCommunityCatalogPresets(), []);
   const catalogsByNormalizedUrl = React.useMemo(() => {
     const entries = new Map<string, Catalog>();
     catalogs.forEach((catalog) => {
@@ -415,10 +392,7 @@ const LibraryView: React.FC<LibraryViewProps> = ({
     () => catalogs.filter((catalog) => !isPalaceCatalogUrl(catalog.url) && !communityCatalogUrls.has(normalizeSourceUrl(catalog.url))),
     [catalogs, communityCatalogUrls, isPalaceCatalogUrl, normalizeSourceUrl],
   );
-  const palaceRegistryUrl = React.useMemo(
-    () => REGISTRY_PRESETS.find((registry) => registry.name === 'Palace Libraries')?.url || 'https://registry.palaceproject.io/libraries',
-    [],
-  );
+  const palaceRegistryUrl = React.useMemo(() => getPalaceRegistryUrl(), []);
 
   const handleSelectCommunityCatalog = useCallback((preset: typeof CATALOG_PRESETS[number]) => {
     const existingCatalog = catalogsByNormalizedUrl.get(normalizeSourceUrl(preset.url));

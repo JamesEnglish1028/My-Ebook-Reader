@@ -3,6 +3,7 @@ import React, { useMemo, useRef, useState } from 'react';
 import { useCatalogContent, useFocusTrap } from '../../hooks';
 import type { Catalog } from '../../types';
 import { CloseIcon, SearchIcon } from '../icons';
+import { normalizeSourceUrl } from './sourceSelection';
 
 interface PalaceCatalogPickerModalProps {
   isOpen: boolean;
@@ -11,8 +12,6 @@ interface PalaceCatalogPickerModalProps {
   existingCatalogs: Catalog[];
   onSelectCatalog: (name: string, url: string) => void;
 }
-
-const normalizeUrl = (value: string) => value.trim().replace(/\/+$/, '').toLowerCase();
 
 const PalaceCatalogPickerModal: React.FC<PalaceCatalogPickerModalProps> = ({
   isOpen,
@@ -38,7 +37,7 @@ const PalaceCatalogPickerModal: React.FC<PalaceCatalogPickerModalProps> = ({
 
   const existingCatalogsByUrl = useMemo(() => {
     const entries = new Map<string, Catalog>();
-    existingCatalogs.forEach((catalog) => entries.set(normalizeUrl(catalog.url), catalog));
+    existingCatalogs.forEach((catalog) => entries.set(normalizeSourceUrl(catalog.url), catalog));
     return entries;
   }, [existingCatalogs]);
 
@@ -105,7 +104,7 @@ const PalaceCatalogPickerModal: React.FC<PalaceCatalogPickerModalProps> = ({
           ) : filteredLinks.length > 0 ? (
             <ul className="space-y-2">
               {filteredLinks.map((link) => {
-                const existingCatalog = existingCatalogsByUrl.get(normalizeUrl(link.url));
+                const existingCatalog = existingCatalogsByUrl.get(normalizeSourceUrl(link.url));
                 return (
                   <li key={link.url}>
                     <button
