@@ -472,6 +472,7 @@ const LibraryView: React.FC<LibraryViewProps> = ({
                     );
                   })}
 
+                  <li className="theme-divider my-1 border-t" />
                   <li className="theme-text-secondary px-3 pb-1 pt-3 text-xs font-semibold uppercase">
                     <span className="inline-flex items-center gap-1.5">
                       <img src={getPalaceLogoSrc()} alt="" aria-hidden="true" className="h-3.5 w-3.5 object-contain" />
@@ -499,6 +500,7 @@ const LibraryView: React.FC<LibraryViewProps> = ({
                   </li>
 
                   {otherCatalogs.length > 0 && <>
+                    <li className="theme-divider my-1 border-t" />
                     <li className="theme-text-secondary px-3 pb-1 pt-3 text-xs font-semibold uppercase">Other Catalogs</li>
                     {otherCatalogs.map(catalog => (
                       <li key={catalog.id}>
@@ -510,6 +512,7 @@ const LibraryView: React.FC<LibraryViewProps> = ({
                   </>}
 
                   {registries.length > 0 && <>
+                    <li className="theme-divider my-1 border-t" />
                     <li className="theme-text-secondary px-3 pb-1 pt-3 text-xs font-semibold uppercase">Registries</li>
                     {registries.map(registry => (
                       <li key={registry.id}>
