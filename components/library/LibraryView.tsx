@@ -2,15 +2,17 @@ import React, { useCallback, useEffect, useRef, useState } from 'react';
 
 import { useQueryClient } from '@tanstack/react-query';
 
+import { CATALOG_PRESETS } from '../../constants/opdsPresets';
 import { useAuth } from '../../contexts/AuthContext';
 import { bookKeys, useCatalogs, useUiTheme } from '../../hooks';
 import { db, logger } from '../../services';
 import type { BookMetadata, BookRecord, Catalog, CatalogBook, CatalogRegistry, CoverAnimationData } from '../../types';
 import { useConfirm } from '../ConfirmContext';
 import DuplicateBookModal from '../DuplicateBookModal';
-import { ChevronDownIcon, ListIcon } from '../icons';
+import { BookIcon, ChevronDownIcon, ListIcon, PlusIcon } from '../icons';
 import ManageCatalogsModal from '../ManageCatalogsModal';
 import ThemeModal from '../ThemeModal';
+import { getPalaceLogoSrc } from '../library/shared/externalReader';
 
 import { CatalogView } from './catalog';
 import { ImportButton, LocalLibraryView } from './local';
@@ -368,6 +370,62 @@ const LibraryView: React.FC<LibraryViewProps> = ({
         : 'theme-text-muted';
   const canSignIn = isInitialized && authStatus !== 'initializing' && authStatus !== 'not_configured';
   const currentThemeLabel = uiTheme.charAt(0).toUpperCase() + uiTheme.slice(1);
+  const normalizeSourceUrl = useCallback((value: string) => value.trim().replace(/\/+$/, '').toLowerCase(), []);
+  const isPalaceCatalogUrl = useCallback((value: string) => {
+    try {
+      const hostname = new URL(value).hostname.toLowerCase();
+      return hostname.endsWith('palace.io')
+        || hostname.endsWith('palaceproject.io')
+        || hostname.endsWith('thepalaceproject.org')
+        || hostname.endsWith('.palace.io')
+        || hostname.endsWith('.thepalaceproject.org');
+    } catch {
+      return false;
+    }
+  }, []);
+  const communityCatalogNames = React.useMemo(() => new Set([
+    'OAPEN',
+    'Open Research Library',
+    'PressBooks',
+    'Project Gutenberg',
+    'UPLOpen',
+  ]), []);
+  const communityCatalogPresets = React.useMemo(
+    () => CATALOG_PRESETS.filter((preset) => communityCatalogNames.has(preset.name)),
+    [communityCatalogNames],
+  );
+  const catalogsByNormalizedUrl = React.useMemo(() => {
+    const entries = new Map<string, Catalog>();
+    catalogs.forEach((catalog) => {
+      entries.set(normalizeSourceUrl(catalog.url), catalog);
+    });
+    return entries;
+  }, [catalogs, normalizeSourceUrl]);
+  const communityCatalogUrls = React.useMemo(
+    () => new Set(communityCatalogPresets.map((preset) => normalizeSourceUrl(preset.url))),
+    [communityCatalogPresets, normalizeSourceUrl],
+  );
+  const palaceCatalogs = React.useMemo(
+    () => catalogs.filter((catalog) => isPalaceCatalogUrl(catalog.url)),
+    [catalogs, isPalaceCatalogUrl],
+  );
+  const otherCatalogs = React.useMemo(
+    () => catalogs.filter((catalog) => !isPalaceCatalogUrl(catalog.url) && !communityCatalogUrls.has(normalizeSourceUrl(catalog.url))),
+    [catalogs, communityCatalogUrls, isPalaceCatalogUrl, normalizeSourceUrl],
+  );
+
+  const handleSelectCommunityCatalog = useCallback((preset: typeof CATALOG_PRESETS[number]) => {
+    const existingCatalog = catalogsByNormalizedUrl.get(normalizeSourceUrl(preset.url));
+    if (existingCatalog) {
+      handleSelectSource(existingCatalog);
+      return;
+    }
+
+    const createdCatalog = addCatalog(preset.name, preset.url, preset.opdsVersion);
+    setActiveOpdsSource(createdCatalog);
+    setCatalogNavPath([{ name: createdCatalog.name, url: createdCatalog.url }]);
+    setIsCatalogDropdownOpen(false);
+  }, [addCatalog, catalogsByNormalizedUrl, handleSelectSource, normalizeSourceUrl, setActiveOpdsSource, setCatalogNavPath]);
 
   return (
     <div className="container mx-auto p-4 md:p-8 theme-text-primary">
@@ -398,11 +456,58 @@ const LibraryView: React.FC<LibraryViewProps> = ({
                       My Shelf
                     </button>
                   </li>
-                  {(catalogs.length > 0 || registries.length > 0) && <li className="theme-divider my-1 border-t" />}
+                  <li className="theme-divider my-1 border-t" />
 
-                  {catalogs.length > 0 && <>
-                    <li className="theme-text-secondary px-3 pb-1 pt-2 text-xs font-semibold uppercase">Catalogs</li>
-                    {catalogs.map(catalog => (
+                  <li className="theme-text-secondary px-3 pb-1 pt-2 text-xs font-semibold uppercase">
+                    <span className="inline-flex items-center gap-1.5">
+                      <BookIcon className="h-3.5 w-3.5" />
+                      <span>Community Catalogs</span>
+                    </span>
+                  </li>
+                  {communityCatalogPresets.map((preset) => {
+                    const existingCatalog = catalogsByNormalizedUrl.get(normalizeSourceUrl(preset.url));
+                    const isActive = isBrowsingOpds && normalizeSourceUrl(activeOpdsSource?.url || '') === normalizeSourceUrl(preset.url);
+                    return (
+                      <li key={preset.url}>
+                        <button
+                          onClick={() => handleSelectCommunityCatalog(preset)}
+                          className={`w-full truncate rounded-md px-3 py-2 text-left text-sm ${isActive ? 'theme-nav-link-active' : 'theme-hover-surface'}`}
+                        >
+                          {existingCatalog?.name || preset.name}
+                        </button>
+                      </li>
+                    );
+                  })}
+
+                  <li className="theme-text-secondary px-3 pb-1 pt-3 text-xs font-semibold uppercase">
+                    <span className="inline-flex items-center gap-1.5">
+                      <img src={getPalaceLogoSrc()} alt="" aria-hidden="true" className="h-3.5 w-3.5 object-contain" />
+                      <span>Palace Catalogs</span>
+                    </span>
+                  </li>
+                  {palaceCatalogs.map((catalog) => (
+                    <li key={catalog.id}>
+                      <button onClick={() => handleSelectSource(catalog)} className={`w-full truncate rounded-md px-3 py-2 text-left text-sm ${isBrowsingOpds && activeOpdsSource?.id === catalog.id ? 'theme-nav-link-active' : 'theme-hover-surface'}`}>
+                        {catalog.name}
+                      </button>
+                    </li>
+                  ))}
+                  <li>
+                    <button
+                      onClick={() => {
+                        setIsCatalogDropdownOpen(false);
+                        setIsManageCatalogsOpen(true);
+                      }}
+                      className="theme-hover-surface theme-text-secondary flex w-full items-center gap-2 rounded-md px-3 py-2 text-left text-sm"
+                    >
+                      <PlusIcon className="h-3.5 w-3.5" />
+                      <span>Add...</span>
+                    </button>
+                  </li>
+
+                  {otherCatalogs.length > 0 && <>
+                    <li className="theme-text-secondary px-3 pb-1 pt-3 text-xs font-semibold uppercase">Other Catalogs</li>
+                    {otherCatalogs.map(catalog => (
                       <li key={catalog.id}>
                         <button onClick={() => handleSelectSource(catalog)} className={`w-full truncate rounded-md px-3 py-2 text-left text-sm ${isBrowsingOpds && activeOpdsSource?.id === catalog.id ? 'theme-nav-link-active' : 'theme-hover-surface'}`}>
                           {catalog.name}
@@ -412,7 +517,7 @@ const LibraryView: React.FC<LibraryViewProps> = ({
                   </>}
 
                   {registries.length > 0 && <>
-                    <li className="theme-text-secondary px-3 pb-1 pt-2 text-xs font-semibold uppercase">Registries</li>
+                    <li className="theme-text-secondary px-3 pb-1 pt-3 text-xs font-semibold uppercase">Registries</li>
                     {registries.map(registry => (
                       <li key={registry.id}>
                         <button onClick={() => handleSelectSource(registry)} className={`w-full truncate rounded-md px-3 py-2 text-left text-sm ${isBrowsingOpds && activeOpdsSource?.id === registry.id ? 'theme-nav-link-active' : 'theme-hover-surface'}`}>
