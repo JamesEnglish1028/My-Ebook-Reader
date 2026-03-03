@@ -31,6 +31,60 @@ type Book = ReturnType<Window['ePub']>;
 type Rendition = ReturnType<Book['renderTo']>;
 type Navigation = Awaited<ReturnType<Book['loaded']['navigation']['then']>>;
 
+const getReaderThemeOverrides = (theme: ReaderSettings['theme']): React.CSSProperties => {
+  if (theme === 'dark') {
+    return {
+      '--app-bg': '#0f172a',
+      '--app-fg': '#f8fafc',
+      '--surface-bg': 'rgba(15, 23, 42, 0.7)',
+      '--surface-elevated-bg': '#1e293b',
+      '--surface-muted-bg': 'rgba(15, 23, 42, 0.45)',
+      '--surface-hover-bg': 'rgba(51, 65, 85, 0.85)',
+      '--border-color': 'rgba(100, 116, 139, 0.6)',
+      '--border-soft-color': 'rgba(100, 116, 139, 0.35)',
+      '--text-primary': '#f8fafc',
+      '--text-secondary': '#cbd5e1',
+      '--text-muted': '#94a3b8',
+      '--input-bg': '#0f172a',
+      '--input-fg': '#e2e8f0',
+      '--accent-text': '#bae6fd',
+      '--accent-text-emphasis': '#e0f2fe',
+      '--button-primary-bg': '#0284c7',
+      '--button-primary-hover-bg': '#0369a1',
+      '--button-primary-fg': '#f8fafc',
+      '--button-secondary-bg': '#334155',
+      '--button-secondary-hover-bg': '#475569',
+      '--button-secondary-fg': '#f8fafc',
+      '--slider-track': 'rgba(100, 116, 139, 0.75)',
+    } as React.CSSProperties;
+  }
+
+  return {
+    '--app-bg': '#f8fafc',
+    '--app-fg': '#0f172a',
+    '--surface-bg': 'rgba(255, 255, 255, 0.88)',
+    '--surface-elevated-bg': '#ffffff',
+    '--surface-muted-bg': 'rgba(226, 232, 240, 0.65)',
+    '--surface-hover-bg': 'rgba(226, 232, 240, 0.95)',
+    '--border-color': 'rgba(203, 213, 225, 0.72)',
+    '--border-soft-color': 'rgba(203, 213, 225, 0.42)',
+    '--text-primary': '#0f172a',
+    '--text-secondary': '#334155',
+    '--text-muted': '#64748b',
+    '--input-bg': '#ffffff',
+    '--input-fg': '#0f172a',
+    '--accent-text': '#1e3a8a',
+    '--accent-text-emphasis': '#1d4ed8',
+    '--button-primary-bg': '#2563eb',
+    '--button-primary-hover-bg': '#1d4ed8',
+    '--button-primary-fg': '#eff6ff',
+    '--button-secondary-bg': '#cbd5e1',
+    '--button-secondary-hover-bg': '#94a3b8',
+    '--button-secondary-fg': '#0f172a',
+    '--slider-track': 'rgba(148, 163, 184, 0.9)',
+  } as React.CSSProperties;
+};
+
 const clearTimerRef = (ref: React.MutableRefObject<number | null>) => {
   if (ref.current) {
     clearTimeout(ref.current);
@@ -631,6 +685,11 @@ const ReaderView: React.FC<ReaderViewProps> = ({ bookId, onClose, animationData 
 
   useEffect(() => {
     if (rendition) {
+      const selectedTheme = settings.theme;
+      const themePalette = selectedTheme === 'dark'
+        ? { color: '#fff', background: '#1f2937' }
+        : { color: '#000', background: '#fff' };
+
       if (!(rendition as any).themesRegistered) {
         const lightTheme = { body: { 'color': '#000', 'background': '#fff' } };
         const darkTheme = { body: { 'color': '#fff', 'background': '#1f2937' } };
@@ -639,7 +698,24 @@ const ReaderView: React.FC<ReaderViewProps> = ({ bookId, onClose, animationData 
         (rendition as any).themesRegistered = true;
       }
 
-      rendition.themes.select(settings.theme);
+      rendition.themes.select(selectedTheme);
+      if (typeof rendition.themes.override === 'function') {
+        rendition.themes.override('color', themePalette.color);
+        rendition.themes.override('background', themePalette.background);
+      }
+      rendition.getContents().forEach((content: any) => {
+        const doc = content?.document;
+        const body = doc?.body as HTMLElement | undefined;
+        const root = doc?.documentElement as HTMLElement | undefined;
+        if (root) {
+          root.style.backgroundColor = themePalette.background;
+          root.style.color = themePalette.color;
+        }
+        if (body) {
+          body.style.backgroundColor = themePalette.background;
+          body.style.color = themePalette.color;
+        }
+      });
       rendition.themes.fontSize(`${settings.fontSize}%`);
       if (settings.fontFamily === 'Original') {
         rendition.themes.font('inherit');
@@ -823,6 +899,7 @@ const ReaderView: React.FC<ReaderViewProps> = ({ bookId, onClose, animationData 
       return updated;
     });
   };
+  const readerThemeOverrides = useMemo(() => getReaderThemeOverrides(settings.theme), [settings.theme]);
   const safeDisplay = useCallback(async (loc?: string) => {
     if (!renditionRef.current) {
       if (isDebug()) console.warn('safeDisplay: rendition not ready');
@@ -1149,7 +1226,10 @@ const ReaderView: React.FC<ReaderViewProps> = ({ bookId, onClose, animationData 
           )}
         </div>
       )}
-      <div className={`theme-shell theme-text-primary fixed inset-0 flex flex-col select-none transition-opacity duration-500 ${animationState === 'fading' || animationState === 'finished' ? 'opacity-100' : 'opacity-0'}`}>
+      <div
+        className={`theme-shell theme-text-primary fixed inset-0 flex flex-col select-none transition-opacity duration-500 ${animationState === 'fading' || animationState === 'finished' ? 'opacity-100' : 'opacity-0'}`}
+        style={readerThemeOverrides}
+      >
         <header
           className={`theme-surface-elevated theme-border theme-text-primary z-20 flex shrink-0 flex-wrap items-center justify-between border-b p-2 shadow-md transition-transform duration-300 ease-in-out sm:flex-nowrap sm:justify-start sm:gap-4 ${controlsVisible ? 'translate-y-0' : '-translate-y-full'}`}
           onMouseEnter={clearControlsTimeout}
