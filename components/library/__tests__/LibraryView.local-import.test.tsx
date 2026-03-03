@@ -34,6 +34,10 @@ vi.mock('../../../hooks', () => ({
   bookKeys: {
     all: ['books'],
   },
+  useCatalogContent: () => ({
+    data: { navigationLinks: [], error: null },
+    isLoading: false,
+  }),
   useCatalogs: () => ({
     catalogs: [],
     registries: [],
@@ -48,6 +52,7 @@ vi.mock('../../../hooks', () => ({
     uiTheme: 'system',
     setUiTheme: vi.fn(),
   }),
+  useFocusTrap: () => ({ current: null }),
 }));
 
 vi.mock('../catalog', () => ({

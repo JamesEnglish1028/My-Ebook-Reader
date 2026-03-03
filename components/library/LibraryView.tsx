@@ -2,7 +2,7 @@ import React, { useCallback, useEffect, useRef, useState } from 'react';
 
 import { useQueryClient } from '@tanstack/react-query';
 
-import { CATALOG_PRESETS } from '../../constants/opdsPresets';
+import { CATALOG_PRESETS, REGISTRY_PRESETS } from '../../constants/opdsPresets';
 import { useAuth } from '../../contexts/AuthContext';
 import { bookKeys, useCatalogs, useUiTheme } from '../../hooks';
 import { db, logger } from '../../services';
@@ -16,6 +16,7 @@ import { getPalaceLogoSrc } from '../library/shared/externalReader';
 
 import { CatalogView } from './catalog';
 import { ImportButton, LocalLibraryView } from './local';
+import PalaceCatalogPickerModal from './PalaceCatalogPickerModal';
 
 interface LibraryViewProps {
   libraryRefreshFlag: number;
@@ -93,6 +94,7 @@ const LibraryView: React.FC<LibraryViewProps> = ({
   // UI state
   const [isCatalogDropdownOpen, setIsCatalogDropdownOpen] = useState(false);
   const [isManageCatalogsOpen, setIsManageCatalogsOpen] = useState(false);
+  const [isPalaceCatalogPickerOpen, setIsPalaceCatalogPickerOpen] = useState(false);
   const [isSettingsMenuOpen, setIsSettingsMenuOpen] = useState(false);
   const [isThemeModalOpen, setIsThemeModalOpen] = useState(false);
   // Duplicate book modal
@@ -413,6 +415,10 @@ const LibraryView: React.FC<LibraryViewProps> = ({
     () => catalogs.filter((catalog) => !isPalaceCatalogUrl(catalog.url) && !communityCatalogUrls.has(normalizeSourceUrl(catalog.url))),
     [catalogs, communityCatalogUrls, isPalaceCatalogUrl, normalizeSourceUrl],
   );
+  const palaceRegistryUrl = React.useMemo(
+    () => REGISTRY_PRESETS.find((registry) => registry.name === 'Palace Libraries')?.url || 'https://registry.palaceproject.io/libraries',
+    [],
+  );
 
   const handleSelectCommunityCatalog = useCallback((preset: typeof CATALOG_PRESETS[number]) => {
     const existingCatalog = catalogsByNormalizedUrl.get(normalizeSourceUrl(preset.url));
@@ -425,6 +431,19 @@ const LibraryView: React.FC<LibraryViewProps> = ({
     setActiveOpdsSource(createdCatalog);
     setCatalogNavPath([{ name: createdCatalog.name, url: createdCatalog.url }]);
     setIsCatalogDropdownOpen(false);
+  }, [addCatalog, catalogsByNormalizedUrl, handleSelectSource, normalizeSourceUrl, setActiveOpdsSource, setCatalogNavPath]);
+
+  const handleSelectPalaceCatalog = useCallback((name: string, url: string) => {
+    const existingCatalog = catalogsByNormalizedUrl.get(normalizeSourceUrl(url));
+    if (existingCatalog) {
+      handleSelectSource(existingCatalog);
+    } else {
+      const createdCatalog = addCatalog(name, url, 'auto');
+      setActiveOpdsSource(createdCatalog);
+      setCatalogNavPath([{ name: createdCatalog.name, url: createdCatalog.url }]);
+      setIsCatalogDropdownOpen(false);
+    }
+    setIsPalaceCatalogPickerOpen(false);
   }, [addCatalog, catalogsByNormalizedUrl, handleSelectSource, normalizeSourceUrl, setActiveOpdsSource, setCatalogNavPath]);
 
   return (
@@ -496,7 +515,7 @@ const LibraryView: React.FC<LibraryViewProps> = ({
                     <button
                       onClick={() => {
                         setIsCatalogDropdownOpen(false);
-                        setIsManageCatalogsOpen(true);
+                        setIsPalaceCatalogPickerOpen(true);
                       }}
                       className="theme-hover-surface theme-text-secondary flex w-full items-center gap-2 rounded-md px-3 py-2 text-left text-sm"
                     >
@@ -704,6 +723,14 @@ const LibraryView: React.FC<LibraryViewProps> = ({
         onAddRegistry={handleAddRegistry}
         onDeleteRegistry={handleDeleteRegistry}
         onUpdateRegistry={handleUpdateRegistry}
+      />
+
+      <PalaceCatalogPickerModal
+        isOpen={isPalaceCatalogPickerOpen}
+        onClose={() => setIsPalaceCatalogPickerOpen(false)}
+        registryUrl={palaceRegistryUrl}
+        existingCatalogs={catalogs}
+        onSelectCatalog={handleSelectPalaceCatalog}
       />
 
       <ThemeModal
