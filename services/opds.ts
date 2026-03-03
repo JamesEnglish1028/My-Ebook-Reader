@@ -577,6 +577,20 @@ export const parseOpds1Xml = (xmlText: string, baseUrl: string): { books: Catalo
             if (href && title) {
                 const fullUrl = new URL(href, baseUrl).href;
                 const normalizedTitle = title.trim();
+                const isDistributorMirror = palaceFeed && distributor
+                    && normalizedTitle.toLowerCase() === distributor.toLowerCase();
+                if (palaceFeed && !isDistributorMirror) {
+                    addNavLink({
+                        title: normalizedTitle,
+                        url: fullUrl,
+                        rel: 'collection',
+                        type: link.getAttribute('type') || undefined,
+                        source: 'navigation',
+                    });
+                }
+                if (palaceFeed) {
+                    return null;
+                }
                 return {
                     title: normalizedTitle,
                     href: fullUrl,

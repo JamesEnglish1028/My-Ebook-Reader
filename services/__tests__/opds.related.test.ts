@@ -143,4 +143,50 @@ describe('related catalog link parsing', () => {
       },
     ]);
   });
+
+  it('keeps Palace OPDS1 entry collection links in navigation, not book detail metadata', () => {
+    const xml = `<?xml version="1.0" encoding="utf-8"?>
+      <feed xmlns="http://www.w3.org/2005/Atom">
+        <title>Sample Feed</title>
+        <entry>
+          <title>Palace Example</title>
+          <author><name>Example Author</name></author>
+          <id>urn:uuid:test-palace-entry-collection</id>
+          <link
+            rel="http://opds-spec.org/acquisition/borrow"
+            type="application/epub+zip"
+            href="/fulfill/test-book" />
+          <link
+            rel="collection"
+            type="application/atom+xml;profile=opds-catalog;kind=acquisition"
+            href="/groups/palace-nav"
+            title="Feed Collection Context" />
+          <link
+            href="/works/test-book/related_books"
+            rel="related"
+            type="application/atom+xml;profile=opds-catalog;kind=acquisition"
+            title="Recommended Works" />
+        </entry>
+      </feed>`;
+
+    const { books, navLinks } = parseOpds1Xml(xml, 'https://minotaur.dev.palaceproject.io/minotaur-test-library/feed.xml');
+    expect(books).toHaveLength(1);
+    expect(books[0].collections).toBeUndefined();
+    expect(navLinks).toEqual([
+      expect.objectContaining({
+        title: 'Feed Collection Context',
+        url: 'https://minotaur.dev.palaceproject.io/groups/palace-nav',
+        rel: 'collection',
+        source: 'navigation',
+      }),
+    ]);
+    expect(books[0].relatedLinks).toEqual([
+      {
+        title: 'Recommended Works',
+        url: 'https://minotaur.dev.palaceproject.io/works/test-book/related_books',
+        rel: 'related',
+        type: 'application/atom+xml;profile=opds-catalog;kind=acquisition',
+      },
+    ]);
+  });
 });
