@@ -19,5 +19,3 @@ export const getExternalReaderBadgeLabel = (externalReaderApp?: ExternalReaderAp
   if (externalReaderApp === 'thorium') return 'Thorium';
   return null;
 };
-
-export const getPalaceLogoSrc = (): string => `${import.meta.env.BASE_URL}palace-logo.svg`;

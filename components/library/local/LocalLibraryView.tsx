@@ -5,8 +5,9 @@ import type { BookMetadata, CatalogBook, CoverAnimationData } from '../../../typ
 import DeleteConfirmationModal from '../../DeleteConfirmationModal';
 import { AdjustmentsVerticalIcon, ListIcon, Squares2X2Icon } from '../../icons';
 import { Error as ErrorDisplay, Loading } from '../../shared';
+import PalaceLogoIcon from '../shared/PalaceLogoIcon';
 import { BookGrid, EmptyState, ExternalReaderBadge } from '../shared';
-import { getPalaceLogoSrc, getReaderDestination, getReaderLabel, type ReaderDestination } from '../shared/externalReader';
+import { getReaderDestination, getReaderLabel, type ReaderDestination } from '../shared/externalReader';
 
 interface LocalLibraryViewProps {
   libraryRefreshFlag: number;
@@ -460,12 +461,7 @@ const LocalLibraryView: React.FC<LocalLibraryViewProps> = ({
                     <div className="flex items-center justify-between">
                       <h3 className="theme-text-primary flex items-center gap-1.5 text-sm font-semibold uppercase tracking-[0.12em]">
                         {group.key === 'palace' && (
-                          <img
-                            src={getPalaceLogoSrc()}
-                            alt=""
-                            aria-hidden="true"
-                            className="h-4 w-4 object-contain"
-                          />
+                          <PalaceLogoIcon className="h-4 w-4 flex-shrink-0 theme-text-primary" />
                         )}
                         <span>{group.title}</span>
                       </h3>

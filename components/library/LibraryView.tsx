@@ -11,11 +11,11 @@ import DuplicateBookModal from '../DuplicateBookModal';
 import { BookIcon, ChevronDownIcon, ListIcon, PlusIcon } from '../icons';
 import ManageCatalogsModal from '../ManageCatalogsModal';
 import ThemeModal from '../ThemeModal';
-import { getPalaceLogoSrc } from '../library/shared/externalReader';
 
 import { CatalogView } from './catalog';
 import { ImportButton, LocalLibraryView } from './local';
 import PalaceCatalogPickerModal from './PalaceCatalogPickerModal';
+import PalaceLogoIcon from './shared/PalaceLogoIcon';
 import { getCommunityCatalogPresets, getPalaceRegistryUrl, isPalaceCatalogUrl, normalizeSourceUrl } from './sourceSelection';
 
 interface LibraryViewProps {
@@ -475,7 +475,7 @@ const LibraryView: React.FC<LibraryViewProps> = ({
                   <li className="theme-divider my-1 border-t" />
                   <li className="theme-text-secondary px-3 pb-1 pt-3 text-xs font-semibold uppercase">
                     <span className="inline-flex items-center gap-1.5">
-                      <img src={getPalaceLogoSrc()} alt="" aria-hidden="true" className="h-3.5 w-3.5 object-contain" />
+                      <PalaceLogoIcon className="h-3.5 w-3.5 flex-shrink-0 theme-text-secondary" />
                       <span>Palace Catalogs</span>
                     </span>
                   </li>

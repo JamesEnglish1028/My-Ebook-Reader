@@ -2,7 +2,8 @@ import React from 'react';
 
 import type { ExternalReaderApp } from '../../../domain/book/types';
 
-import { getExternalReaderBadgeLabel, getPalaceLogoSrc } from './externalReader';
+import { getExternalReaderBadgeLabel } from './externalReader';
+import PalaceLogoIcon from './PalaceLogoIcon';
 
 interface ExternalReaderBadgeProps {
   app?: ExternalReaderApp;
@@ -19,12 +20,7 @@ const ExternalReaderBadge: React.FC<ExternalReaderBadgeProps> = ({ app, classNam
   return (
     <span className={`theme-accent-badge inline-flex items-center rounded-full border px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide ${className}`.trim()}>
       {app === 'palace' && (
-        <img
-          src={getPalaceLogoSrc()}
-          alt=""
-          aria-hidden="true"
-          className="mr-1 h-3 w-3 object-contain"
-        />
+        <PalaceLogoIcon className="mr-1 h-3 w-3 flex-shrink-0 text-current" />
       )}
       {label}
     </span>
