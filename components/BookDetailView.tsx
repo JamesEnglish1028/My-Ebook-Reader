@@ -953,7 +953,7 @@ const BookDetailView: React.FC<BookDetailViewProps> = ({ book, onBack, source, c
                   />
                 )}
               </div>
-              {descriptionHasOverflow && (
+              {(descriptionExpanded || descriptionHasOverflow) && (
                 <button
                   type="button"
                   className="theme-accent-text theme-accent-text-emphasis-hover mt-2 text-sm font-semibold underline"
