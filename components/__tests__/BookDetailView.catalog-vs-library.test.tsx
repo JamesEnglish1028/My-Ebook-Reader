@@ -51,7 +51,8 @@ describe('Catalog vs Library BookDetailView Differences', () => {
     expect(screen.getByText('Import to My Shelf')).toBeInTheDocument();
 
     // Should show provider information
-    expect(screen.getByText('Catalog Provider:')).toBeInTheDocument();
+    expect(screen.getByText('Information')).toBeInTheDocument();
+    expect(screen.getByText('Provider')).toBeInTheDocument();
     expect(screen.getByText('OAPEN Library')).toBeInTheDocument();
 
     console.log('✅ Catalog book detail view shows distributor as provider');
@@ -88,12 +89,11 @@ describe('Catalog vs Library BookDetailView Differences', () => {
     expect(screen.getByText('Read Book')).toBeInTheDocument();
 
     // Should show provider information
-    expect(screen.getByText(/Provider:/)).toBeInTheDocument();
+    expect(screen.getByText('Provider')).toBeInTheDocument();
     expect(screen.getByText('My Local Library')).toBeInTheDocument();
 
     // Library books currently still display the stored distributor metadata
-    expect(screen.getByText('Distributor:')).toBeInTheDocument();
-    expect(screen.getByText('OAPEN')).toBeInTheDocument();
+    expect(screen.getByText('Distributor: OAPEN')).toBeInTheDocument();
 
     console.log('✅ Library book detail view shows providerName, not distributor');
   });
@@ -129,7 +129,7 @@ describe('Catalog vs Library BookDetailView Differences', () => {
     expect(screen.getByText('Import to My Shelf')).toBeInTheDocument();
 
     // Should show provider information
-    expect(screen.getByText('BiblioBoard')).toBeInTheDocument();
+    expect(screen.getByText('Distributor: BiblioBoard')).toBeInTheDocument();
 
     console.log('✅ PDF catalog book shows Add to Bookshelf and distributor');
   });
@@ -193,7 +193,7 @@ describe('Catalog vs Library BookDetailView Differences', () => {
 
     expect(screen.getByText('Series: Great Saga')).toBeInTheDocument();
     expect(screen.getByText('2 books')).toBeInTheDocument();
-    expect(screen.getByText('Collections:')).toBeInTheDocument();
+    expect(screen.getByText('Collections')).toBeInTheDocument();
     expect(screen.getByText(/Featured Collection, Series Collection/)).toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Recommended Works' })).toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Same Series: Great Saga' })).toBeInTheDocument();

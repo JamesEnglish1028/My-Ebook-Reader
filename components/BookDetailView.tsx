@@ -114,6 +114,17 @@ const sanitizeDescriptionHtml = (rawText: string): string => {
   return container.innerHTML;
 };
 
+const DetailField: React.FC<{
+  label: string;
+  children: React.ReactNode;
+  compact?: boolean;
+}> = ({ label, children, compact = false }) => (
+  <div className={`space-y-1 ${compact ? '' : 'pb-1'}`}>
+    <p className="theme-text-primary text-xs font-semibold uppercase tracking-[0.14em]">{label}</p>
+    <div className="theme-text-secondary text-sm leading-6">{children}</div>
+  </div>
+);
+
 // BookAnnotationsAside component
 const BookAnnotationsAside: React.FC<{
   libraryBook: BookMetadata;
@@ -137,35 +148,57 @@ const BookAnnotationsAside: React.FC<{
   return (
     <section className="mt-8 space-y-6">
       <div>
-        <h3 className="theme-text-primary mb-2 text-lg font-semibold">Bookmarks</h3>
+        <div className="theme-border theme-surface rounded-lg border p-4">
+          <div className="mb-4 flex items-center justify-between gap-3">
+            <h3 className="theme-text-primary text-sm font-semibold">Bookmarks</h3>
+            <span className="theme-accent-badge inline-flex items-center rounded-full border px-2 py-0.5 text-[11px] font-semibold uppercase tracking-wide">
+              Saved
+            </span>
+          </div>
         {bookmarks.length > 0 ? (
           <ul className="space-y-2">
             {bookmarks.map((bm, idx) => (
-              <li key={bm.id || idx} className="theme-surface-elevated theme-text-secondary rounded p-3">
-                <div className="font-semibold">{bm.label || `Bookmark ${idx + 1}`}</div>
-                {bm.description && <div className="theme-text-secondary mt-1 text-sm">{bm.description}</div>}
-                {bm.chapter && <div className="theme-text-muted mt-1 text-xs">Chapter: {bm.chapter}</div>}
-                <div className="theme-text-muted text-xs">Created: {formatDate(bm.createdAt)}</div>
+              <li key={bm.id || idx} className="theme-surface-elevated rounded-lg p-3">
+                <div className="space-y-2">
+                  <DetailField label="Bookmark" compact>
+                    <span className="theme-text-primary font-semibold">{bm.label || `Bookmark ${idx + 1}`}</span>
+                  </DetailField>
+                  {bm.description && (
+                    <DetailField label="Note" compact>
+                      {bm.description}
+                    </DetailField>
+                  )}
+                  {bm.chapter && (
+                    <DetailField label="Chapter" compact>
+                      {bm.chapter}
+                    </DetailField>
+                  )}
+                  <DetailField label="Created" compact>
+                    <span className="theme-text-muted">{formatDate(bm.createdAt)}</span>
+                  </DetailField>
+                </div>
               </li>
             ))}
           </ul>
         ) : (
           <div className="theme-text-muted text-sm">No bookmarks yet.</div>
         )}
+        </div>
       </div>
       <div>
-        <h3 className="theme-text-primary mb-2 flex items-center justify-between text-lg font-semibold">
-          Citations
-          <button
-            className="theme-button-primary ml-2 rounded px-3 py-1 text-xs font-bold"
-            onClick={() => {
-              const ris = citations.map(c => `${c.note || ''} [${c.chapter || ''}${c.pageNumber ? ', p.' + c.pageNumber : ''}]`).join('\n');
-              downloadTextFile(`${libraryBook.title || 'citations'}.ris`, ris);
-            }}
-          >
-            Export to RIS
-          </button>
-        </h3>
+        <div className="theme-border theme-surface rounded-lg border p-4">
+          <div className="mb-4 flex items-center justify-between gap-3">
+            <h3 className="theme-text-primary text-sm font-semibold">Citations</h3>
+            <button
+              className="theme-button-primary ml-2 rounded px-3 py-1 text-xs font-bold"
+              onClick={() => {
+                const ris = citations.map(c => `${c.note || ''} [${c.chapter || ''}${c.pageNumber ? ', p.' + c.pageNumber : ''}]`).join('\n');
+                downloadTextFile(`${libraryBook.title || 'citations'}.ris`, ris);
+              }}
+            >
+              Export to RIS
+            </button>
+          </div>
         {citations.length > 0 ? (
           <ul className="space-y-2">
             {citations.map((ct, idx) => {
@@ -174,13 +207,29 @@ const BookAnnotationsAside: React.FC<{
               const citationFormat = rawCitationFormat === 'mla' ? 'mla' : 'apa';
               const formatted = citationService.formatCitation(libraryBook, ct, citationFormat);
               return (
-                <li key={ct.id || idx} className="theme-surface-elevated theme-text-secondary rounded p-3">
-                  <div className="font-semibold mb-1">{formatted.text}</div>
-                  {ct.note && <div className="theme-text-secondary mt-1 text-sm">{ct.note}</div>}
-                  {ct.chapter && <div className="theme-text-muted mt-1 text-xs">Chapter: {ct.chapter}</div>}
-                  {ct.pageNumber && <div className="theme-text-muted mt-1 text-xs">Page: {ct.pageNumber}</div>}
-                  <div className="theme-text-muted text-xs">Created: {formatDate(ct.createdAt)}</div>
-                  <span className="theme-accent-badge mt-2 inline-block rounded border px-2 py-0.5 text-xs font-bold">{formatted.format.toUpperCase()}</span>
+                <li key={ct.id || idx} className="theme-surface-elevated rounded-lg p-3">
+                  <div className="space-y-2">
+                    <DetailField label="Citation" compact>
+                      <span className="theme-text-primary font-semibold">{formatted.text}</span>
+                    </DetailField>
+                    {ct.note && (
+                      <DetailField label="Note" compact>
+                        {ct.note}
+                      </DetailField>
+                    )}
+                    {(ct.chapter || ct.pageNumber) && (
+                      <DetailField label="Location" compact>
+                        <div className="space-y-1">
+                          {ct.chapter && <div>{ct.chapter}</div>}
+                          {ct.pageNumber && <div>Page {ct.pageNumber}</div>}
+                        </div>
+                      </DetailField>
+                    )}
+                    <DetailField label="Created" compact>
+                      <span className="theme-text-muted">{formatDate(ct.createdAt)}</span>
+                    </DetailField>
+                    <span className="theme-accent-badge inline-block rounded border px-2 py-0.5 text-xs font-bold">{formatted.format.toUpperCase()}</span>
+                  </div>
                 </li>
               );
             })}
@@ -188,6 +237,7 @@ const BookAnnotationsAside: React.FC<{
         ) : (
           <div className="theme-text-muted text-sm">No citations yet.</div>
         )}
+        </div>
       </div>
     </section>
   );
@@ -875,61 +925,71 @@ const BookDetailView: React.FC<BookDetailViewProps> = ({ book, onBack, source, c
         <div className="md:mb-4 md:mr-6 md:mt-4">
           <h3 className="theme-text-primary mb-3 text-xl font-bold">Book Details</h3>
           <div className="theme-divider mb-5 border-t" />
-          <div className="theme-surface-elevated rounded-lg p-6 md:p-8">
-            <div className="grid gap-8 md:grid-cols-[minmax(0,1fr)_minmax(0,1fr)]">
-              <div>
-                <ul className="space-y-2 text-base">
-                  <li>
-                    <span className="theme-text-primary font-semibold">Catalog Provider:</span> <span className="theme-text-secondary">{bookAny.providerName || (source === 'catalog' ? catalogName : 'Imported locally')}</span>
+          <div className="grid gap-6 md:grid-cols-[minmax(0,1fr)_minmax(0,1fr)]">
+            <section className="theme-border theme-surface rounded-lg border p-4" aria-label="Book metadata">
+              <div className="space-y-4">
+                <div className="flex items-center justify-between gap-3">
+                  <h4 className="theme-text-primary text-sm font-semibold">Information</h4>
+                  <span className="theme-accent-badge inline-flex items-center rounded-full border px-2 py-0.5 text-[11px] font-semibold uppercase tracking-wide">
+                    Metadata
+                  </span>
+                </div>
+
+                <DetailField label="Provider">
+                  <div className="space-y-1">
+                    <div>{bookAny.providerName || (source === 'catalog' ? catalogName : 'Imported locally')}</div>
+                    {bookAny.distributor && (
+                      <div className="theme-text-muted">Distributor: {bookAny.distributor}</div>
+                    )}
                     {bookAny.providerId ? (
-                      <div className="theme-text-muted mt-1 text-xs">
-                        Provider ID: {
-                          /^https?:\/\//.test(bookAny.providerId)
-                            ? <a href={bookAny.providerId} target="_blank" rel="noopener noreferrer" className="theme-accent-text theme-accent-text-emphasis-hover underline">{bookAny.providerId}</a>
-                            : bookAny.providerId
-                        }
+                      <div className="theme-text-muted text-xs">
+                        Provider ID:{' '}
+                        {/^https?:\/\//.test(bookAny.providerId)
+                          ? <a href={bookAny.providerId} target="_blank" rel="noopener noreferrer" className="theme-accent-text theme-accent-text-emphasis-hover underline">{bookAny.providerId}</a>
+                          : bookAny.providerId}
                       </div>
                     ) : (
-                      <div className="theme-text-muted mt-1 text-xs">Imported locally</div>
+                      <div className="theme-text-muted text-xs">Imported locally</div>
                     )}
-                  </li>
-                  {bookAny.distributor && (
-                    <li><span className="theme-text-primary font-semibold">Distributor:</span> <span className="theme-text-secondary">{bookAny.distributor}</span></li>
-                  )}
-                  {publisherText && (
-                    <li><span className="theme-text-primary font-semibold">Publisher:</span> <span className="theme-text-secondary">{publisherText}</span></li>
-                  )}
-                  {publicationDateText && (
-                    <li><span className="theme-text-primary font-semibold">Published:</span> <span className="theme-text-secondary">{publicationDateText}</span></li>
-                  )}
-                  {bookAny.language && (
-                    <li><span className="theme-text-primary font-semibold">Language:</span> <span className="theme-text-secondary">{bookAny.language}</span></li>
-                  )}
-                  {collectionTitles.length > 0 && (
-                    <li>
-                      <span className="theme-text-primary font-semibold">Collections:</span>{' '}
-                      <span className="theme-text-secondary">{collectionTitles.join(', ')}</span>
-                    </li>
-                  )}
-                  {bookAny.categories && bookAny.categories.length > 0 && (
-                    <li>
-                      <span className="theme-text-primary font-semibold">Categories:</span>{' '}
-                      <span className="theme-text-secondary">{bookAny.categories.map((cat: any) => cat.label || cat.term).join(', ')}</span>
-                    </li>
-                  )}
-                  {(!bookAny.categories || bookAny.categories.length === 0) && book.subjects && book.subjects.length > 0 && (
-                    <li>
-                      <span className="theme-text-primary font-semibold">Subjects:</span>{' '}
-                      <span className="theme-text-secondary">
-                        {book.subjects.join(', ')}
-                      </span>
-                    </li>
-                  )}
-                </ul>
+                  </div>
+                </DetailField>
+
+                {(publisherText || publicationDateText) && (
+                  <DetailField label="Publisher">
+                    <div className="space-y-1">
+                      {publisherText && <div>{publisherText}</div>}
+                      {publicationDateText && <div className="theme-text-muted">Published {publicationDateText}</div>}
+                    </div>
+                  </DetailField>
+                )}
+
+                {bookAny.language && (
+                  <DetailField label="Language">
+                    {bookAny.language}
+                  </DetailField>
+                )}
+
+                {collectionTitles.length > 0 && (
+                  <DetailField label="Collections">
+                    {collectionTitles.join(', ')}
+                  </DetailField>
+                )}
+
+                {bookAny.categories && bookAny.categories.length > 0 && (
+                  <DetailField label="Categories">
+                    {bookAny.categories.map((cat: any) => cat.label || cat.term).join(', ')}
+                  </DetailField>
+                )}
+
+                {(!bookAny.categories || bookAny.categories.length === 0) && book.subjects && book.subjects.length > 0 && (
+                  <DetailField label="Subjects">
+                    {book.subjects.join(', ')}
+                  </DetailField>
+                )}
               </div>
-              <div>
+            </section>
+            <div>
                 <AccessibilityBadges book={book as BookDetailMetadata} />
-              </div>
             </div>
           </div>
         </div>

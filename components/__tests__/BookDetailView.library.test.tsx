@@ -30,10 +30,10 @@ describe('BookDetailView Library Book UI', () => {
     render(<BookDetailView {...mockProps} />);
     expect(screen.getByText('Return to My Shelf')).toBeInTheDocument();
     expect(screen.getByText('Read Book')).toBeInTheDocument();
-    expect(screen.getByText('Catalog Provider:')).toBeInTheDocument();
+    expect(screen.getByText('Information')).toBeInTheDocument();
+    expect(screen.getByText('Provider')).toBeInTheDocument();
     expect(screen.getByText('My Local Library')).toBeInTheDocument();
-    expect(screen.getByText('Distributor:')).toBeInTheDocument();
-    expect(screen.getByText('OAPEN')).toBeInTheDocument();
+    expect(screen.getByText('Distributor: OAPEN')).toBeInTheDocument();
   });
 
   test('disables reading for metadata-only synced protected titles', () => {
