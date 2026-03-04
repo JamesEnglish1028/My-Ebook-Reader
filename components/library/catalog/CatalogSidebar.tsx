@@ -63,6 +63,15 @@ const CatalogSidebar: React.FC<CatalogSidebarProps> = ({
   const EXPANDED_LIMIT = 24;
   const SEARCH_THRESHOLD = 12;
   const MODAL_THRESHOLD = 24;
+  const getNavigationLabelParts = (link: CatalogNavigationLink): { groupTitle?: string; linkTitle: string } => {
+    if (link.source === 'group') {
+      const match = link.title.match(/^([^:]+):\s+(.+)$/);
+      if (match) {
+        return { groupTitle: match[1].trim(), linkTitle: match[2].trim() };
+      }
+    }
+    return { linkTitle: link.title };
+  };
   const populatedFacetGroups = useMemo(
     () => facetGroups.filter((group) => group.links.length > 0),
     [facetGroups],
@@ -85,12 +94,40 @@ const CatalogSidebar: React.FC<CatalogSidebarProps> = ({
   }, [filteredNavigationLinks, navigationLinks.length, showExpandedNavigation]);
 
   const hiddenNavigationCount = Math.max(filteredNavigationLinks.length - visibleNavigationLinks.length, 0);
+  const visibleNavigationSections = useMemo(() => {
+    const sections = new Map<string, { title?: string; links: CatalogNavigationLink[] }>();
+    visibleNavigationLinks.forEach((link) => {
+      const { groupTitle, linkTitle } = getNavigationLabelParts(link);
+      const key = groupTitle || '__default__';
+      if (!sections.has(key)) {
+        sections.set(key, { title: groupTitle, links: [] });
+      }
+      const section = sections.get(key);
+      if (!section) return;
+      section.links.push({ ...link, title: linkTitle });
+    });
+    return Array.from(sections.values());
+  }, [visibleNavigationLinks]);
 
   const modalNavigationLinks = useMemo(() => {
     const query = modalQuery.trim().toLowerCase();
     if (!query) return navigationLinks;
     return navigationLinks.filter((link) => link.title.toLowerCase().includes(query));
   }, [modalQuery, navigationLinks]);
+  const modalNavigationSections = useMemo(() => {
+    const sections = new Map<string, { title?: string; links: CatalogNavigationLink[] }>();
+    modalNavigationLinks.forEach((link) => {
+      const { groupTitle, linkTitle } = getNavigationLabelParts(link);
+      const key = groupTitle || '__default__';
+      if (!sections.has(key)) {
+        sections.set(key, { title: groupTitle, links: [] });
+      }
+      const section = sections.get(key);
+      if (!section) return;
+      section.links.push({ ...link, title: linkTitle });
+    });
+    return Array.from(sections.values());
+  }, [modalNavigationLinks]);
   const modalFacetLinks = useMemo(() => {
     if (!activeFacetGroup) return [];
     const query = facetModalQuery.trim().toLowerCase();
@@ -204,9 +241,20 @@ const CatalogSidebar: React.FC<CatalogSidebarProps> = ({
                   )}
                   {filteredNavigationLinks.length > 0 ? (
                     <>
-                      <nav className="space-y-1.5">
-                        {visibleNavigationLinks.map((link, index) => renderNavigationButton(link, index, onNavigationSelect))}
-                      </nav>
+                      <div className="space-y-3">
+                        {visibleNavigationSections.map((section, sectionIndex) => (
+                          <div key={`${section.title || 'default'}-${sectionIndex}`} className="space-y-1.5">
+                            {section.title && (
+                              <p className="theme-text-muted px-1 text-[11px] font-medium uppercase tracking-[0.14em]">
+                                {section.title}
+                              </p>
+                            )}
+                            <nav className="space-y-1.5">
+                              {section.links.map((link, index) => renderNavigationButton(link, index, onNavigationSelect))}
+                            </nav>
+                          </div>
+                        ))}
+                      </div>
                       {navigationLinks.length > SEARCH_THRESHOLD && (
                         <div className="flex flex-wrap gap-2 pt-1">
                           {hiddenNavigationCount > 0 && (
@@ -371,9 +419,20 @@ const CatalogSidebar: React.FC<CatalogSidebarProps> = ({
             </div>
             <div className="flex-1 overflow-y-auto px-4 py-3">
               {modalNavigationLinks.length > 0 ? (
-                <nav className="space-y-1.5">
-                  {modalNavigationLinks.map((link, index) => renderNavigationButton(link, index, handleModalNavigationSelect))}
-                </nav>
+                <div className="space-y-3">
+                  {modalNavigationSections.map((section, sectionIndex) => (
+                    <div key={`${section.title || 'default'}-modal-${sectionIndex}`} className="space-y-1.5">
+                      {section.title && (
+                        <p className="theme-text-muted px-1 text-[11px] font-medium uppercase tracking-[0.14em]">
+                          {section.title}
+                        </p>
+                      )}
+                      <nav className="space-y-1.5">
+                        {section.links.map((link, index) => renderNavigationButton(link, index, handleModalNavigationSelect))}
+                      </nav>
+                    </div>
+                  ))}
+                </div>
               ) : (
                 <p className="theme-surface theme-text-muted rounded-md px-3 py-4 text-sm">
                   No navigation links match that search.
