@@ -405,6 +405,9 @@ const BookDetailView: React.FC<BookDetailViewProps> = ({ book, onBack, source, c
     () => (descriptionText ? sanitizeDescriptionHtml(descriptionText) : ''),
     [descriptionText],
   );
+  const descriptionRef = React.useRef<HTMLDivElement>(null);
+  const [descriptionExpanded, setDescriptionExpanded] = React.useState(false);
+  const [descriptionHasOverflow, setDescriptionHasOverflow] = React.useState(false);
   const libraryBookForAnnotations: BookMetadata = {
     id: bookAny.id ?? 0,
     title: book.title,
@@ -499,6 +502,24 @@ const BookDetailView: React.FC<BookDetailViewProps> = ({ book, onBack, source, c
       if (result.success) setLocalCitations(result.data);
     }
   }, [bookAny.id]);
+
+  React.useEffect(() => {
+    const evaluateOverflow = () => {
+      const element = descriptionRef.current;
+      if (!element) {
+        setDescriptionHasOverflow(false);
+        return;
+      }
+      setDescriptionHasOverflow(element.scrollHeight > element.clientHeight + 2);
+    };
+
+    evaluateOverflow();
+    if (typeof window === 'undefined') return undefined;
+    window.addEventListener('resize', evaluateOverflow);
+    return () => {
+      window.removeEventListener('resize', evaluateOverflow);
+    };
+  }, [descriptionExpanded, descriptionHtml]);
   const coverRef = useRef<HTMLImageElement>(null);
   const normalizedFormat = book.format?.toUpperCase() || '';
   const effectiveMediaType = (bookAny.mediaType || bookAny.acquisitionMediaType || '') as string;
@@ -916,10 +937,30 @@ const BookDetailView: React.FC<BookDetailViewProps> = ({ book, onBack, source, c
             </div>
           )}
           {descriptionText && (
-            <div
-              className="theme-text-secondary mt-4 text-base leading-7 [&_ol]:my-4 [&_ol]:list-decimal [&_ol]:pl-6 [&_p]:mb-4 [&_ul]:my-4 [&_ul]:list-disc [&_ul]:pl-6"
-              dangerouslySetInnerHTML={{ __html: descriptionHtml }}
-            />
+            <div className="mt-4">
+              <div className={`relative ${!descriptionExpanded ? 'max-h-56 overflow-hidden' : ''}`}>
+                <div
+                  ref={descriptionRef}
+                  className="theme-text-secondary text-base leading-7 [&_ol]:my-4 [&_ol]:list-decimal [&_ol]:pl-6 [&_p]:mb-4 [&_ul]:my-4 [&_ul]:list-disc [&_ul]:pl-6"
+                  dangerouslySetInnerHTML={{ __html: descriptionHtml }}
+                />
+                {!descriptionExpanded && descriptionHasOverflow && (
+                  <div
+                    className="pointer-events-none absolute inset-x-0 bottom-0 h-16 bg-gradient-to-t from-[var(--surface)] to-transparent"
+                    aria-hidden="true"
+                  />
+                )}
+              </div>
+              {descriptionHasOverflow && (
+                <button
+                  type="button"
+                  className="theme-accent-text theme-accent-text-emphasis-hover mt-2 text-sm font-semibold underline"
+                  onClick={() => setDescriptionExpanded((value) => !value)}
+                >
+                  {descriptionExpanded ? 'Show less' : 'Show more'}
+                </button>
+              )}
+            </div>
           )}
         </div>
         {/* Book Details Section (accessibility, provider) INSIDE container */}
