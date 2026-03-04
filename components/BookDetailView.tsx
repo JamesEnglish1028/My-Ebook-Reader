@@ -997,10 +997,16 @@ const BookDetailView: React.FC<BookDetailViewProps> = ({ book, onBack, source, c
           <div className="md:mb-4 md:mr-6 md:mt-6">
             <h3 className="theme-text-primary mb-3 text-xl font-bold">Related Works</h3>
             <div className="theme-divider mb-5 border-t" />
-            <div className="theme-surface-elevated space-y-6 rounded-lg p-6 md:p-8">
+            <div className="space-y-4">
               {relatedFeedLinks.length > 0 && (
-                <div className="space-y-3">
-                  <h4 className="theme-text-primary text-sm font-semibold uppercase tracking-[0.14em]">Browse Related Feeds</h4>
+                <section className="theme-border theme-surface rounded-lg border p-4">
+                  <div className="mb-3 flex items-center justify-between gap-3">
+                    <h4 className="theme-text-primary text-sm font-semibold">Browse Related Feeds</h4>
+                    <span className="theme-accent-badge inline-flex items-center rounded-full border px-2 py-0.5 text-[11px] font-semibold uppercase tracking-wide">
+                      Links
+                    </span>
+                  </div>
+                  <p className="theme-text-primary mb-3 text-xs font-semibold uppercase tracking-[0.14em]">Feeds</p>
                   <div className="flex flex-wrap gap-2">
                     {relatedFeedLinks.map((link) => (
                       <button
@@ -1013,11 +1019,16 @@ const BookDetailView: React.FC<BookDetailViewProps> = ({ book, onBack, source, c
                       </button>
                     ))}
                   </div>
-                </div>
+                </section>
               )}
               {primarySeries && seriesBooksForLane && (
-                <div className="space-y-3">
-                  <h4 className="theme-text-primary text-sm font-semibold uppercase tracking-[0.14em]">Same Series</h4>
+                <section className="theme-border theme-surface rounded-lg border p-4">
+                  <div className="mb-3 flex items-center justify-between gap-3">
+                    <h4 className="theme-text-primary text-sm font-semibold">Same Series</h4>
+                    <span className="theme-accent-badge inline-flex items-center rounded-full border px-2 py-0.5 text-[11px] font-semibold uppercase tracking-wide">
+                      Related
+                    </span>
+                  </div>
                   <SeriesLane
                     series={primarySeries}
                     books={seriesBooksForLane}
@@ -1031,7 +1042,7 @@ const BookDetailView: React.FC<BookDetailViewProps> = ({ book, onBack, source, c
                       ? () => onOpenRelatedCatalogFeed?.(`Same Series: ${primarySeries.name}`, primarySeries.url as string)
                       : undefined}
                   />
-                </div>
+                </section>
               )}
             </div>
           </div>
