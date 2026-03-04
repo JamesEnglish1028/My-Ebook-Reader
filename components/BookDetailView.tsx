@@ -131,7 +131,8 @@ const BookAnnotationsAside: React.FC<{
   bookmarks: Bookmark[];
   citations: Citation[];
   userCitationFormat: 'apa' | 'mla' | 'chicago' | string;
-}> = ({ libraryBook, bookmarks = [], citations = [], userCitationFormat }) => {
+  className?: string;
+}> = ({ libraryBook, bookmarks = [], citations = [], userCitationFormat, className = '' }) => {
   function downloadTextFile(filename: string, content: string) {
     const blob = new Blob([content], { type: 'text/plain' });
     const url = URL.createObjectURL(blob);
@@ -146,7 +147,7 @@ const BookAnnotationsAside: React.FC<{
     }, 0);
   }
   return (
-    <section className="mt-8 space-y-6">
+    <section className={`space-y-6 ${className}`.trim()}>
       <div>
         <div className="theme-border theme-surface rounded-lg border p-4">
           <div className="mb-4 flex items-center justify-between gap-3">
@@ -257,6 +258,8 @@ interface PrimaryActionNotice {
   tone: 'default' | 'warning';
   message: string;
 }
+
+type DetailTabKey = 'bibliographic' | 'accessibility' | 'related' | 'annotations';
 
 const getLibraryPrimaryActionState = (
   normalizedFormat: string,
@@ -680,6 +683,7 @@ const BookDetailView: React.FC<BookDetailViewProps> = ({ book, onBack, source, c
   const showPalacePrimaryActionIcon = (source === 'library' && externalReaderApp === 'palace')
     || (source === 'catalog' && usesPalaceProtectedAction);
   const useAudiobookCoverContain = normalizedFormat === 'AUDIOBOOK';
+  const [activeDetailTab, setActiveDetailTab] = React.useState<DetailTabKey>('bibliographic');
 
   React.useEffect(() => {
     setProtectedActionState('idle');
@@ -883,9 +887,6 @@ const BookDetailView: React.FC<BookDetailViewProps> = ({ book, onBack, source, c
             <div className="theme-text-secondary mt-3 text-center text-sm">{playbackNotice}</div>
           )}
         </div>
-        <div className="w-full max-w-xs mx-auto">
-          <BookAnnotationsAside libraryBook={libraryBookForAnnotations} bookmarks={localBookmarks} citations={localCitations} userCitationFormat={userCitationFormat} />
-        </div>
       </div>
       {/* Right column: Book Details */}
       <div className="md:w-2/3 mt-8 md:mt-0">
@@ -925,128 +926,168 @@ const BookDetailView: React.FC<BookDetailViewProps> = ({ book, onBack, source, c
         <div className="md:mb-4 md:mr-6 md:mt-4">
           <h3 className="theme-text-primary mb-3 text-xl font-bold">Book Details</h3>
           <div className="theme-divider mb-5 border-t" />
-          <div className="grid gap-6 md:grid-cols-[minmax(0,1fr)_minmax(0,1fr)]">
-            <section className="theme-border theme-surface rounded-lg border p-4" aria-label="Book metadata">
-              <div className="space-y-4">
-                <div className="flex items-center justify-between gap-3">
-                  <h4 className="theme-text-primary text-sm font-semibold">Information</h4>
-                  <span className="theme-accent-badge inline-flex items-center rounded-full border px-2 py-0.5 text-[11px] font-semibold uppercase tracking-wide">
-                    Metadata
-                  </span>
-                </div>
-
-                <DetailField label="Provider">
-                  <div className="space-y-1">
-                    <div>{bookAny.providerName || (source === 'catalog' ? catalogName : 'Imported locally')}</div>
-                    {bookAny.distributor && (
-                      <div className="theme-text-muted">Distributor: {bookAny.distributor}</div>
-                    )}
-                    {bookAny.providerId ? (
-                      <div className="theme-text-muted text-xs">
-                        Provider ID:{' '}
-                        {/^https?:\/\//.test(bookAny.providerId)
-                          ? <a href={bookAny.providerId} target="_blank" rel="noopener noreferrer" className="theme-accent-text theme-accent-text-emphasis-hover underline">{bookAny.providerId}</a>
-                          : bookAny.providerId}
-                      </div>
-                    ) : (
-                      <div className="theme-text-muted text-xs">Imported locally</div>
-                    )}
+          <div className="theme-border theme-surface rounded-lg border p-4">
+            <div
+              className="theme-divider mb-4 flex flex-wrap items-center gap-2 border-b pb-3"
+              role="tablist"
+              aria-label="Book detail sections"
+            >
+              {[
+                { key: 'bibliographic' as const, label: 'Bibliographic Info' },
+                { key: 'accessibility' as const, label: 'Accessibility Info' },
+                { key: 'related' as const, label: 'Related Works' },
+                { key: 'annotations' as const, label: 'My Bookmarks & Citations' },
+              ].map((tab) => (
+                <button
+                  key={tab.key}
+                  type="button"
+                  role="tab"
+                  aria-selected={activeDetailTab === tab.key}
+                  onClick={() => setActiveDetailTab(tab.key)}
+                  className={`rounded-full border px-3 py-1.5 text-xs font-semibold transition-colors ${
+                    activeDetailTab === tab.key
+                      ? 'theme-nav-link-active'
+                      : 'theme-button-neutral theme-hover-surface'
+                  }`}
+                >
+                  {tab.label}
+                </button>
+              ))}
+            </div>
+            {activeDetailTab === 'bibliographic' && (
+              <section className="theme-border theme-surface rounded-lg border p-4" aria-label="Book metadata">
+                <div className="space-y-4">
+                  <div className="flex items-center justify-between gap-3">
+                    <h4 className="theme-text-primary text-sm font-semibold">Information</h4>
+                    <span className="theme-accent-badge inline-flex items-center rounded-full border px-2 py-0.5 text-[11px] font-semibold uppercase tracking-wide">
+                      Metadata
+                    </span>
                   </div>
-                </DetailField>
 
-                {(publisherText || publicationDateText) && (
-                  <DetailField label="Publisher">
+                  <DetailField label="Provider">
                     <div className="space-y-1">
-                      {publisherText && <div>{publisherText}</div>}
-                      {publicationDateText && <div className="theme-text-muted">Published {publicationDateText}</div>}
+                      <div>{bookAny.providerName || (source === 'catalog' ? catalogName : 'Imported locally')}</div>
+                      {bookAny.distributor && (
+                        <div className="theme-text-muted">Distributor: {bookAny.distributor}</div>
+                      )}
+                      {bookAny.providerId ? (
+                        <div className="theme-text-muted text-xs">
+                          Provider ID:{' '}
+                          {/^https?:\/\//.test(bookAny.providerId)
+                            ? <a href={bookAny.providerId} target="_blank" rel="noopener noreferrer" className="theme-accent-text theme-accent-text-emphasis-hover underline">{bookAny.providerId}</a>
+                            : bookAny.providerId}
+                        </div>
+                      ) : (
+                        <div className="theme-text-muted text-xs">Imported locally</div>
+                      )}
                     </div>
                   </DetailField>
-                )}
 
-                {bookAny.language && (
-                  <DetailField label="Language">
-                    {bookAny.language}
-                  </DetailField>
-                )}
+                  {(publisherText || publicationDateText) && (
+                    <DetailField label="Publisher">
+                      <div className="space-y-1">
+                        {publisherText && <div>{publisherText}</div>}
+                        {publicationDateText && <div className="theme-text-muted">Published {publicationDateText}</div>}
+                      </div>
+                    </DetailField>
+                  )}
 
-                {collectionTitles.length > 0 && (
-                  <DetailField label="Collections">
-                    {collectionTitles.join(', ')}
-                  </DetailField>
-                )}
+                  {bookAny.language && (
+                    <DetailField label="Language">
+                      {bookAny.language}
+                    </DetailField>
+                  )}
 
-                {bookAny.categories && bookAny.categories.length > 0 && (
-                  <DetailField label="Categories">
-                    {bookAny.categories.map((cat: any) => cat.label || cat.term).join(', ')}
-                  </DetailField>
-                )}
+                  {collectionTitles.length > 0 && (
+                    <DetailField label="Collections">
+                      {collectionTitles.join(', ')}
+                    </DetailField>
+                  )}
 
-                {(!bookAny.categories || bookAny.categories.length === 0) && book.subjects && book.subjects.length > 0 && (
-                  <DetailField label="Subjects">
-                    {book.subjects.join(', ')}
-                  </DetailField>
-                )}
-              </div>
-            </section>
-            <div>
-                <AccessibilityBadges book={book as BookDetailMetadata} />
-            </div>
+                  {bookAny.categories && bookAny.categories.length > 0 && (
+                    <DetailField label="Categories">
+                      {bookAny.categories.map((cat: any) => cat.label || cat.term).join(', ')}
+                    </DetailField>
+                  )}
+
+                  {(!bookAny.categories || bookAny.categories.length === 0) && book.subjects && book.subjects.length > 0 && (
+                    <DetailField label="Subjects">
+                      {book.subjects.join(', ')}
+                    </DetailField>
+                  )}
+                </div>
+              </section>
+            )}
+            {activeDetailTab === 'accessibility' && (
+              <AccessibilityBadges book={book as BookDetailMetadata} />
+            )}
+            {activeDetailTab === 'related' && (
+              hasRelatedWorksSection ? (
+                <div className="space-y-4">
+                  {relatedFeedLinks.length > 0 && (
+                    <section className="theme-border theme-surface rounded-lg border p-4">
+                      <div className="mb-3 flex items-center justify-between gap-3">
+                        <h4 className="theme-text-primary text-sm font-semibold">Browse Related Feeds</h4>
+                        <span className="theme-accent-badge inline-flex items-center rounded-full border px-2 py-0.5 text-[11px] font-semibold uppercase tracking-wide">
+                          Links
+                        </span>
+                      </div>
+                      <p className="theme-text-primary mb-3 text-xs font-semibold uppercase tracking-[0.14em]">Feeds</p>
+                      <div className="flex flex-wrap gap-2">
+                        {relatedFeedLinks.map((link) => (
+                          <button
+                            key={link.url}
+                            type="button"
+                            onClick={() => onOpenRelatedCatalogFeed?.(link.title, link.url)}
+                            className="theme-button-neutral theme-hover-surface inline-flex items-center rounded-full border px-3 py-1.5 text-xs font-semibold transition-colors"
+                          >
+                            {link.title}
+                          </button>
+                        ))}
+                      </div>
+                    </section>
+                  )}
+                  {primarySeries && seriesBooksForLane && (
+                    <section className="theme-border theme-surface rounded-lg border p-4">
+                      <div className="mb-3 flex items-center justify-between gap-3">
+                        <h4 className="theme-text-primary text-sm font-semibold">Same Series</h4>
+                        <span className="theme-accent-badge inline-flex items-center rounded-full border px-2 py-0.5 text-[11px] font-semibold uppercase tracking-wide">
+                          Related
+                        </span>
+                      </div>
+                      <SeriesLane
+                        series={primarySeries}
+                        books={seriesBooksForLane}
+                        onBookClick={(seriesBook) => {
+                          if (seriesBook.providerId === ('providerId' in book ? book.providerId : undefined)) {
+                            return;
+                          }
+                          onShowRelatedCatalogBook?.(seriesBook, seriesBooksForLane);
+                        }}
+                        onViewMore={primarySeries.url
+                          ? () => onOpenRelatedCatalogFeed?.(`Same Series: ${primarySeries.name}`, primarySeries.url as string)
+                          : undefined}
+                      />
+                    </section>
+                  )}
+                </div>
+              ) : (
+                <section className="theme-border theme-surface rounded-lg border p-4">
+                  <p className="theme-text-muted text-sm">No related works available for this title.</p>
+                </section>
+              )
+            )}
+            {activeDetailTab === 'annotations' && (
+              <BookAnnotationsAside
+                className="mt-0"
+                libraryBook={libraryBookForAnnotations}
+                bookmarks={localBookmarks}
+                citations={localCitations}
+                userCitationFormat={userCitationFormat}
+              />
+            )}
           </div>
         </div>
-        {hasRelatedWorksSection && (
-          <div className="md:mb-4 md:mr-6 md:mt-6">
-            <h3 className="theme-text-primary mb-3 text-xl font-bold">Related Works</h3>
-            <div className="theme-divider mb-5 border-t" />
-            <div className="space-y-4">
-              {relatedFeedLinks.length > 0 && (
-                <section className="theme-border theme-surface rounded-lg border p-4">
-                  <div className="mb-3 flex items-center justify-between gap-3">
-                    <h4 className="theme-text-primary text-sm font-semibold">Browse Related Feeds</h4>
-                    <span className="theme-accent-badge inline-flex items-center rounded-full border px-2 py-0.5 text-[11px] font-semibold uppercase tracking-wide">
-                      Links
-                    </span>
-                  </div>
-                  <p className="theme-text-primary mb-3 text-xs font-semibold uppercase tracking-[0.14em]">Feeds</p>
-                  <div className="flex flex-wrap gap-2">
-                    {relatedFeedLinks.map((link) => (
-                      <button
-                        key={link.url}
-                        type="button"
-                        onClick={() => onOpenRelatedCatalogFeed?.(link.title, link.url)}
-                        className="theme-button-neutral theme-hover-surface inline-flex items-center rounded-full border px-3 py-1.5 text-xs font-semibold transition-colors"
-                      >
-                        {link.title}
-                      </button>
-                    ))}
-                  </div>
-                </section>
-              )}
-              {primarySeries && seriesBooksForLane && (
-                <section className="theme-border theme-surface rounded-lg border p-4">
-                  <div className="mb-3 flex items-center justify-between gap-3">
-                    <h4 className="theme-text-primary text-sm font-semibold">Same Series</h4>
-                    <span className="theme-accent-badge inline-flex items-center rounded-full border px-2 py-0.5 text-[11px] font-semibold uppercase tracking-wide">
-                      Related
-                    </span>
-                  </div>
-                  <SeriesLane
-                    series={primarySeries}
-                    books={seriesBooksForLane}
-                    onBookClick={(seriesBook) => {
-                      if (seriesBook.providerId === ('providerId' in book ? book.providerId : undefined)) {
-                        return;
-                      }
-                      onShowRelatedCatalogBook?.(seriesBook, seriesBooksForLane);
-                    }}
-                    onViewMore={primarySeries.url
-                      ? () => onOpenRelatedCatalogFeed?.(`Same Series: ${primarySeries.name}`, primarySeries.url as string)
-                      : undefined}
-                  />
-                </section>
-              )}
-            </div>
-          </div>
-        )}
       </div>
     </div>
   );

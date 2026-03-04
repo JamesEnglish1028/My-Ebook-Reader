@@ -191,10 +191,13 @@ describe('Catalog vs Library BookDetailView Differences', () => {
       />,
     );
 
-    expect(screen.getByText('Series: Great Saga')).toBeInTheDocument();
-    expect(screen.getByText('2 books')).toBeInTheDocument();
     expect(screen.getByText('Collections')).toBeInTheDocument();
     expect(screen.getByText(/Featured Collection, Series Collection/)).toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole('tab', { name: 'Related Works' }));
+
+    expect(screen.getByText('Series: Great Saga')).toBeInTheDocument();
+    expect(screen.getByText('2 books')).toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Recommended Works' })).toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Same Series: Great Saga' })).toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Series Collection' })).toBeInTheDocument();
