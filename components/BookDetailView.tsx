@@ -1139,9 +1139,12 @@ const BookDetailView: React.FC<BookDetailViewProps> = ({ book, onBack, source, c
 export default BookDetailView;
 // BookDetailHeader: handles the header/back button section
 const BookDetailHeader: React.FC<{ onBack: () => void, source: 'library' | 'catalog' }> = ({ onBack, source }) => (
-  <header className="mb-8">
-    <button onClick={onBack} className="theme-text-secondary theme-accent-text-emphasis-hover inline-flex items-center gap-2 transition-colors">
-      <LeftArrowIcon className="w-5 h-5" />
+  <header className="mb-8 pt-4 md:pt-6">
+    <button
+      onClick={onBack}
+      className="theme-button-neutral theme-hover-surface inline-flex items-center gap-2 rounded-full border px-3 py-1.5 text-sm font-semibold transition-colors"
+    >
+      <LeftArrowIcon className="h-4 w-4" />
       <span>Return to {source === 'library' ? 'My Shelf' : 'Catalog'}</span>
     </button>
   </header>
