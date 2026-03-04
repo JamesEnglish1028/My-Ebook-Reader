@@ -938,9 +938,11 @@ const BookDetailView: React.FC<BookDetailViewProps> = ({ book, onBack, source, c
           )}
           {descriptionText && (
             <div className="mt-4">
-              <div className={`relative ${!descriptionExpanded ? 'max-h-56 overflow-hidden' : ''}`}>
+              <div
+                ref={descriptionRef}
+                className={`relative ${!descriptionExpanded ? 'max-h-56 overflow-hidden' : ''}`}
+              >
                 <div
-                  ref={descriptionRef}
                   className="theme-text-secondary text-base leading-7 [&_ol]:my-4 [&_ol]:list-decimal [&_ol]:pl-6 [&_p]:mb-4 [&_ul]:my-4 [&_ul]:list-disc [&_ul]:pl-6"
                   dangerouslySetInnerHTML={{ __html: descriptionHtml }}
                 />
