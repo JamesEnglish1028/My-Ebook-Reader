@@ -1,5 +1,6 @@
 import React, { useRef } from 'react';
 
+import { opdsParserService } from '../domain/catalog/opds-service';
 import { bookmarkService } from '../domain/reader';
 import { citationService } from '../domain/reader/citation-service';
 import type { BookMetadata, BookRecord, Bookmark, CatalogBook, Citation, ImportStatus } from '../types';
@@ -37,7 +38,7 @@ import SeriesLane from './library/catalog/SeriesLane';
 import BookBadges from './library/shared/BookBadges';
 import { getReaderLabel } from './library/shared/externalReader';
 import PalaceLogoIcon from './library/shared/PalaceLogoIcon';
-import { db, ensureFreshPatronAuthorization, findCredentialForUrl } from '../services';
+import { db, ensureFreshPatronAuthorization, findCredentialForUrl, getCachedPatronAuthorizationForUrl } from '../services';
 
 const handleImgError = (e: React.SyntheticEvent<HTMLImageElement, Event>) => {
   (e.target as HTMLImageElement).src = '/default-cover.png';
@@ -705,12 +706,59 @@ const BookDetailView: React.FC<BookDetailViewProps> = ({ book, onBack, source, c
     || (source === 'catalog' && usesPalaceProtectedAction);
   const useAudiobookCoverContain = normalizedFormat === 'AUDIOBOOK';
   const [activeDetailTab, setActiveDetailTab] = React.useState<DetailTabKey>('bibliographic');
+  const [remoteSeriesBooks, setRemoteSeriesBooks] = React.useState<CatalogBook[] | null>(null);
+  const [isLoadingRemoteSeries, setIsLoadingRemoteSeries] = React.useState(false);
+  const [remoteSeriesError, setRemoteSeriesError] = React.useState<string | null>(null);
+  const [hasAttemptedRemoteSeriesFetch, setHasAttemptedRemoteSeriesFetch] = React.useState(false);
 
   React.useEffect(() => {
     setProtectedActionState('idle');
     setProtectedActionMessage(null);
     setProtectedActionError(null);
   }, [bookAny.providerId, book.title, source]);
+
+  React.useEffect(() => {
+    setRemoteSeriesBooks(null);
+    setIsLoadingRemoteSeries(false);
+    setRemoteSeriesError(null);
+    setHasAttemptedRemoteSeriesFetch(false);
+  }, [bookAny.providerId, source]);
+
+  React.useEffect(() => {
+    if (source !== 'catalog') return;
+    if (activeDetailTab !== 'related') return;
+    if (!primarySeries?.url) return;
+    if (hasAttemptedRemoteSeriesFetch) return;
+
+    setHasAttemptedRemoteSeriesFetch(true);
+    setIsLoadingRemoteSeries(true);
+    setRemoteSeriesError(null);
+
+    const loadRemoteSeries = async () => {
+      const requestAuth = getCachedPatronAuthorizationForUrl(primarySeries.url)
+        || ('downloadUrl' in book ? getCachedPatronAuthorizationForUrl(book.downloadUrl) : null)
+        || (bookAny.sourceUrl ? getCachedPatronAuthorizationForUrl(bookAny.sourceUrl) : null);
+
+      const result = await opdsParserService.fetchCatalog(
+        primarySeries.url as string,
+        primarySeries.url as string,
+        'auto',
+        requestAuth || undefined,
+      );
+
+      if (!result.success) {
+        setRemoteSeriesError(result.error || 'Unable to load titles in this series.');
+        setRemoteSeriesBooks(null);
+        setIsLoadingRemoteSeries(false);
+        return;
+      }
+
+      setRemoteSeriesBooks(result.data.books);
+      setIsLoadingRemoteSeries(false);
+    };
+
+    void loadRemoteSeries();
+  }, [activeDetailTab, book, bookAny.sourceUrl, hasAttemptedRemoteSeriesFetch, primarySeries?.url, source]);
 
   React.useEffect(() => {
     let cancelled = false;
@@ -1100,7 +1148,7 @@ const BookDetailView: React.FC<BookDetailViewProps> = ({ book, onBack, source, c
                       </div>
                       <SeriesLane
                         series={primarySeries}
-                        books={seriesBooksForLane}
+                        books={remoteSeriesBooks && remoteSeriesBooks.length > 0 ? remoteSeriesBooks : seriesBooksForLane}
                         onBookClick={(seriesBook) => {
                           if (seriesBook.providerId === ('providerId' in book ? book.providerId : undefined)) {
                             return;
@@ -1111,6 +1159,12 @@ const BookDetailView: React.FC<BookDetailViewProps> = ({ book, onBack, source, c
                           ? () => onOpenRelatedCatalogFeed?.(`Same Series: ${primarySeries.name}`, primarySeries.url as string)
                           : undefined}
                       />
+                      {isLoadingRemoteSeries && (
+                        <p className="theme-text-muted mt-3 text-xs">Loading more titles from this series...</p>
+                      )}
+                      {remoteSeriesError && (
+                        <p className="theme-text-warning mt-3 text-xs">{remoteSeriesError}</p>
+                      )}
                     </section>
                   )}
                 </div>

@@ -305,6 +305,16 @@ const CatalogView: React.FC<CatalogViewProps> = ({
       book.relatedLinks?.forEach((link) => {
         cachePatronAuthorizationForUrl(link.url, currentRequestAuth);
       });
+      book.series?.forEach((series) => {
+        if (series?.url) {
+          cachePatronAuthorizationForUrl(series.url, currentRequestAuth);
+        }
+      });
+      book.collections?.forEach((collection) => {
+        if (collection?.href) {
+          cachePatronAuthorizationForUrl(collection.href, currentRequestAuth);
+        }
+      });
     }
     const primarySeriesName = book.series?.[0]?.name;
     const relatedSeriesBooks = primarySeriesName
