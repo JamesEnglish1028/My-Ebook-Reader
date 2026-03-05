@@ -67,10 +67,10 @@ export const CATALOG_PRESETS: CatalogPreset[] = [
     description: 'Open-access publishing from the University Press Library Open initiative.',
   },
   {
-    name: 'Fulcrum',
+    name: 'University of Michigan Press',
     url: 'https://www.fulcrum.org/api/opds',
     opdsVersion: '2',
-    description: 'Scholarly publishing and digital collections from Fulcrum.',
+    description: 'University of Michigan Press catalog on the Fulcrum platform.',
   },
   {
     name: 'OAPEN',

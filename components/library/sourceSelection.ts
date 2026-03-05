@@ -6,6 +6,7 @@ export const COMMUNITY_CATALOG_NAMES = new Set([
   'PressBooks',
   'Project Gutenberg',
   'UPLOpen',
+  'University of Michigan Press',
 ]);
 
 export const normalizeSourceUrl = (value: string): string => value.trim().replace(/\/+$/, '').toLowerCase();
