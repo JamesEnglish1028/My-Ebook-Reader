@@ -74,6 +74,9 @@ export interface CatalogBook {
 
   // Palace.io categories
   categories?: Category[];
+  publicationSubjects?: PublicationSubject[];
+  identifiers?: IdentifierInfo[];
+  accessibility?: AccessibilityMetadata;
 
   // Publication type (Schema.org)
   schemaOrgType?: string;
@@ -121,6 +124,37 @@ export interface Category {
   term: string;
   label: string;
 }
+
+export interface IdentifierInfo {
+  value: string;
+  scheme?: string;
+}
+
+export interface PublicationSubject {
+  name: string;
+  sortAs?: string;
+  scheme?: string;
+  code?: string;
+}
+
+export interface ContributorInfo {
+  name: string;
+  role?: string;
+  uri?: string;
+}
+
+export interface AccessibilityMetadata {
+  modes?: string[];
+  modesSufficient?: string[];
+  features?: string[];
+  hazards?: string[];
+  summary?: string;
+  certification?: {
+    standard: string;
+  };
+}
+
+export type AcquisitionType = 'open-access' | 'borrow' | 'buy' | 'sample' | 'generic';
 
 /**
  * Category lane for UI display

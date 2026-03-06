@@ -102,7 +102,7 @@ function resolveBelongsToEntryHref(entry: any): string | undefined {
   return undefined;
 }
 
-function parseCollectionMetadata(metadata: any, baseUrl: string): { title: string; href: string }[] | undefined {
+function parseCollectionMetadata(metadata: any, baseUrl: string): { title: string; href: string; source: 'belongsTo' }[] | undefined {
   try {
     const rawCollections = metadata?.belongsTo?.collection;
     if (!rawCollections) return undefined;
@@ -111,7 +111,7 @@ function parseCollectionMetadata(metadata: any, baseUrl: string): { title: strin
       .map((entry: any) => {
         if (typeof entry === 'string') {
           const title = entry.trim();
-          return title ? { title, href: '' } : undefined;
+          return title ? { title, href: '', source: 'belongsTo' as const } : undefined;
         }
 
         const title = String(entry?.name || entry?.title || '').trim();
@@ -119,9 +119,9 @@ function parseCollectionMetadata(metadata: any, baseUrl: string): { title: strin
 
         const rawHref = resolveBelongsToEntryHref(entry);
         const href = rawHref ? new URL(String(rawHref), baseUrl).href : '';
-        return { title, href };
+        return { title, href, source: 'belongsTo' as const };
       })
-      .filter((entry): entry is { title: string; href: string } => entry !== undefined)
+      .filter((entry): entry is { title: string; href: string; source: 'belongsTo' } => entry !== undefined)
       .filter((entry, index, collection) => (
         collection.findIndex((candidate) => candidate.title === entry.title && candidate.href === entry.href) === index
       ));
@@ -715,22 +715,33 @@ function extractIdentifiers(metadata: any): import('../domain/catalog').Identifi
 /**
  * Extract enhanced subject information with scheme
  */
+function normalizeSubjectEntries(metadata: any): any[] {
+  if (!metadata || metadata.subject == null) return [];
+  return Array.isArray(metadata.subject) ? metadata.subject : [metadata.subject];
+}
+
 function extractPublicationSubjects(metadata: any): import('../domain/catalog').PublicationSubject[] | undefined {
-  if (!Array.isArray(metadata.subject) || metadata.subject.length === 0) return undefined;
+  const subjectEntries = normalizeSubjectEntries(metadata);
+  if (subjectEntries.length === 0) return undefined;
   
   const subjects: import('../domain/catalog').PublicationSubject[] = [];
   
-  metadata.subject.forEach((s: any) => {
+  subjectEntries.forEach((s: any) => {
     if (typeof s === 'string') {
       subjects.push({ name: s });
     } else if (s && typeof s === 'object') {
-      const name = s.name || s.label;
+      const name = s.name || s.label || s.code || s.term;
       if (name) {
-        subjects.push({
+        const nextSubject: import('../domain/catalog').PublicationSubject = {
           name: String(name).trim(),
-          scheme: s.scheme || s.schemeURI,
-          code: s.term || s.code
-        });
+        };
+        const sortAs = s.sortAs || s.sortas;
+        const scheme = s.scheme || s.schemeURI;
+        const code = s.term || s.code;
+        if (sortAs) nextSubject.sortAs = String(sortAs).trim();
+        if (scheme) nextSubject.scheme = String(scheme).trim();
+        if (code) nextSubject.code = String(code).trim();
+        subjects.push(nextSubject);
       }
     }
   });
@@ -842,11 +853,12 @@ function processOpds2Publication(pub: Opds2Publication, baseUrl: string): Catalo
   }
   // Extract categories from subject field (for backward compatibility)
   let categories: { scheme: string; term: string; label: string }[] | undefined = undefined;
-  if (Array.isArray(metadata.subject)) {
+  const subjectEntries = normalizeSubjectEntries(metadata);
+  if (subjectEntries.length > 0) {
     const cats: { scheme: string; term: string; label: string }[] = [];
-    metadata.subject.forEach((s: any) => {
+    subjectEntries.forEach((s: any) => {
       if (s && typeof s === 'object') {
-        const name = (s.name || s.label || '').trim();
+        const name = (s.name || s.label || s.code || s.term || '').trim();
         const term = (s.term || s.code || name || '').trim();
         const scheme = (s.scheme || s.schemeURI || 'http://opds-spec.org/subject').trim();
         if (name || term) cats.push({ scheme, term: term || name, label: name || term });
@@ -864,7 +876,7 @@ function processOpds2Publication(pub: Opds2Publication, baseUrl: string): Catalo
     links = [pub.links as Opds2Link];
   }
   const acquisitions: { href: string; rels: string[]; type?: string; indirectType?: string; acquisitionType?: string; isLcpProtected?: boolean; isAdobeDrmProtected?: boolean }[] = [];
-  const collections: { title: string; href: string }[] = [];
+  const collections: { title: string; href: string; source: 'link' }[] = [];
   links.forEach((l: Record<string, any>) => {
     if (!l || !l.href) return;
     const rels = Array.isArray(l.rel) ? l.rel.map((r: any) => String(r)) : (l.rel ? [String(l.rel)] : []);
@@ -882,7 +894,7 @@ function processOpds2Publication(pub: Opds2Publication, baseUrl: string): Catalo
       acquisitions.push({ href: new URL(l.href, baseUrl).href, rels, type: l.type, indirectType, isLcpProtected, isAdobeDrmProtected });
     }
     if (l.title && rels.includes('collection')) {
-      collections.push({ title: l.title, href: new URL(l.href, baseUrl).href });
+      collections.push({ title: l.title, href: new URL(l.href, baseUrl).href, source: 'link' });
     }
   });
   const alternativeFormats = acquisitions.map(a => {

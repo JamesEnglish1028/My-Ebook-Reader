@@ -1,16 +1,26 @@
+interface Opds2Subject {
+  name?: string;
+  label?: string;
+  sortAs?: string;
+  scheme?: string;
+  schemeURI?: string;
+  code?: string;
+  term?: string;
+}
+
 // OPDS2 Publication interface
 export interface Opds2Publication {
   metadata?: {
     title?: string;
-  author?: string | { name?: string } | (string | { name?: string })[];
+    author?: string | { name?: string } | (string | { name?: string })[];
     description?: string;
     subtitle?: string;
     publisher?: string | { name?: string };
     published?: string;
     issued?: string;
     identifier?: string | string[];
-  subject?: string[] | (string | { name?: string })[];
-  image?: { href?: string; url?: string }[];
+    subject?: string | Opds2Subject | (string | Opds2Subject)[];
+    image?: { href?: string; url?: string }[];
     '@type'?: string;
     type?: string;
   };

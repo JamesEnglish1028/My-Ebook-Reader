@@ -151,10 +151,10 @@ describe('parseOpds2Json', () => {
 
     const { books } = parseOpds2Json(feed, 'https://example.org/');
     expect(books[0].collections).toEqual([
-      { title: 'Featured Collection', href: 'https://example.org/collections/featured' },
-      { title: 'SciFi Classics', href: '' },
-      { title: 'Award Winners', href: 'https://example.org/collections/awards' },
-      { title: 'Editor Picks', href: 'https://example.org/collections/editor-picks' },
+      { title: 'Featured Collection', href: 'https://example.org/collections/featured', source: 'link' },
+      { title: 'SciFi Classics', href: '', source: 'belongsTo' },
+      { title: 'Award Winners', href: 'https://example.org/collections/awards', source: 'belongsTo' },
+      { title: 'Editor Picks', href: 'https://example.org/collections/editor-picks', source: 'belongsTo' },
     ]);
   });
 
@@ -180,6 +180,33 @@ describe('parseOpds2Json', () => {
     expect(books[0].subjects).toEqual(['Science Fiction', 'Space Opera']);
     expect(books[0].categories?.[0].scheme).toBe('http://example.org/genres');
     expect(books[0].categories?.[0].term).toBe('sci-fi');
+  });
+
+  it('supports OPDS2 single-object subject metadata with scheme and code', () => {
+    const feed = {
+      metadata: { title: 'Single Subject Catalog' },
+      publications: [
+        {
+          metadata: {
+            title: 'Manga Example',
+            author: 'Example Author',
+            subject: {
+              name: 'Manga: Shonen',
+              sortAs: 'Shonen',
+              scheme: 'https://ns.editeur.org/thema/',
+              code: 'XAMG',
+            },
+          },
+          links: [{ href: '/works/5', rel: 'http://opds-spec.org/acquisition/open-access', type: 'application/epub+zip' }],
+        },
+      ],
+    };
+
+    const { books } = parseOpds2Json(feed, 'https://example.org/');
+    expect(books[0].subjects).toEqual(['Manga: Shonen']);
+    expect(books[0].categories?.[0].scheme).toBe('https://ns.editeur.org/thema/');
+    expect(books[0].categories?.[0].term).toBe('XAMG');
+    expect(books[0].categories?.[0].label).toBe('Manga: Shonen');
   });
 
   it('captures contributors alongside primary author', () => {
