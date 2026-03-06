@@ -640,7 +640,7 @@ const CatalogView: React.FC<CatalogViewProps> = ({
     <>
       <div className="flex flex-col lg:flex-row gap-6">
       {hasSidebarContent && (
-        <aside className="order-2 w-full lg:order-1 lg:w-56 lg:flex-shrink-0">
+        <aside className="order-2 w-full lg:order-1 lg:w-80 lg:flex-shrink-0">
           <CatalogSidebar
             navigationLinks={displayNavigationLinks}
             currentNavigationUrl={currentUrl}

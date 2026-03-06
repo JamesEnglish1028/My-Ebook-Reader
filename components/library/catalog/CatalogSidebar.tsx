@@ -348,15 +348,15 @@ const CatalogSidebar: React.FC<CatalogSidebarProps> = ({
                               <button
                                 key={`${link.url}-${index}`}
                                 onClick={() => onFacetSelect(link)}
-                                className={`flex w-full items-center justify-between gap-3 rounded-md border px-2.5 py-2 text-left text-sm transition-colors ${
+                                className={`flex w-full items-start justify-between gap-3 rounded-md border px-2.5 py-2 text-left text-sm transition-colors ${
                                   link.isActive
                                     ? 'theme-selection-active'
                                     : 'theme-button-neutral border-transparent'
                                 }`}
                               >
-                                <span className="truncate">{link.title}</span>
+                                <span className="min-w-0 whitespace-normal break-words leading-5">{link.title}</span>
                                 {typeof link.count === 'number' && (
-                                  <span className="theme-surface-elevated theme-text-muted rounded-full px-2 py-0.5 text-[11px]">{link.count}</span>
+                                  <span className="theme-surface-elevated theme-text-muted mt-0.5 rounded-full px-2 py-0.5 text-[11px]">{link.count}</span>
                                 )}
                               </button>
                             ))}
@@ -486,15 +486,15 @@ const CatalogSidebar: React.FC<CatalogSidebarProps> = ({
                     <button
                       key={`${link.url}-modal-${index}`}
                       onClick={() => handleModalFacetSelect(link)}
-                      className={`flex w-full items-center justify-between gap-3 rounded-md border px-2.5 py-2 text-left text-sm transition-colors ${
+                      className={`flex w-full items-start justify-between gap-3 rounded-md border px-2.5 py-2 text-left text-sm transition-colors ${
                         link.isActive
                           ? 'theme-selection-active'
                           : 'theme-button-neutral border-transparent'
                       }`}
                     >
-                      <span className="truncate">{link.title}</span>
+                      <span className="min-w-0 whitespace-normal break-words leading-5">{link.title}</span>
                       {typeof link.count === 'number' && (
-                        <span className="theme-surface-elevated theme-text-muted rounded-full px-2 py-0.5 text-[11px]">{link.count}</span>
+                        <span className="theme-surface-elevated theme-text-muted mt-0.5 rounded-full px-2 py-0.5 text-[11px]">{link.count}</span>
                       )}
                     </button>
                   ))}
