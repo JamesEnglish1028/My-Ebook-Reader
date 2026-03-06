@@ -20,6 +20,7 @@ export interface Opds2Publication {
     issued?: string;
     identifier?: string | string[];
     subject?: string | Opds2Subject | (string | Opds2Subject)[];
+    subjects?: string | Opds2Subject | (string | Opds2Subject)[];
     image?: { href?: string; url?: string }[];
     '@type'?: string;
     type?: string;

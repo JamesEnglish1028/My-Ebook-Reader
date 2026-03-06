@@ -72,7 +72,10 @@ const formatPublicationDate = (dateString: string | number | undefined): string 
   return date.toLocaleDateString('en-GB', { year: 'numeric', month: 'long', day: 'numeric', timeZone: 'UTC' });
 };
 
-const getClassificationAuthority = (scheme: string | undefined): 'BISAC' | 'THEMA' | 'LCC' | 'LCSH' | 'Other' => {
+const getClassificationAuthority = (
+  scheme: string | undefined,
+  code?: string,
+): 'BISAC' | 'THEMA' | 'LCC' | 'LCSH' | 'Other' => {
   const normalizedScheme = String(scheme || '').toLowerCase();
 
   if (normalizedScheme.includes('bisac')) return 'BISAC';
@@ -82,6 +85,7 @@ const getClassificationAuthority = (scheme: string | undefined): 'BISAC' | 'THEM
     || normalizedScheme.includes('authorities/subjects')
     || normalizedScheme.includes('id.loc.gov/authorities/subjects')
   ) return 'LCSH';
+  if (normalizedScheme === 'http://id.loc.gov' && code) return 'LCC';
   if (
     normalizedScheme.includes('lcc')
     || normalizedScheme.includes('classification')
@@ -474,7 +478,7 @@ const BookDetailView: React.FC<BookDetailViewProps> = ({ book, onBack, source, c
         return {
           key: `${String(category?.scheme || 'other')}::${String(category?.term || label)}`,
           label,
-          authority: getClassificationAuthority(category?.scheme),
+          authority: getClassificationAuthority(category?.scheme, category?.term),
         };
       })
       .filter((entry: any): entry is { key: string; label: string; authority: 'BISAC' | 'THEMA' | 'LCC' | 'LCSH' | 'Other' } => Boolean(entry))

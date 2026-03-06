@@ -716,8 +716,10 @@ function extractIdentifiers(metadata: any): import('../domain/catalog').Identifi
  * Extract enhanced subject information with scheme
  */
 function normalizeSubjectEntries(metadata: any): any[] {
-  if (!metadata || metadata.subject == null) return [];
-  return Array.isArray(metadata.subject) ? metadata.subject : [metadata.subject];
+  if (!metadata) return [];
+  const rawSubjects = metadata.subject ?? metadata.subjects;
+  if (rawSubjects == null) return [];
+  return Array.isArray(rawSubjects) ? rawSubjects : [rawSubjects];
 }
 
 function extractPublicationSubjects(metadata: any): import('../domain/catalog').PublicationSubject[] | undefined {

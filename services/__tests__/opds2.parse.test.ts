@@ -209,6 +209,53 @@ describe('parseOpds2Json', () => {
     expect(books[0].categories?.[0].label).toBe('Manga: Shonen');
   });
 
+  it('supports OPDS2 plural subjects arrays with scheme and code', () => {
+    const feed = {
+      metadata: { title: 'Plural Subjects Catalog' },
+      publications: [
+        {
+          metadata: {
+            title: 'Feminism Reader',
+            author: 'Research Author',
+            subjects: [
+              {
+                name: 'Women. Feminism',
+                sortAs: 'Women. Feminism',
+                scheme: 'http://id.loc.gov',
+                code: 'HQ',
+              },
+              {
+                name: 'Feminism',
+                sortAs: 'Feminism',
+                scheme: 'http://id.loc.gov/authorities/subjects',
+              },
+              {
+                name: 'Feminism and feminist theory',
+                sortAs: 'Feminism and feminist theory',
+                scheme: 'https://ns.editeur.org/thema/',
+                code: 'JBSF1',
+              },
+            ],
+          },
+          links: [{ href: '/works/6', rel: 'http://opds-spec.org/acquisition/open-access', type: 'application/epub+zip' }],
+        },
+      ],
+    };
+
+    const { books } = parseOpds2Json(feed, 'https://example.org/');
+    expect(books[0].subjects).toEqual([
+      'Women. Feminism',
+      'Feminism',
+      'Feminism and feminist theory',
+    ]);
+    expect(books[0].categories?.map((category) => category.term)).toEqual(['HQ', 'Feminism', 'JBSF1']);
+    expect(books[0].categories?.map((category) => category.scheme)).toEqual([
+      'http://id.loc.gov',
+      'http://id.loc.gov/authorities/subjects',
+      'https://ns.editeur.org/thema/',
+    ]);
+  });
+
   it('captures contributors alongside primary author', () => {
     const feed = {
       metadata: { title: 'Contrib Catalog' },
