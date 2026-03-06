@@ -72,6 +72,24 @@ const formatPublicationDate = (dateString: string | number | undefined): string 
   return date.toLocaleDateString('en-GB', { year: 'numeric', month: 'long', day: 'numeric', timeZone: 'UTC' });
 };
 
+const getClassificationAuthority = (scheme: string | undefined): 'BISAC' | 'THEMA' | 'LCC' | 'LCSH' | 'Other' => {
+  const normalizedScheme = String(scheme || '').toLowerCase();
+
+  if (normalizedScheme.includes('bisac')) return 'BISAC';
+  if (normalizedScheme.includes('thema')) return 'THEMA';
+  if (
+    normalizedScheme.includes('lcsh')
+    || normalizedScheme.includes('authorities/subjects')
+    || normalizedScheme.includes('id.loc.gov/authorities/subjects')
+  ) return 'LCSH';
+  if (
+    normalizedScheme.includes('lcc')
+    || normalizedScheme.includes('classification')
+    || normalizedScheme.includes('id.loc.gov/classification')
+  ) return 'LCC';
+  return 'Other';
+};
+
 const sanitizeDescriptionHtml = (rawText: string): string => {
   if (!rawText.includes('<')) {
     return rawText;
@@ -447,6 +465,20 @@ const BookDetailView: React.FC<BookDetailViewProps> = ({ book, onBack, source, c
         .map((collection: any) => String(collection?.title || '').trim())
         .filter((title: string) => title.length > 0),
     ))
+    : [];
+  const classificationItems = Array.isArray(bookAny.categories)
+    ? bookAny.categories
+      .map((category: any) => {
+        const label = String(category?.label || category?.term || '').trim();
+        if (!label) return null;
+        return {
+          key: `${String(category?.scheme || 'other')}::${String(category?.term || label)}`,
+          label,
+          authority: getClassificationAuthority(category?.scheme),
+        };
+      })
+      .filter((entry: any): entry is { key: string; label: string; authority: 'BISAC' | 'THEMA' | 'LCC' | 'LCSH' | 'Other' } => Boolean(entry))
+      .filter((entry: any, index: number, entries: any[]) => entries.findIndex((candidate) => candidate.key === entry.key) === index)
     : [];
   const relatedFeedLinks = React.useMemo(() => {
     if (!('downloadUrl' in book)) {
@@ -1095,13 +1127,25 @@ const BookDetailView: React.FC<BookDetailViewProps> = ({ book, onBack, source, c
                     </DetailField>
                   )}
 
-                  {bookAny.categories && bookAny.categories.length > 0 && (
-                    <DetailField label="Categories">
-                      {bookAny.categories.map((cat: any) => cat.label || cat.term).join(', ')}
+                  {classificationItems.length > 0 && (
+                    <DetailField label="Classifications">
+                      <div className="flex flex-wrap gap-2">
+                        {classificationItems.map((classification) => (
+                          <span
+                            key={classification.key}
+                            className="theme-surface-elevated theme-border inline-flex items-center gap-2 rounded-full border px-2.5 py-1 text-xs"
+                          >
+                            <span className="theme-accent-badge inline-flex items-center rounded-full border px-1.5 py-0.5 text-[10px] font-semibold uppercase tracking-wide">
+                              {classification.authority}
+                            </span>
+                            <span className="theme-text-secondary">{classification.label}</span>
+                          </span>
+                        ))}
+                      </div>
                     </DetailField>
                   )}
 
-                  {(!bookAny.categories || bookAny.categories.length === 0) && book.subjects && book.subjects.length > 0 && (
+                  {classificationItems.length === 0 && book.subjects && book.subjects.length > 0 && (
                     <DetailField label="Subjects">
                       {book.subjects.join(', ')}
                     </DetailField>
