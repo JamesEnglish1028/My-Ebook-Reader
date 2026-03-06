@@ -484,6 +484,19 @@ const BookDetailView: React.FC<BookDetailViewProps> = ({ book, onBack, source, c
       .filter((entry: any): entry is { key: string; label: string; authority: 'BISAC' | 'THEMA' | 'LCC' | 'LCSH' | 'Other' } => Boolean(entry))
       .filter((entry: any, index: number, entries: any[]) => entries.findIndex((candidate) => candidate.key === entry.key) === index)
     : [];
+  const classificationGroups = React.useMemo(() => {
+    const grouped = new Map<'BISAC' | 'THEMA' | 'LCC' | 'LCSH' | 'Other', string[]>();
+    classificationItems.forEach((item) => {
+      if (!grouped.has(item.authority)) {
+        grouped.set(item.authority, []);
+      }
+      grouped.get(item.authority)?.push(item.label);
+    });
+    return Array.from(grouped.entries()).map(([authority, labels]) => ({
+      authority,
+      labels: Array.from(new Set(labels)),
+    }));
+  }, [classificationItems]);
   const relatedFeedLinks = React.useMemo(() => {
     if (!('downloadUrl' in book)) {
       return [] as Array<{ title: string; url: string; rel: string; type?: string }>;
@@ -1131,25 +1144,26 @@ const BookDetailView: React.FC<BookDetailViewProps> = ({ book, onBack, source, c
                     </DetailField>
                   )}
 
-                  {classificationItems.length > 0 && (
+                  {classificationGroups.length > 0 && (
                     <DetailField label="Classifications">
-                      <div className="flex flex-wrap gap-2">
-                        {classificationItems.map((classification) => (
-                          <span
-                            key={classification.key}
-                            className="theme-surface-elevated theme-border inline-flex items-center gap-2 rounded-full border px-2.5 py-1 text-xs"
-                          >
+                      <div className="space-y-3">
+                        {classificationGroups.map((group) => (
+                          <div key={group.authority} className="theme-surface-elevated theme-border rounded-lg border px-3 py-2">
                             <span className="theme-accent-badge inline-flex items-center rounded-full border px-1.5 py-0.5 text-[10px] font-semibold uppercase tracking-wide">
-                              {classification.authority}
+                              {group.authority}
                             </span>
-                            <span className="theme-text-secondary">{classification.label}</span>
-                          </span>
+                            <ul className="theme-text-secondary mt-2 list-disc space-y-1 pl-5 text-sm">
+                              {group.labels.map((label) => (
+                                <li key={`${group.authority}-${label}`}>{label}</li>
+                              ))}
+                            </ul>
+                          </div>
                         ))}
                       </div>
                     </DetailField>
                   )}
 
-                  {classificationItems.length === 0 && book.subjects && book.subjects.length > 0 && (
+                  {classificationGroups.length === 0 && book.subjects && book.subjects.length > 0 && (
                     <DetailField label="Subjects">
                       {book.subjects.join(', ')}
                     </DetailField>
