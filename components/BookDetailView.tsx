@@ -1146,13 +1146,13 @@ const BookDetailView: React.FC<BookDetailViewProps> = ({ book, onBack, source, c
 
                   {classificationGroups.length > 0 && (
                     <DetailField label="Classifications">
-                      <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
+                      <div className="grid gap-2 sm:gap-3 sm:grid-cols-2 xl:grid-cols-3">
                         {classificationGroups.map((group) => (
-                          <div key={group.authority} className="theme-surface-elevated theme-border rounded-lg border px-3 py-2">
-                            <span className="theme-accent-badge inline-flex items-center rounded-full border px-1.5 py-0.5 text-[10px] font-semibold uppercase tracking-wide">
+                          <div key={group.authority} className="theme-surface-elevated theme-border rounded-lg border px-2.5 py-2 sm:px-3">
+                            <span className="theme-accent-badge inline-flex items-center rounded-full border px-1.5 py-0.5 text-[10px] font-semibold uppercase tracking-[0.08em]">
                               {group.authority}
                             </span>
-                            <ul className="theme-text-secondary mt-2 list-disc space-y-1 pl-4 text-xs leading-5">
+                            <ul className="theme-text-secondary mt-1.5 list-disc space-y-0.5 pl-4 text-xs leading-5 sm:text-[13px]">
                               {group.labels.map((label) => (
                                 <li key={`${group.authority}-${label}`}>{label}</li>
                               ))}
