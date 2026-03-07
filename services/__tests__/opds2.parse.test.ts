@@ -337,4 +337,39 @@ describe('parseOpds2Json', () => {
     expect(publicationGroups[0].books[0].title).toBe('Moby-Dick');
     expect(publicationGroups[0].navigationLink?.url).toBe('https://example.org/featured');
   });
+
+  it('keeps grouped publication previews even without acquisition links', () => {
+    const feed = {
+      metadata: { title: 'Grouped Catalog' },
+      groups: [
+        {
+          metadata: { title: 'Recommended Works' },
+          publications: [
+            {
+              metadata: {
+                title: 'Preview Only Title',
+                author: [{ name: 'Sample Author' }],
+                identifier: 'urn:uuid:preview-only',
+              },
+              images: [{ href: '/covers/preview.jpg' }],
+              links: [
+                {
+                  href: '/publications/preview.json',
+                  rel: 'self',
+                  type: 'application/opds-publication+json',
+                },
+              ],
+            },
+          ],
+        },
+      ],
+    };
+
+    const { publicationGroups } = parseOpds2Json(feed, 'https://example.org/catalog/');
+    expect(publicationGroups).toHaveLength(1);
+    expect(publicationGroups[0].books).toHaveLength(1);
+    expect(publicationGroups[0].books[0].title).toBe('Preview Only Title');
+    expect(publicationGroups[0].books[0].author).toBe('Sample Author');
+    expect(publicationGroups[0].books[0].coverImage).toBe('https://example.org/covers/preview.jpg');
+  });
 });

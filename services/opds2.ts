@@ -1136,6 +1136,44 @@ function normalizeMediumFormatCode(schemaType: string | undefined, type?: string
     }
   }
 
+  function buildGroupPreviewBook(pub: Opds2Publication): CatalogBook | undefined {
+    const metadata = pub.metadata || {};
+    const title = String(metadata.title || '').trim();
+    if (!title) return undefined;
+
+    const authorValue = metadata.author;
+    const author = Array.isArray(authorValue)
+      ? authorValue
+        .map((entry) => (typeof entry === 'string' ? entry : entry?.name))
+        .map((name) => String(name || '').trim())
+        .filter((name) => name.length > 0)
+        .join(', ')
+      : (typeof authorValue === 'string' ? authorValue : String(authorValue?.name || '')).trim();
+
+    const imageCandidates = [
+      ...(Array.isArray(pub.images) ? pub.images : []),
+      ...(Array.isArray((metadata as any).image) ? (metadata as any).image : []),
+    ];
+    const coverImage = imageCandidates.find((img: any) => img?.href || img?.url);
+    const coverHref = coverImage?.href || coverImage?.url;
+
+    const links = Array.isArray(pub.links) ? pub.links : [];
+    const primaryLink = links.find((link) => typeof link?.href === 'string');
+    const providerId = metadata.identifier
+      ? (Array.isArray(metadata.identifier) ? String(metadata.identifier[0]) : String(metadata.identifier))
+      : undefined;
+
+    return {
+      title,
+      author: author || 'Unknown Author',
+      coverImage: coverHref ? new URL(String(coverHref), baseUrl).href : null,
+      downloadUrl: primaryLink?.href ? new URL(String(primaryLink.href), baseUrl).href : '',
+      summary: metadata.description ? String(metadata.description) : null,
+      providerId,
+      format: getFormatFromMimeType(primaryLink?.type),
+    };
+  }
+
   if (Array.isArray(jsonData.groups)) {
     jsonData.groups.forEach((group: Opds2NavigationGroup) => {
       if (!Array.isArray(group.publications) || group.publications.length === 0) return;
@@ -1143,7 +1181,7 @@ function normalizeMediumFormatCode(schemaType: string | undefined, type?: string
       const laneBooks: CatalogBook[] = [];
       group.publications.forEach((pub) => {
         normalizePublicationLinks(pub);
-        const book = processOpds2Publication(pub, baseUrl);
+        const book = processOpds2Publication(pub, baseUrl) || buildGroupPreviewBook(pub);
         if (book) laneBooks.push(book);
       });
 
