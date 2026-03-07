@@ -151,6 +151,7 @@ const CatalogView: React.FC<CatalogViewProps> = ({
   const [searchActionError, setSearchActionError] = useState<string | null>(null);
   const [isSearchOpen, setIsSearchOpen] = useState(false);
   const [isFiltersOpen, setIsFiltersOpen] = useState(false);
+  const [catalogDisplayMode, setCatalogDisplayMode] = useState<'auto' | 'lanes' | 'grid'>('auto');
   const [sessionCredentialsByHost, setSessionCredentialsByHost] = useState<Record<string, SessionCredentialState>>({});
   const [pendingLoansTarget, setPendingLoansTarget] = useState<PendingLoansTarget | null>(null);
 
@@ -214,6 +215,7 @@ const CatalogView: React.FC<CatalogViewProps> = ({
     setActiveSearchQuery(null);
     setSearchOriginPath(null);
     setSearchActionError(null);
+    setCatalogDisplayMode('auto');
   }, [activeOpdsSource?.id]);
 
   useEffect(() => {
@@ -659,6 +661,10 @@ const CatalogView: React.FC<CatalogViewProps> = ({
   const hasSwimLanes = filteredPublicationGroups.length > 0;
   const hasOriginalBooks = originalCatalogBooks.length > 0;
   const hasOriginalSwimLanes = publicationGroups.length > 0;
+  const effectiveDisplayMode: 'lanes' | 'grid' = catalogDisplayMode === 'auto'
+    ? (hasOriginalSwimLanes ? 'lanes' : 'grid')
+    : catalogDisplayMode;
+  const showLaneView = effectiveDisplayMode === 'lanes';
   const hasNavigationOnlyContent = !hasOriginalBooks && !hasOriginalSwimLanes && hasSidebarContent;
   const isEmptyFeed = !hasOriginalBooks && !hasOriginalSwimLanes && !hasSidebarContent;
   const pendingLoansAuthDocument = pendingLoansTarget
@@ -720,6 +726,30 @@ const CatalogView: React.FC<CatalogViewProps> = ({
                   </span>
                 </button>
               )}
+              {hasOriginalSwimLanes && (
+                <div className="theme-surface-muted theme-border inline-flex items-center rounded-lg border p-0.5">
+                  <button
+                    type="button"
+                    onClick={() => setCatalogDisplayMode('lanes')}
+                    className={`rounded-md px-2.5 py-1.5 text-xs font-medium transition-colors ${
+                      showLaneView ? 'theme-nav-link-active' : 'theme-text-secondary theme-hover-surface'
+                    }`}
+                    aria-pressed={showLaneView}
+                  >
+                    Swim Lanes
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setCatalogDisplayMode('grid')}
+                    className={`rounded-md px-2.5 py-1.5 text-xs font-medium transition-colors ${
+                      !showLaneView ? 'theme-nav-link-active' : 'theme-text-secondary theme-hover-surface'
+                    }`}
+                    aria-pressed={!showLaneView}
+                  >
+                    Root Grid
+                  </button>
+                </div>
+              )}
             </>
           )}
         />
@@ -769,7 +799,7 @@ const CatalogView: React.FC<CatalogViewProps> = ({
 
         {isEmptyFeed ? (
           <EmptyState variant="catalog" />
-        ) : hasSwimLanes ? (
+        ) : showLaneView && hasSwimLanes ? (
           <div className="space-y-6">
             {filteredPublicationGroups.map((group, index) => {
               const laneLink: CatalogNavigationLink = group.navigationLink || {
@@ -809,6 +839,11 @@ const CatalogView: React.FC<CatalogViewProps> = ({
           <div className="theme-text-primary py-12 text-center">
             <p className="theme-text-secondary mb-2 text-lg">No books match your current filters</p>
             <p className="theme-text-muted text-sm">Try adjusting the local filters to see more books</p>
+          </div>
+        ) : !showLaneView && hasOriginalSwimLanes ? (
+          <div className="theme-text-primary py-12 text-center">
+            <p className="theme-text-secondary mb-2 text-lg">No root-feed publications are available</p>
+            <p className="theme-text-muted text-sm">Switch to Swim Lanes to browse grouped publications.</p>
           </div>
         ) : hasNavigationOnlyContent ? (
           <div className="theme-surface-elevated theme-text-primary rounded-lg py-12 text-center">
