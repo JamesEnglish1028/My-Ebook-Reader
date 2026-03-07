@@ -1174,12 +1174,20 @@ function normalizeMediumFormatCode(schemaType: string | undefined, type?: string
     };
   }
 
-  if (Array.isArray(jsonData.groups)) {
-    jsonData.groups.forEach((group: Opds2NavigationGroup) => {
-      if (!Array.isArray(group.publications) || group.publications.length === 0) return;
+  const rawGroups = Array.isArray(jsonData.groups)
+    ? jsonData.groups
+    : (jsonData.groups && typeof jsonData.groups === 'object' ? [jsonData.groups] : []);
+
+  if (rawGroups.length > 0) {
+    rawGroups.forEach((rawGroup: any) => {
+      const group = rawGroup as Opds2NavigationGroup;
+      const rawPublications = Array.isArray(group.publications)
+        ? group.publications
+        : (group.publications ? [group.publications] : (Array.isArray(rawGroup?.items) ? rawGroup.items : []));
+      if (rawPublications.length === 0) return;
 
       const laneBooks: CatalogBook[] = [];
-      group.publications.forEach((pub) => {
+      rawPublications.forEach((pub: Opds2Publication) => {
         normalizePublicationLinks(pub);
         const book = processOpds2Publication(pub, baseUrl) || buildGroupPreviewBook(pub);
         if (book) laneBooks.push(book);
@@ -1187,7 +1195,9 @@ function normalizeMediumFormatCode(schemaType: string | undefined, type?: string
 
       if (laneBooks.length === 0) return;
 
-      const groupLinks = Array.isArray(group.links) ? group.links : [];
+      const groupLinks = Array.isArray(group.links)
+        ? group.links
+        : (group.links && typeof group.links === 'object' ? [group.links as Opds2Link] : []);
       const laneLink = groupLinks.find((link) => {
         if (!link?.href) return false;
         if (!isOpdsNavigationTarget(link)) return false;

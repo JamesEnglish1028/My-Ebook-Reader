@@ -726,7 +726,7 @@ const CatalogView: React.FC<CatalogViewProps> = ({
                   </span>
                 </button>
               )}
-              {hasOriginalSwimLanes && (
+              {(hasOriginalSwimLanes || hasSwimLanes) && (
                 <div className="theme-surface-muted theme-border inline-flex items-center rounded-lg border p-0.5">
                   <button
                     type="button"
@@ -799,35 +799,44 @@ const CatalogView: React.FC<CatalogViewProps> = ({
 
         {isEmptyFeed ? (
           <EmptyState variant="catalog" />
-        ) : showLaneView && hasSwimLanes ? (
-          <div className="space-y-6">
-            {filteredPublicationGroups.map((group, index) => {
-              const laneLink: CatalogNavigationLink = group.navigationLink || {
-                title: group.title,
-                url: currentUrl || activeOpdsSource.url,
-                rel: 'collection',
-                source: 'group',
-                isCatalog: true,
-              };
-              const laneTitle = typeof group.numberOfItems === 'number' && group.numberOfItems > 0
-                ? `${group.title} (${group.numberOfItems})`
-                : group.title;
-              return (
-                <CatalogSwimLane
-                  key={`${laneLink.url}-${group.title}-${index}`}
-                  laneTitle={laneTitle}
-                  laneLink={laneLink}
-                  books={group.books}
-                  hasFetched={true}
-                  onOpenLane={(link) => {
-                    if (!group.navigationLink) return;
-                    handleNavigationSelect(link);
-                  }}
-                  onBookClick={handleCatalogBookClick}
-                />
-              );
-            })}
-          </div>
+        ) : showLaneView ? (
+          hasSwimLanes ? (
+            <div className="space-y-6">
+              {filteredPublicationGroups.map((group, index) => {
+                const laneLink: CatalogNavigationLink = group.navigationLink || {
+                  title: group.title,
+                  url: currentUrl || activeOpdsSource.url,
+                  rel: 'collection',
+                  source: 'group',
+                  isCatalog: true,
+                };
+                const laneTitle = typeof group.numberOfItems === 'number' && group.numberOfItems > 0
+                  ? `${group.title} (${group.numberOfItems})`
+                  : group.title;
+                return (
+                  <CatalogSwimLane
+                    key={`${laneLink.url}-${group.title}-${index}`}
+                    laneTitle={laneTitle}
+                    laneLink={laneLink}
+                    books={group.books}
+                    hasFetched={true}
+                    onOpenLane={(link) => {
+                      if (!group.navigationLink) return;
+                      handleNavigationSelect(link);
+                    }}
+                    onBookClick={handleCatalogBookClick}
+                  />
+                );
+              })}
+            </div>
+          ) : (
+            <div className="theme-text-primary py-12 text-center">
+              <p className="theme-text-secondary mb-2 text-lg">No grouped publication lanes were found</p>
+              <p className="theme-text-muted text-sm">
+                Switch to Root Grid to browse top-level publications from this feed.
+              </p>
+            </div>
+          )
         ) : hasBooks ? (
           <BookGrid
             books={catalogBooks}
