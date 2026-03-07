@@ -1,7 +1,7 @@
 {
   // Minimal Wrangler configuration for Cloudflare Pages builds that run `npx wrangler deploy` from repo root.
   // This points the deployer to the existing worker entrypoint under `proxy/`.
-  "name": "mebooks-proxy-worker",
+  "name": "mebooks",
   "compatibility_date": "2025-10-18",
   "main": "proxy/cloudflare-worker-example.js"
 }
