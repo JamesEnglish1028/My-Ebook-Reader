@@ -51,6 +51,8 @@ export interface Opds2Link {
 
 // OPDS2 Navigation Group interface
 export interface Opds2NavigationGroup {
-  metadata?: { title?: string };
+  metadata?: { title?: string; numberOfItems?: number };
   navigation?: Opds2Link[];
+  links?: Opds2Link[];
+  publications?: Opds2Publication[];
 }

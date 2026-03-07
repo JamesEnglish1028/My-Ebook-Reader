@@ -809,7 +809,7 @@ export const fetchCatalogContent = async (
     baseUrl: string,
     forcedVersion: 'auto' | '1' | '2' = 'auto',
     auth?: RequestAuthorization | null,
-): Promise<{ books: CatalogBook[], navLinks: CatalogNavigationLink[], facetGroups: CatalogFacetGroup[], pagination: CatalogPagination, search?: CatalogSearchMetadata, authDocumentUrl?: string, error?: string }> => {
+): Promise<{ books: CatalogBook[], navLinks: CatalogNavigationLink[], facetGroups: CatalogFacetGroup[], publicationGroups?: import('../domain/catalog').CatalogPublicationGroup[], pagination: CatalogPagination, search?: CatalogSearchMetadata, authDocumentUrl?: string, error?: string }> => {
     try {
         // Resolve relative links against the actual feed URL, not the catalog root.
         // For direct fetches that follow redirects, prefer the final response URL.

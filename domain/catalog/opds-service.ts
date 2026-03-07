@@ -16,6 +16,7 @@ import type {
   CatalogFacetGroup,
   CatalogNavigationLink,
   CatalogPagination,
+  CatalogPublicationGroup,
   CatalogSearchMetadata,
 } from './types';
 
@@ -33,6 +34,7 @@ export interface ParsedCatalog {
   books: CatalogBook[];
   navigationLinks: CatalogNavigationLink[];
   facetGroups: CatalogFacetGroup[];
+  publicationGroups: CatalogPublicationGroup[];
   pagination: CatalogPagination;
   search?: CatalogSearchMetadata;
   authDocumentUrl?: string;
@@ -85,6 +87,7 @@ export class OPDSParserService {
           books: result.books,
           navigationLinks: result.navLinks,
           facetGroups: result.facetGroups || [],
+          publicationGroups: result.publicationGroups || [],
           pagination: result.pagination,
           search: result.search,
           authDocumentUrl: result.authDocumentUrl,
@@ -121,6 +124,7 @@ export class OPDSParserService {
           books: result.books,
           navigationLinks: result.navLinks,
           facetGroups: result.facetGroups || [],
+          publicationGroups: result.publicationGroups || [],
           pagination: result.pagination,
           search: result.search,
           authDocumentUrl: (result as any).authDocumentUrl,
@@ -162,6 +166,7 @@ export class OPDSParserService {
           books: result.books,
           navigationLinks: result.navLinks,
           facetGroups: result.facetGroups || [],
+          publicationGroups: result.publicationGroups || [],
           pagination: result.pagination,
           search: result.search,
           authDocumentUrl: (result as any).authDocumentUrl,

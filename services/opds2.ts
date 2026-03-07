@@ -44,7 +44,7 @@ function normalizeRelValues(rel: unknown): string[] {
     .map((r) => normalizeRel(toLowerSafe(r)))
     .filter((r) => r.length > 0);
 }
-import type { CatalogBook, CatalogFacetGroup, CatalogFacetLink, CatalogNavigationLink, CatalogPagination, CatalogRelatedLink, CatalogSearchMetadata, Series } from '../types';
+import type { CatalogBook, CatalogFacetGroup, CatalogFacetLink, CatalogNavigationLink, CatalogPagination, CatalogPublicationGroup, CatalogRelatedLink, CatalogSearchMetadata, Series } from '../types';
 import type { Opds2Link, Opds2NavigationGroup, Opds2Publication } from '../types/opds2';
 import { parseCatalogSearchTemplateParameters, resolveCatalogSearchTemplateUrl } from './opensearch';
 
@@ -577,7 +577,18 @@ export function getCachedEtag(url: string) {
 }
 
 
-export const parseOpds2Json = (jsonData: any, baseUrl: string): { books: CatalogBook[], navLinks: CatalogNavigationLink[], facetGroups: CatalogFacetGroup[], pagination: CatalogPagination, search?: CatalogSearchMetadata, error?: string } => {
+export const parseOpds2Json = (
+  jsonData: any,
+  baseUrl: string,
+): {
+  books: CatalogBook[];
+  navLinks: CatalogNavigationLink[];
+  facetGroups: CatalogFacetGroup[];
+  publicationGroups: CatalogPublicationGroup[];
+  pagination: CatalogPagination;
+  search?: CatalogSearchMetadata;
+  error?: string;
+} => {
   logger.debug('[OPDS2] parseOpds2Json start', { baseUrl, typeofJson: typeof jsonData });
   try {
     if (typeof jsonData !== 'object' || jsonData === null) {
@@ -595,6 +606,7 @@ export const parseOpds2Json = (jsonData: any, baseUrl: string): { books: Catalog
   const books: CatalogBook[] = [];
   const navLinks: CatalogNavigationLink[] = parseOpds2NavigationLinks(jsonData, baseUrl);
   const facetGroups: CatalogFacetGroup[] = parseOpds2FacetGroups(jsonData, baseUrl);
+  const publicationGroups: CatalogPublicationGroup[] = [];
   const pagination: CatalogPagination = parseOpds2Pagination(jsonData, baseUrl);
   const search: CatalogSearchMetadata | undefined = parseOpds2SearchLink(jsonData, baseUrl);
 
@@ -1076,50 +1088,104 @@ function normalizeMediumFormatCode(schemaType: string | undefined, type?: string
     return undefined;
   }
 
+  function normalizePublicationLinks(pub: Opds2Publication): void {
+    // Some feeds embed serialized XML `<link>` fragments inside JSON fields.
+    if (typeof pub.links === 'string' && pub.links.trim().startsWith('<')) {
+      try {
+        const parser = new DOMParser();
+        const xml = parser.parseFromString(pub.links, 'application/xml');
+        const parsedLinks: Record<string, any>[] = [];
+        Array.from(xml.querySelectorAll('link')).forEach((ln: Element) => {
+          const href = ln.getAttribute('href');
+          const rel = ln.getAttribute('rel');
+          const type = ln.getAttribute('type');
+          const obj: Record<string, any> = {};
+          if (href) obj.href = href;
+          if (rel) obj.rel = rel;
+          if (type) obj.type = type;
+          parsedLinks.push(obj);
+        });
+        if (parsedLinks.length > 0) pub.links = parsedLinks;
+      } catch {
+        // Ignore malformed embedded link XML and leave publication untouched.
+      }
+    }
+
+    if (!pub.links && pub.properties && typeof pub.properties === 'object') {
+      const maybeLinks = pub.properties.links || pub.properties.link || pub.properties.acquisitions;
+      if (typeof maybeLinks === 'string' && maybeLinks.trim().startsWith('<')) {
+        try {
+          const parser = new DOMParser();
+          const xml = parser.parseFromString(maybeLinks, 'application/xml');
+          const parsedLinks: Record<string, any>[] = [];
+          Array.from(xml.querySelectorAll('link')).forEach((ln: Element) => {
+            const href = ln.getAttribute('href');
+            const rel = ln.getAttribute('rel');
+            const type = ln.getAttribute('type');
+            const obj: Record<string, any> = {};
+            if (href) obj.href = href;
+            if (rel) obj.rel = rel;
+            if (type) obj.type = type;
+            parsedLinks.push(obj);
+          });
+          if (parsedLinks.length > 0) pub.links = parsedLinks;
+        } catch {
+          // Ignore malformed embedded link XML and leave publication untouched.
+        }
+      }
+    }
+  }
+
+  if (Array.isArray(jsonData.groups)) {
+    jsonData.groups.forEach((group: Opds2NavigationGroup) => {
+      if (!Array.isArray(group.publications) || group.publications.length === 0) return;
+
+      const laneBooks: CatalogBook[] = [];
+      group.publications.forEach((pub) => {
+        normalizePublicationLinks(pub);
+        const book = processOpds2Publication(pub, baseUrl);
+        if (book) laneBooks.push(book);
+      });
+
+      if (laneBooks.length === 0) return;
+
+      const groupLinks = Array.isArray(group.links) ? group.links : [];
+      const laneLink = groupLinks.find((link) => {
+        if (!link?.href) return false;
+        if (!isOpdsNavigationTarget(link)) return false;
+        const resolvedUrl = new URL(String(link.href), baseUrl).href;
+        return !shouldFilterCrawlableLink(resolvedUrl);
+      });
+
+      const navigationLink = laneLink
+        ? {
+          title: toNonEmptyString(group.metadata?.title) || toNonEmptyString(laneLink.title) || 'Collection',
+          url: new URL(String(laneLink.href), baseUrl).href,
+          rel: normalizeRelValues(laneLink.rel)[0] || 'collection',
+          type: laneLink.type,
+          isCatalog: true,
+          source: 'group' as const,
+        }
+        : undefined;
+
+      const numberOfItems = typeof group.metadata?.numberOfItems === 'number'
+        ? group.metadata.numberOfItems
+        : undefined;
+
+      publicationGroups.push({
+        title: toNonEmptyString(group.metadata?.title) || navigationLink?.title || 'Collection',
+        books: laneBooks,
+        numberOfItems,
+        navigationLink,
+      });
+    });
+  }
+
   if (jsonData.publications && Array.isArray(jsonData.publications)) {
     logger.debug('[OPDS2] Parsing publications', { count: jsonData.publications.length, baseUrl });
     if (jsonData.publications && Array.isArray(jsonData.publications)) {
       for (const pub of jsonData.publications) {
-        // Normalize links: some providers (e.g., Palace) embed XML serialized <link> elements inside JSON string fields.
-        if (typeof pub.links === 'string' && pub.links.trim().startsWith('<')) {
-          try {
-            const parser = new DOMParser();
-            const xml = parser.parseFromString(pub.links, 'application/xml');
-            const parsedLinks: Record<string, any>[] = [];
-            Array.from(xml.querySelectorAll('link')).forEach((ln: Element) => {
-              const href = ln.getAttribute('href');
-              const rel = ln.getAttribute('rel');
-              const type = ln.getAttribute('type');
-              const obj: Record<string, any> = {};
-              if (href) obj.href = href;
-              if (rel) obj.rel = rel;
-              if (type) obj.type = type;
-              parsedLinks.push(obj);
-            });
-            if (parsedLinks.length > 0) pub.links = parsedLinks;
-          } catch (_) { }
-        }
-        if (!pub.links && pub.properties && typeof pub.properties === 'object') {
-          const maybeLinks = pub.properties.links || pub.properties.link || pub.properties.acquisitions;
-          if (typeof maybeLinks === 'string' && maybeLinks.trim().startsWith('<')) {
-            try {
-              const parser = new DOMParser();
-              const xml = parser.parseFromString(maybeLinks, 'application/xml');
-              const parsedLinks: Record<string, any>[] = [];
-              Array.from(xml.querySelectorAll('link')).forEach((ln: Element) => {
-                const href = ln.getAttribute('href');
-                const rel = ln.getAttribute('rel');
-                const type = ln.getAttribute('type');
-                const obj: Record<string, any> = {};
-                if (href) obj.href = href;
-                if (rel) obj.rel = rel;
-                if (type) obj.type = type;
-                parsedLinks.push(obj);
-              });
-              if (parsedLinks.length > 0) pub.links = parsedLinks;
-            } catch (_) { }
-          }
-        }
+        normalizePublicationLinks(pub);
         const book = processOpds2Publication(pub, baseUrl);
         if (book) books.push(book);
       }
@@ -1136,12 +1202,18 @@ function normalizeMediumFormatCode(schemaType: string | undefined, type?: string
     console.warn('[OPDS2] Warning: feed is missing required metadata and publications.');
   }
 
-    logger.debug('[OPDS2] parseOpds2Json complete', { navLinks: navLinks.length, facetGroups: facetGroups.length, books: books.length, paginationKeys: Object.keys(pagination) });
-    return { books, navLinks, facetGroups, pagination, search };
+    logger.debug('[OPDS2] parseOpds2Json complete', {
+      navLinks: navLinks.length,
+      facetGroups: facetGroups.length,
+      publicationGroups: publicationGroups.length,
+      books: books.length,
+      paginationKeys: Object.keys(pagination),
+    });
+    return { books, navLinks, facetGroups, publicationGroups, pagination, search };
   } catch (err) {
     const message = err instanceof Error ? err.message : 'Unknown OPDS2 parse error';
     logger.error('[OPDS2] parseOpds2Json error', err);
-    return { books: [], navLinks: [], facetGroups: [], pagination: {}, error: message };
+    return { books: [], navLinks: [], facetGroups: [], publicationGroups: [], pagination: {}, error: message };
   }
 };
 
@@ -1171,7 +1243,7 @@ export const fetchOpds2Feed = async (url: string, credentials?: { username: stri
 
   const resp = await fetch(proxyUrl, { headers, method: 'GET' });
   if (resp.status === 304) {
-    return { status: 304, books: [], navLinks: [], facetGroups: [], pagination: {} };
+    return { status: 304, books: [], navLinks: [], facetGroups: [], publicationGroups: [], pagination: {} };
   }
 
   const etag = resp.headers.get('ETag') || resp.headers.get('etag');
@@ -1188,10 +1260,10 @@ export const fetchOpds2Feed = async (url: string, credentials?: { username: stri
         const protocolHint = parsed.protocol === 'http:'
           ? ' This upstream is plain HTTP, so the proxy must explicitly allow that host.'
           : '';
-        return { status: resp.status, books: [], navLinks: [], facetGroups: [], pagination: {}, error: `Proxy denied access to host for ${targetLabel}.${protocolHint}` };
+        return { status: resp.status, books: [], navLinks: [], facetGroups: [], publicationGroups: [], pagination: {}, error: `Proxy denied access to host for ${targetLabel}.${protocolHint}` };
       }
       if (errorSource === 'proxy' && typeof parsed?.error === 'string') {
-        return { status: resp.status, books: [], navLinks: [], facetGroups: [], pagination: {}, error: `The proxy itself denied the request for ${url}. ${parsed.error}` };
+        return { status: resp.status, books: [], navLinks: [], facetGroups: [], publicationGroups: [], pagination: {}, error: `The proxy itself denied the request for ${url}. ${parsed.error}` };
       }
     } catch (e) {
       // Ignore invalid proxy JSON and continue with normal parsing.
@@ -1204,6 +1276,7 @@ export const fetchOpds2Feed = async (url: string, credentials?: { username: stri
       books: [],
       navLinks: [],
       facetGroups: [],
+      publicationGroups: [],
       pagination: {},
       error: `The proxy reached the upstream server, but the upstream server denied the request (${upstreamStatus}) for ${url}. This is not a proxy allowlist rejection.`,
     };
@@ -1220,11 +1293,11 @@ export const fetchOpds2Feed = async (url: string, credentials?: { username: stri
       return { status: resp.status, ...parsed };
     } catch (e) {
       const message = e instanceof Error ? e.message : 'Failed to parse XML/OPDS1 content';
-      return { status: resp.status, books: [], navLinks: [], facetGroups: [], pagination: {}, error: message };
+      return { status: resp.status, books: [], navLinks: [], facetGroups: [], publicationGroups: [], pagination: {}, error: message };
     }
   }
 
-  return { status: resp.status, books: [], navLinks: [], facetGroups: [], pagination: {}, error: 'Unsupported content type for OPDS2 fetch' };
+  return { status: resp.status, books: [], navLinks: [], facetGroups: [], publicationGroups: [], pagination: {}, error: 'Unsupported content type for OPDS2 fetch' };
 };
 
 export const borrowOpds2Work = async (borrowHref: string, credentials?: { username: string; password: string } | null) => {

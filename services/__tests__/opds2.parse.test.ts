@@ -298,4 +298,43 @@ describe('parseOpds2Json', () => {
     expect(navLinks).toHaveLength(1);
     expect(navLinks[0].title).toBe('Browse');
   });
+
+  it('extracts grouped publication lanes from OPDS2 groups', () => {
+    const feed = {
+      metadata: { title: 'Grouped Catalog' },
+      groups: [
+        {
+          metadata: { title: 'Featured Books', numberOfItems: 20 },
+          links: [
+            {
+              rel: 'self',
+              href: '/featured',
+              type: 'application/opds+json',
+            },
+          ],
+          publications: [
+            {
+              metadata: { title: 'Moby-Dick', author: 'Herman Melville' },
+              links: [
+                {
+                  href: '/books/moby-dick.epub',
+                  rel: 'http://opds-spec.org/acquisition/open-access',
+                  type: 'application/epub+zip',
+                },
+              ],
+              images: [{ href: '/covers/moby-dick.jpg' }],
+            },
+          ],
+        },
+      ],
+    };
+
+    const { publicationGroups } = parseOpds2Json(feed, 'https://example.org/catalog');
+    expect(publicationGroups).toHaveLength(1);
+    expect(publicationGroups[0].title).toBe('Featured Books');
+    expect(publicationGroups[0].numberOfItems).toBe(20);
+    expect(publicationGroups[0].books).toHaveLength(1);
+    expect(publicationGroups[0].books[0].title).toBe('Moby-Dick');
+    expect(publicationGroups[0].navigationLink?.url).toBe('https://example.org/featured');
+  });
 });

@@ -14,6 +14,7 @@ import type {
   CatalogFacetGroup,
   CatalogNavigationLink,
   CatalogPagination,
+  CatalogPublicationGroup,
   CatalogSearchMetadata,
 } from '../types';
 
@@ -28,6 +29,7 @@ interface CatalogContentResult {
   books: CatalogBook[];
   navigationLinks: CatalogNavigationLink[];
   facetGroups: CatalogFacetGroup[];
+  publicationGroups: CatalogPublicationGroup[];
   pagination: CatalogPagination;
   search: CatalogSearchMetadata | null;
   authDocument: AuthDocument | null;
@@ -69,6 +71,7 @@ export function useCatalogContent(
           books: [],
           navigationLinks: [],
           facetGroups: [],
+          publicationGroups: [],
           pagination: {},
           search: null,
           authDocument: null,
@@ -85,6 +88,7 @@ export function useCatalogContent(
           books: [],
           navigationLinks: [],
           facetGroups: [],
+          publicationGroups: [],
           pagination: {},
           search: null,
           authDocument: null,
@@ -118,6 +122,7 @@ export function useCatalogContent(
         books: result.data.books,
         navigationLinks: finalNavigationLinks,
         facetGroups: result.data.facetGroups,
+        publicationGroups: result.data.publicationGroups || [],
         pagination: result.data.pagination,
         search: result.data.search || null,
         authDocument,

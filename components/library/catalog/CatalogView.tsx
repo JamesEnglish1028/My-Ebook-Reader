@@ -32,6 +32,7 @@ import type {
   CatalogBook,
   CatalogFacetLink,
   CatalogNavigationLink,
+  CatalogPublicationGroup,
   CatalogRegistry,
   DistributorMode,
   FictionMode,
@@ -44,7 +45,7 @@ import type {
 import OpdsCredentialsModal from '../../OpdsCredentialsModal';
 import { Error as ErrorDisplay, Loading } from '../../shared';
 import { AdjustmentsVerticalIcon, SearchIcon } from '../../icons';
-import { CatalogFilters, CatalogNavigation, CatalogSearch, CatalogSidebar } from '../catalog';
+import { CatalogFilters, CatalogNavigation, CatalogSearch, CatalogSidebar, CatalogSwimLane } from '../catalog';
 import { BookGrid, EmptyState } from '../shared';
 
 interface CatalogViewProps {
@@ -195,8 +196,16 @@ const CatalogView: React.FC<CatalogViewProps> = ({
   const originalCatalogBooks = catalogData?.books || [];
   const navigationLinks = catalogData?.navigationLinks || [];
   const facetGroups = catalogData?.facetGroups || [];
+  const publicationGroups = catalogData?.publicationGroups || [];
   const catalogPagination = catalogData?.pagination || null;
   const discoveredSearch = catalogData?.search || null;
+  const allCatalogBooksForFiltering = useMemo(
+    () => [
+      ...originalCatalogBooks,
+      ...publicationGroups.flatMap((group) => group.books),
+    ],
+    [originalCatalogBooks, publicationGroups],
+  );
 
   useEffect(() => {
     setCatalogSearch(null);
@@ -233,25 +242,25 @@ const CatalogView: React.FC<CatalogViewProps> = ({
     availableAvailabilityModes,
     availableDistributors,
   } = useMemo(() => ({
-    availableAudiences: getAvailableAudiences(originalCatalogBooks),
-    availableFictionModes: getAvailableFictionModes(originalCatalogBooks),
-    availableMediaModes: getAvailableMediaModes(originalCatalogBooks),
-    availablePublicationTypes: getAvailablePublicationTypes(originalCatalogBooks),
-    availableAvailabilityModes: getAvailableAvailabilityModes(originalCatalogBooks),
-    availableDistributors: getAvailableDistributors(originalCatalogBooks),
-  }), [originalCatalogBooks]);
+    availableAudiences: getAvailableAudiences(allCatalogBooksForFiltering),
+    availableFictionModes: getAvailableFictionModes(allCatalogBooksForFiltering),
+    availableMediaModes: getAvailableMediaModes(allCatalogBooksForFiltering),
+    availablePublicationTypes: getAvailablePublicationTypes(allCatalogBooksForFiltering),
+    availableAvailabilityModes: getAvailableAvailabilityModes(allCatalogBooksForFiltering),
+    availableDistributors: getAvailableDistributors(allCatalogBooksForFiltering),
+  }), [allCatalogBooksForFiltering]);
 
-  useEffect(() => {
-    if (originalCatalogBooks.length === 0) return;
-
-    const audienceFiltered = filterBooksByAudience(originalCatalogBooks, audienceMode);
+  const applyActiveFilters = (books: CatalogBook[]) => {
+    const audienceFiltered = filterBooksByAudience(books, audienceMode);
     const fictionFiltered = filterBooksByFiction(audienceFiltered, fictionMode);
     const mediaFiltered = filterBooksByMedia(fictionFiltered, mediaMode);
     const publicationFiltered = filterBooksByPublication(mediaFiltered, publicationMode);
     const availabilityFiltered = filterBooksByAvailability(publicationFiltered, availabilityMode);
-    const distributorFiltered = filterBooksByDistributor(availabilityFiltered, distributorMode);
+    return filterBooksByDistributor(availabilityFiltered, distributorMode);
+  };
 
-    setCatalogBooks(distributorFiltered);
+  useEffect(() => {
+    setCatalogBooks(applyActiveFilters(originalCatalogBooks));
   }, [
     audienceMode,
     fictionMode,
@@ -261,6 +270,24 @@ const CatalogView: React.FC<CatalogViewProps> = ({
     distributorMode,
     originalCatalogBooks,
   ]);
+
+  const filteredPublicationGroups = useMemo<CatalogPublicationGroup[]>(
+    () => publicationGroups
+      .map((group) => ({
+        ...group,
+        books: applyActiveFilters(group.books),
+      }))
+      .filter((group) => group.books.length > 0),
+    [
+      audienceMode,
+      availabilityMode,
+      distributorMode,
+      fictionMode,
+      mediaMode,
+      publicationMode,
+      publicationGroups,
+    ],
+  );
 
   const resetLocalFilters = () => {
     setAudienceMode('all');
@@ -629,9 +656,11 @@ const CatalogView: React.FC<CatalogViewProps> = ({
   }
 
   const hasBooks = catalogBooks.length > 0;
+  const hasSwimLanes = filteredPublicationGroups.length > 0;
   const hasOriginalBooks = originalCatalogBooks.length > 0;
-  const hasNavigationOnlyContent = !hasOriginalBooks && hasSidebarContent;
-  const isEmptyFeed = !hasOriginalBooks && !hasSidebarContent;
+  const hasOriginalSwimLanes = publicationGroups.length > 0;
+  const hasNavigationOnlyContent = !hasOriginalBooks && !hasOriginalSwimLanes && hasSidebarContent;
+  const isEmptyFeed = !hasOriginalBooks && !hasOriginalSwimLanes && !hasSidebarContent;
   const pendingLoansAuthDocument = pendingLoansTarget
     ? (catalogData?.authDocument || getCachedAuthDocumentForUrl(pendingLoansTarget.link.url))
     : null;
@@ -740,6 +769,35 @@ const CatalogView: React.FC<CatalogViewProps> = ({
 
         {isEmptyFeed ? (
           <EmptyState variant="catalog" />
+        ) : hasSwimLanes ? (
+          <div className="space-y-6">
+            {filteredPublicationGroups.map((group, index) => {
+              const laneLink: CatalogNavigationLink = group.navigationLink || {
+                title: group.title,
+                url: currentUrl || activeOpdsSource.url,
+                rel: 'collection',
+                source: 'group',
+                isCatalog: true,
+              };
+              const laneTitle = typeof group.numberOfItems === 'number' && group.numberOfItems > 0
+                ? `${group.title} (${group.numberOfItems})`
+                : group.title;
+              return (
+                <CatalogSwimLane
+                  key={`${laneLink.url}-${group.title}-${index}`}
+                  laneTitle={laneTitle}
+                  laneLink={laneLink}
+                  books={group.books}
+                  hasFetched={true}
+                  onOpenLane={(link) => {
+                    if (!group.navigationLink) return;
+                    handleNavigationSelect(link);
+                  }}
+                  onBookClick={handleCatalogBookClick}
+                />
+              );
+            })}
+          </div>
         ) : hasBooks ? (
           <BookGrid
             books={catalogBooks}

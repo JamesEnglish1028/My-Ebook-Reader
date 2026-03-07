@@ -177,6 +177,16 @@ export interface CatalogLanePreview {
 }
 
 /**
+ * OPDS 2 grouped-publication lane for carousel/swim-lane display.
+ */
+export interface CatalogPublicationGroup {
+  title: string;
+  books: CatalogBook[];
+  numberOfItems?: number;
+  navigationLink?: CatalogNavigationLink;
+}
+
+/**
  * Collection group for UI display
  */
 export interface CollectionGroup {
