@@ -12,7 +12,7 @@ const SplashScreen: React.FC<SplashScreenProps> = ({ isVisible }) => {
     >
       <div className="animate-pulse text-center">
         <div className="theme-accent-text-emphasis text-4xl font-bold tracking-[-0.04em] sm:text-5xl">
-          MeBooks
+          MyEbooks
         </div>
         <div className="theme-text-secondary mt-2 text-xs font-semibold uppercase tracking-[0.35em] sm:text-sm">
           Browser Reader
