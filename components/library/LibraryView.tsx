@@ -24,6 +24,8 @@ import {
   normalizeSourceUrl,
 } from './sourceSelection';
 
+const ENHANCED_CATALOG_URLS_STORAGE_KEY = 'mebooks.enhanced-catalog-urls';
+
 interface LibraryViewProps {
   libraryRefreshFlag: number;
   syncStatus: {
@@ -104,6 +106,16 @@ const LibraryView: React.FC<LibraryViewProps> = ({
   const [isEnhancedCatalogPickerOpen, setIsEnhancedCatalogPickerOpen] = useState(false);
   const [isSettingsMenuOpen, setIsSettingsMenuOpen] = useState(false);
   const [isThemeModalOpen, setIsThemeModalOpen] = useState(false);
+  const [enhancedCatalogUrls, setEnhancedCatalogUrls] = useState<Set<string>>(() => {
+    try {
+      const raw = localStorage.getItem(ENHANCED_CATALOG_URLS_STORAGE_KEY);
+      if (!raw) return new Set<string>();
+      const parsed = JSON.parse(raw);
+      return new Set(Array.isArray(parsed) ? parsed.map((value) => normalizeSourceUrl(String(value))) : []);
+    } catch {
+      return new Set<string>();
+    }
+  });
   // Duplicate book modal
   const [duplicateBook, setDuplicateBook] = useState<BookRecord | null>(null);
   const [existingBook, setExistingBook] = useState<BookRecord | null>(null);
@@ -391,17 +403,55 @@ const LibraryView: React.FC<LibraryViewProps> = ({
     () => new Set(communityCatalogPresets.map((preset) => normalizeSourceUrl(preset.url))),
     [communityCatalogPresets, normalizeSourceUrl],
   );
+  const enhancedCommunityCatalogs = React.useMemo(
+    () => catalogs.filter((catalog) => enhancedCatalogUrls.has(normalizeSourceUrl(catalog.url))),
+    [catalogs, enhancedCatalogUrls, normalizeSourceUrl],
+  );
   const palaceCatalogs = React.useMemo(
     () => catalogs.filter((catalog) => isPalaceCatalogUrl(catalog.url)),
     [catalogs, isPalaceCatalogUrl],
   );
   const otherCatalogs = React.useMemo(
-    () => catalogs.filter((catalog) => !isPalaceCatalogUrl(catalog.url) && !communityCatalogUrls.has(normalizeSourceUrl(catalog.url))),
-    [catalogs, communityCatalogUrls, isPalaceCatalogUrl, normalizeSourceUrl],
+    () => catalogs.filter((catalog) => {
+      const normalizedUrl = normalizeSourceUrl(catalog.url);
+      return !isPalaceCatalogUrl(catalog.url)
+        && !communityCatalogUrls.has(normalizedUrl)
+        && !enhancedCatalogUrls.has(normalizedUrl);
+    }),
+    [catalogs, communityCatalogUrls, enhancedCatalogUrls, isPalaceCatalogUrl, normalizeSourceUrl],
   );
   const palaceRegistryUrl = React.useMemo(() => getPalaceRegistryUrl(), []);
   const enhancedCommunityRegistryPreset = React.useMemo(() => getEnhancedCommunityRegistryPreset(), []);
   const enhancedCommunityRegistryUrl = enhancedCommunityRegistryPreset?.url || '';
+
+  const markCatalogAsEnhanced = useCallback((url: string) => {
+    const normalizedUrl = normalizeSourceUrl(url);
+    setEnhancedCatalogUrls((prev) => {
+      if (prev.has(normalizedUrl)) return prev;
+      const next = new Set(prev);
+      next.add(normalizedUrl);
+      try {
+        localStorage.setItem(ENHANCED_CATALOG_URLS_STORAGE_KEY, JSON.stringify(Array.from(next)));
+      } catch {
+        // Ignore storage errors and keep in-memory state.
+      }
+      return next;
+    });
+  }, [normalizeSourceUrl]);
+
+  useEffect(() => {
+    setEnhancedCatalogUrls((prev) => {
+      const existingUrls = new Set(catalogs.map((catalog) => normalizeSourceUrl(catalog.url)));
+      const next = new Set(Array.from(prev).filter((url) => existingUrls.has(url)));
+      if (next.size === prev.size) return prev;
+      try {
+        localStorage.setItem(ENHANCED_CATALOG_URLS_STORAGE_KEY, JSON.stringify(Array.from(next)));
+      } catch {
+        // Ignore storage errors and keep in-memory state.
+      }
+      return next;
+    });
+  }, [catalogs, normalizeSourceUrl]);
 
   const handleSelectCommunityCatalog = useCallback((preset: (typeof communityCatalogPresets)[number]) => {
     const existingCatalog = catalogsByNormalizedUrl.get(normalizeSourceUrl(preset.url));
@@ -417,6 +467,7 @@ const LibraryView: React.FC<LibraryViewProps> = ({
   }, [addCatalog, catalogsByNormalizedUrl, communityCatalogPresets, handleSelectSource, normalizeSourceUrl, setActiveOpdsSource, setCatalogNavPath]);
 
   const handleSelectEnhancedCommunityCatalog = useCallback((name: string, url: string) => {
+    markCatalogAsEnhanced(url);
     const existingCatalog = catalogsByNormalizedUrl.get(normalizeSourceUrl(url));
     if (existingCatalog) {
       handleSelectSource(existingCatalog);
@@ -427,7 +478,7 @@ const LibraryView: React.FC<LibraryViewProps> = ({
       setIsCatalogDropdownOpen(false);
     }
     setIsEnhancedCatalogPickerOpen(false);
-  }, [addCatalog, catalogsByNormalizedUrl, handleSelectSource, normalizeSourceUrl, setActiveOpdsSource, setCatalogNavPath]);
+  }, [addCatalog, catalogsByNormalizedUrl, handleSelectSource, markCatalogAsEnhanced, normalizeSourceUrl, setActiveOpdsSource, setCatalogNavPath]);
 
   const handleSelectPalaceCatalog = useCallback((name: string, url: string) => {
     const existingCatalog = catalogsByNormalizedUrl.get(normalizeSourceUrl(url));
@@ -502,6 +553,18 @@ const LibraryView: React.FC<LibraryViewProps> = ({
                         <span>Enhanced Community Catalogs</span>
                       </span>
                     </li>
+                    {enhancedCommunityCatalogs.map((catalog) => (
+                      <li key={catalog.id}>
+                        <button
+                          onClick={() => handleSelectSource(catalog)}
+                          className={`w-full truncate rounded-md px-3 py-2 text-left text-sm ${
+                            isBrowsingOpds && activeOpdsSource?.id === catalog.id ? 'theme-nav-link-active' : 'theme-hover-surface'
+                          }`}
+                        >
+                          {catalog.name}
+                        </button>
+                      </li>
+                    ))}
                     <li>
                       <button
                         onClick={() => {
