@@ -204,6 +204,14 @@ function parseOpds2NavigationLinks(jsonData: any, baseUrl: string): CatalogNavig
       const meta = catalogEntry.metadata || {};
       const title = meta.title || meta.name || catalogEntry.title || 'Catalog';
       const links = normalizeOpdsLinkCollection(catalogEntry.links || catalogEntry.link);
+      if (links.length === 0 && catalogEntry.href) {
+        links.push({
+          href: String(catalogEntry.href),
+          rel: catalogEntry.rel || 'subsection',
+          type: catalogEntry.type,
+          title: catalogEntry.title || title,
+        });
+      }
       const pickCatalogLink = () => {
         const relContainsCatalog = (rel: unknown) => toLowerSafe(rel).includes('catalog');
         // Prefer explicit catalog rel, then any OPDS link
