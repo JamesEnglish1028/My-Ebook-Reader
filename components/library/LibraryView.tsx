@@ -8,7 +8,7 @@ import { db, logger } from '../../services';
 import type { BookMetadata, BookRecord, Catalog, CatalogBook, CatalogRegistry, CoverAnimationData } from '../../types';
 import { useConfirm } from '../ConfirmContext';
 import DuplicateBookModal from '../DuplicateBookModal';
-import { BookIcon, ChevronDownIcon, ListIcon, PlusIcon } from '../icons';
+import { BookIcon, ChevronDownIcon, ListIcon, PlusIcon, SparklesIcon } from '../icons';
 import ManageCatalogsModal from '../ManageCatalogsModal';
 import ThemeModal from '../ThemeModal';
 
@@ -16,7 +16,13 @@ import { CatalogView } from './catalog';
 import { ImportButton, LocalLibraryView } from './local';
 import PalaceCatalogPickerModal from './PalaceCatalogPickerModal';
 import PalaceLogoIcon from './shared/PalaceLogoIcon';
-import { getCommunityCatalogPresets, getPalaceRegistryUrl, isPalaceCatalogUrl, normalizeSourceUrl } from './sourceSelection';
+import {
+  getCommunityCatalogPresets,
+  getEnhancedCommunityRegistryPreset,
+  getPalaceRegistryUrl,
+  isPalaceCatalogUrl,
+  normalizeSourceUrl,
+} from './sourceSelection';
 
 interface LibraryViewProps {
   libraryRefreshFlag: number;
@@ -380,6 +386,13 @@ const LibraryView: React.FC<LibraryViewProps> = ({
     });
     return entries;
   }, [catalogs, normalizeSourceUrl]);
+  const registriesByNormalizedUrl = React.useMemo(() => {
+    const entries = new Map<string, CatalogRegistry>();
+    registries.forEach((registry) => {
+      entries.set(normalizeSourceUrl(registry.url), registry);
+    });
+    return entries;
+  }, [registries, normalizeSourceUrl]);
   const communityCatalogUrls = React.useMemo(
     () => new Set(communityCatalogPresets.map((preset) => normalizeSourceUrl(preset.url))),
     [communityCatalogPresets, normalizeSourceUrl],
@@ -393,8 +406,9 @@ const LibraryView: React.FC<LibraryViewProps> = ({
     [catalogs, communityCatalogUrls, isPalaceCatalogUrl, normalizeSourceUrl],
   );
   const palaceRegistryUrl = React.useMemo(() => getPalaceRegistryUrl(), []);
+  const enhancedCommunityRegistryPreset = React.useMemo(() => getEnhancedCommunityRegistryPreset(), []);
 
-  const handleSelectCommunityCatalog = useCallback((preset: typeof CATALOG_PRESETS[number]) => {
+  const handleSelectCommunityCatalog = useCallback((preset: (typeof communityCatalogPresets)[number]) => {
     const existingCatalog = catalogsByNormalizedUrl.get(normalizeSourceUrl(preset.url));
     if (existingCatalog) {
       handleSelectSource(existingCatalog);
@@ -405,7 +419,33 @@ const LibraryView: React.FC<LibraryViewProps> = ({
     setActiveOpdsSource(createdCatalog);
     setCatalogNavPath([{ name: createdCatalog.name, url: createdCatalog.url }]);
     setIsCatalogDropdownOpen(false);
-  }, [addCatalog, catalogsByNormalizedUrl, handleSelectSource, normalizeSourceUrl, setActiveOpdsSource, setCatalogNavPath]);
+  }, [addCatalog, catalogsByNormalizedUrl, communityCatalogPresets, handleSelectSource, normalizeSourceUrl, setActiveOpdsSource, setCatalogNavPath]);
+
+  const handleSelectEnhancedCommunityRegistry = useCallback(() => {
+    if (!enhancedCommunityRegistryPreset) return;
+    const existingRegistry = registriesByNormalizedUrl.get(normalizeSourceUrl(enhancedCommunityRegistryPreset.url));
+    if (existingRegistry) {
+      handleSelectSource(existingRegistry);
+      setIsCatalogDropdownOpen(false);
+      return;
+    }
+
+    const createdRegistry = addRegistry(
+      enhancedCommunityRegistryPreset.name,
+      enhancedCommunityRegistryPreset.url,
+    );
+    setActiveOpdsSource(createdRegistry);
+    setCatalogNavPath([{ name: createdRegistry.name, url: createdRegistry.url }]);
+    setIsCatalogDropdownOpen(false);
+  }, [
+    addRegistry,
+    enhancedCommunityRegistryPreset,
+    handleSelectSource,
+    normalizeSourceUrl,
+    registriesByNormalizedUrl,
+    setActiveOpdsSource,
+    setCatalogNavPath,
+  ]);
 
   const handleSelectPalaceCatalog = useCallback((name: string, url: string) => {
     const existingCatalog = catalogsByNormalizedUrl.get(normalizeSourceUrl(url));
@@ -471,6 +511,28 @@ const LibraryView: React.FC<LibraryViewProps> = ({
                       </li>
                     );
                   })}
+
+                  {enhancedCommunityRegistryPreset && <>
+                    <li className="theme-divider my-1 border-t" />
+                    <li className="theme-text-secondary px-3 pb-1 pt-3 text-xs font-semibold uppercase">
+                      <span className="inline-flex items-center gap-1.5">
+                        <SparklesIcon className="h-3.5 w-3.5" />
+                        <span>Enhanced Community Catalogs</span>
+                      </span>
+                    </li>
+                    <li>
+                      <button
+                        onClick={handleSelectEnhancedCommunityRegistry}
+                        className={`w-full truncate rounded-md px-3 py-2 text-left text-sm ${
+                          isBrowsingOpds && normalizeSourceUrl(activeOpdsSource?.url || '') === normalizeSourceUrl(enhancedCommunityRegistryPreset.url)
+                            ? 'theme-nav-link-active'
+                            : 'theme-hover-surface'
+                        }`}
+                      >
+                        {enhancedCommunityRegistryPreset.name}
+                      </button>
+                    </li>
+                  </>}
 
                   <li className="theme-divider my-1 border-t" />
                   <li className="theme-text-secondary px-3 pb-1 pt-3 text-xs font-semibold uppercase">

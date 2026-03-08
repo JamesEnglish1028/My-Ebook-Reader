@@ -149,6 +149,12 @@ export const GlobeIcon: React.FC<{ className?: string }> = ({ className }) => (
   </svg>
 );
 
+export const SparklesIcon: React.FC<{ className?: string }> = ({ className }) => (
+  <svg xmlns="http://www.w3.org/2000/svg" className={className} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
+    <path strokeLinecap="round" strokeLinejoin="round" d="M9.813 15.904L9 18l-.813-2.096a2.25 2.25 0 00-1.341-1.341L4.75 13.75l2.096-.813a2.25 2.25 0 001.341-1.341L9 9.5l.813 2.096a2.25 2.25 0 001.341 1.341l2.096.813-2.096.813a2.25 2.25 0 00-1.341 1.341zM18.25 8.25L18 9l-.25-.75a1.5 1.5 0 00-.9-.9L16.1 7l.75-.25a1.5 1.5 0 00.9-.9L18 5.1l.25.75a1.5 1.5 0 00.9.9l.75.25-.75.25a1.5 1.5 0 00-.9.9zM16.5 17.5l-.45 1.1-.45-1.1a1.5 1.5 0 00-.9-.9l-1.1-.45 1.1-.45a1.5 1.5 0 00.9-.9l.45-1.1.45 1.1a1.5 1.5 0 00.9.9l1.1.45-1.1.45a1.5 1.5 0 00-.9.9z" />
+  </svg>
+);
+
 export const ChevronDownIcon: React.FC<{ className?: string }> = ({ className }) => (
   <svg xmlns="http://www.w3.org/2000/svg" className={className} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
     <path strokeLinecap="round" strokeLinejoin="round" d="M19 9l-7 7-7-7" />

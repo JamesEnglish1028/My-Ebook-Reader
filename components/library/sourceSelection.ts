@@ -1,13 +1,14 @@
 import { CATALOG_PRESETS, REGISTRY_PRESETS } from '../../constants/opdsPresets';
 
 export const COMMUNITY_CATALOG_NAMES = new Set([
-  'OAPEN',
   'Open Research Library',
   'PressBooks',
   'Project Gutenberg',
   'UPLOpen',
   'University of Michigan Press',
 ]);
+
+export const ENHANCED_COMMUNITY_REGISTRY_NAME = 'Enhanced Community Catalogs';
 
 export const normalizeSourceUrl = (value: string): string => value.trim().replace(/\/+$/, '').toLowerCase();
 
@@ -29,4 +30,8 @@ export const getCommunityCatalogPresets = () => CATALOG_PRESETS.filter((preset) 
 export const getPalaceRegistryUrl = (): string => (
   REGISTRY_PRESETS.find((registry) => registry.name === 'Palace Libraries')?.url
   || 'https://registry.palaceproject.io/libraries'
+);
+
+export const getEnhancedCommunityRegistryPreset = () => (
+  REGISTRY_PRESETS.find((registry) => registry.name === ENHANCED_COMMUNITY_REGISTRY_NAME) || null
 );
