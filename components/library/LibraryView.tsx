@@ -101,6 +101,7 @@ const LibraryView: React.FC<LibraryViewProps> = ({
   const [isCatalogDropdownOpen, setIsCatalogDropdownOpen] = useState(false);
   const [isManageCatalogsOpen, setIsManageCatalogsOpen] = useState(false);
   const [isPalaceCatalogPickerOpen, setIsPalaceCatalogPickerOpen] = useState(false);
+  const [isEnhancedCatalogPickerOpen, setIsEnhancedCatalogPickerOpen] = useState(false);
   const [isSettingsMenuOpen, setIsSettingsMenuOpen] = useState(false);
   const [isThemeModalOpen, setIsThemeModalOpen] = useState(false);
   // Duplicate book modal
@@ -386,13 +387,6 @@ const LibraryView: React.FC<LibraryViewProps> = ({
     });
     return entries;
   }, [catalogs, normalizeSourceUrl]);
-  const registriesByNormalizedUrl = React.useMemo(() => {
-    const entries = new Map<string, CatalogRegistry>();
-    registries.forEach((registry) => {
-      entries.set(normalizeSourceUrl(registry.url), registry);
-    });
-    return entries;
-  }, [registries, normalizeSourceUrl]);
   const communityCatalogUrls = React.useMemo(
     () => new Set(communityCatalogPresets.map((preset) => normalizeSourceUrl(preset.url))),
     [communityCatalogPresets, normalizeSourceUrl],
@@ -407,6 +401,7 @@ const LibraryView: React.FC<LibraryViewProps> = ({
   );
   const palaceRegistryUrl = React.useMemo(() => getPalaceRegistryUrl(), []);
   const enhancedCommunityRegistryPreset = React.useMemo(() => getEnhancedCommunityRegistryPreset(), []);
+  const enhancedCommunityRegistryUrl = enhancedCommunityRegistryPreset?.url || '';
 
   const handleSelectCommunityCatalog = useCallback((preset: (typeof communityCatalogPresets)[number]) => {
     const existingCatalog = catalogsByNormalizedUrl.get(normalizeSourceUrl(preset.url));
@@ -421,31 +416,18 @@ const LibraryView: React.FC<LibraryViewProps> = ({
     setIsCatalogDropdownOpen(false);
   }, [addCatalog, catalogsByNormalizedUrl, communityCatalogPresets, handleSelectSource, normalizeSourceUrl, setActiveOpdsSource, setCatalogNavPath]);
 
-  const handleSelectEnhancedCommunityRegistry = useCallback(() => {
-    if (!enhancedCommunityRegistryPreset) return;
-    const existingRegistry = registriesByNormalizedUrl.get(normalizeSourceUrl(enhancedCommunityRegistryPreset.url));
-    if (existingRegistry) {
-      handleSelectSource(existingRegistry);
+  const handleSelectEnhancedCommunityCatalog = useCallback((name: string, url: string) => {
+    const existingCatalog = catalogsByNormalizedUrl.get(normalizeSourceUrl(url));
+    if (existingCatalog) {
+      handleSelectSource(existingCatalog);
+    } else {
+      const createdCatalog = addCatalog(name, url, 'auto');
+      setActiveOpdsSource(createdCatalog);
+      setCatalogNavPath([{ name: createdCatalog.name, url: createdCatalog.url }]);
       setIsCatalogDropdownOpen(false);
-      return;
     }
-
-    const createdRegistry = addRegistry(
-      enhancedCommunityRegistryPreset.name,
-      enhancedCommunityRegistryPreset.url,
-    );
-    setActiveOpdsSource(createdRegistry);
-    setCatalogNavPath([{ name: createdRegistry.name, url: createdRegistry.url }]);
-    setIsCatalogDropdownOpen(false);
-  }, [
-    addRegistry,
-    enhancedCommunityRegistryPreset,
-    handleSelectSource,
-    normalizeSourceUrl,
-    registriesByNormalizedUrl,
-    setActiveOpdsSource,
-    setCatalogNavPath,
-  ]);
+    setIsEnhancedCatalogPickerOpen(false);
+  }, [addCatalog, catalogsByNormalizedUrl, handleSelectSource, normalizeSourceUrl, setActiveOpdsSource, setCatalogNavPath]);
 
   const handleSelectPalaceCatalog = useCallback((name: string, url: string) => {
     const existingCatalog = catalogsByNormalizedUrl.get(normalizeSourceUrl(url));
@@ -522,14 +504,14 @@ const LibraryView: React.FC<LibraryViewProps> = ({
                     </li>
                     <li>
                       <button
-                        onClick={handleSelectEnhancedCommunityRegistry}
-                        className={`w-full truncate rounded-md px-3 py-2 text-left text-sm ${
-                          isBrowsingOpds && normalizeSourceUrl(activeOpdsSource?.url || '') === normalizeSourceUrl(enhancedCommunityRegistryPreset.url)
-                            ? 'theme-nav-link-active'
-                            : 'theme-hover-surface'
-                        }`}
+                        onClick={() => {
+                          setIsCatalogDropdownOpen(false);
+                          setIsEnhancedCatalogPickerOpen(true);
+                        }}
+                        className="theme-hover-surface theme-text-secondary flex w-full items-center gap-2 rounded-md px-3 py-2 text-left text-sm"
                       >
-                        {enhancedCommunityRegistryPreset.name}
+                        <PlusIcon className="h-3.5 w-3.5" />
+                        <span>Add...</span>
                       </button>
                     </li>
                   </>}
@@ -772,6 +754,21 @@ const LibraryView: React.FC<LibraryViewProps> = ({
         registryUrl={palaceRegistryUrl}
         existingCatalogs={catalogs}
         onSelectCatalog={handleSelectPalaceCatalog}
+      />
+      <PalaceCatalogPickerModal
+        isOpen={isEnhancedCatalogPickerOpen}
+        onClose={() => setIsEnhancedCatalogPickerOpen(false)}
+        registryUrl={enhancedCommunityRegistryUrl}
+        existingCatalogs={catalogs}
+        onSelectCatalog={handleSelectEnhancedCommunityCatalog}
+        ariaLabel="Choose an enhanced community catalog"
+        title="Choose an Enhanced Community Catalog"
+        description="Search and add a specific catalog from the enhanced community registry"
+        searchLabel="Search enhanced community catalogs"
+        searchPlaceholder="Search catalogs"
+        loadingMessage="Loading enhanced community catalogs..."
+        errorTitle="Unable to load the enhanced community registry."
+        emptyMessage="No enhanced community catalogs match that search."
       />
 
       <ThemeModal

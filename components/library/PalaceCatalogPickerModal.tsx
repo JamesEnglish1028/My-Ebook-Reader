@@ -11,6 +11,14 @@ interface PalaceCatalogPickerModalProps {
   registryUrl: string;
   existingCatalogs: Catalog[];
   onSelectCatalog: (name: string, url: string) => void;
+  ariaLabel?: string;
+  title?: string;
+  description?: string;
+  searchLabel?: string;
+  searchPlaceholder?: string;
+  loadingMessage?: string;
+  errorTitle?: string;
+  emptyMessage?: string;
 }
 
 const PalaceCatalogPickerModal: React.FC<PalaceCatalogPickerModalProps> = ({
@@ -19,6 +27,14 @@ const PalaceCatalogPickerModal: React.FC<PalaceCatalogPickerModalProps> = ({
   registryUrl,
   existingCatalogs,
   onSelectCatalog,
+  ariaLabel = 'Choose a Palace library',
+  title = 'Choose a Palace Library',
+  description = 'Search and add a Palace catalog directly from the registry',
+  searchLabel = 'Search Palace libraries',
+  searchPlaceholder = 'Search libraries',
+  loadingMessage = 'Loading Palace libraries...',
+  errorTitle = 'Unable to load the Palace library registry.',
+  emptyMessage = 'No Palace libraries match that search.',
 }) => {
   const [query, setQuery] = useState('');
   const searchRef = useRef<HTMLInputElement>(null);
@@ -56,7 +72,7 @@ const PalaceCatalogPickerModal: React.FC<PalaceCatalogPickerModalProps> = ({
       onClick={onClose}
       role="dialog"
       aria-modal="true"
-      aria-label="Choose a Palace library"
+      aria-label={ariaLabel}
     >
       <div
         ref={modalRef}
@@ -65,8 +81,8 @@ const PalaceCatalogPickerModal: React.FC<PalaceCatalogPickerModalProps> = ({
       >
         <div className="theme-divider flex items-center justify-between border-b px-4 py-3">
           <div>
-            <h3 className="theme-text-primary text-sm font-semibold">Choose a Palace Library</h3>
-            <p className="theme-text-muted text-xs">Search and add a Palace catalog directly from the registry</p>
+            <h3 className="theme-text-primary text-sm font-semibold">{title}</h3>
+            <p className="theme-text-muted text-xs">{description}</p>
           </div>
           <button
             onClick={onClose}
@@ -78,7 +94,7 @@ const PalaceCatalogPickerModal: React.FC<PalaceCatalogPickerModalProps> = ({
         </div>
 
         <div className="theme-divider border-b px-4 py-3">
-          <label htmlFor="palace-library-search" className="sr-only">Search Palace libraries</label>
+          <label htmlFor="palace-library-search" className="sr-only">{searchLabel}</label>
           <div className="theme-input flex items-center gap-2 rounded-lg border px-3 py-2">
             <SearchIcon className="theme-text-muted h-4 w-4" />
             <input
@@ -87,7 +103,7 @@ const PalaceCatalogPickerModal: React.FC<PalaceCatalogPickerModalProps> = ({
               type="search"
               value={query}
               onChange={(event) => setQuery(event.target.value)}
-              placeholder="Search libraries"
+              placeholder={searchPlaceholder}
               className="w-full bg-transparent text-sm outline-none"
             />
           </div>
@@ -95,10 +111,10 @@ const PalaceCatalogPickerModal: React.FC<PalaceCatalogPickerModalProps> = ({
 
         <div className="theme-surface min-h-[16rem] flex-1 overflow-y-auto p-3">
           {isLoading ? (
-            <p className="theme-text-muted px-2 py-8 text-center text-sm">Loading Palace libraries...</p>
+            <p className="theme-text-muted px-2 py-8 text-center text-sm">{loadingMessage}</p>
           ) : data?.error ? (
             <div className="theme-surface-elevated rounded-lg border px-4 py-6 text-center">
-              <p className="theme-text-danger text-sm font-medium">Unable to load the Palace library registry.</p>
+              <p className="theme-text-danger text-sm font-medium">{errorTitle}</p>
               <p className="theme-text-muted mt-2 text-xs">{data.error}</p>
             </div>
           ) : filteredLinks.length > 0 ? (
@@ -124,7 +140,7 @@ const PalaceCatalogPickerModal: React.FC<PalaceCatalogPickerModalProps> = ({
               })}
             </ul>
           ) : (
-            <p className="theme-text-muted px-2 py-8 text-center text-sm">No Palace libraries match that search.</p>
+            <p className="theme-text-muted px-2 py-8 text-center text-sm">{emptyMessage}</p>
           )}
         </div>
       </div>
