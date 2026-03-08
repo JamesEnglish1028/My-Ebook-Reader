@@ -1,0 +1,8 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" role="img" aria-label="Book icon">
+  <rect x="12" y="8" width="40" height="48" rx="6" fill="#1d4f91" />
+  <rect x="16" y="12" width="30" height="40" rx="3" fill="#ffffff" />
+  <rect x="20" y="20" width="22" height="3" rx="1.5" fill="#1d4f91" />
+  <rect x="20" y="28" width="22" height="3" rx="1.5" fill="#1d4f91" />
+  <rect x="20" y="36" width="16" height="3" rx="1.5" fill="#1d4f91" />
+  <rect x="12" y="8" width="6" height="48" rx="3" fill="#153a6a" />
+</svg>
