@@ -338,6 +338,30 @@ describe('parseOpds2Json', () => {
     expect(publicationGroups[0].navigationLink?.url).toBe('https://example.org/featured');
   });
 
+  it('parses registry catalogs when catalog links are object-shaped', () => {
+    const feed = {
+      metadata: { title: 'Registry Feed' },
+      catalogs: [
+        {
+          metadata: { title: 'Community Catalog A' },
+          links: {
+            self: {
+              href: '/catalogs/community-a',
+              rel: 'self',
+              type: 'application/opds+json',
+            },
+          },
+        },
+      ],
+    };
+
+    const { navLinks } = parseOpds2Json(feed, 'https://example.org/registry/');
+    expect(navLinks).toHaveLength(1);
+    expect(navLinks[0].title).toBe('Community Catalog A');
+    expect(navLinks[0].url).toBe('https://example.org/catalogs/community-a');
+    expect(navLinks[0].source).toBe('registry');
+  });
+
   it('keeps grouped publication previews even without acquisition links', () => {
     const feed = {
       metadata: { title: 'Grouped Catalog' },

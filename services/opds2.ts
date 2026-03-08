@@ -172,6 +172,27 @@ function isOpdsNavigationTarget(link: Partial<Opds2Link> | undefined): boolean {
   return typeof link.type === 'string' && link.type.includes('application/opds+json');
 }
 
+function normalizeOpdsLinkCollection(rawLinks: unknown): Opds2Link[] {
+  if (!rawLinks) return [];
+  if (Array.isArray(rawLinks)) {
+    return rawLinks.filter((link): link is Opds2Link => !!link && typeof link === 'object');
+  }
+  if (typeof rawLinks === 'object') {
+    const record = rawLinks as Record<string, unknown>;
+    if ('href' in record) {
+      return [record as Opds2Link];
+    }
+    return Object.values(record).flatMap((entry) => {
+      if (!entry) return [];
+      if (Array.isArray(entry)) {
+        return entry.filter((link): link is Opds2Link => !!link && typeof link === 'object');
+      }
+      return typeof entry === 'object' ? [entry as Opds2Link] : [];
+    });
+  }
+  return [];
+}
+
 // Helper: Parse navigation links from OPDS2 feed
 function parseOpds2NavigationLinks(jsonData: any, baseUrl: string): CatalogNavigationLink[] {
   const navLinks: CatalogNavigationLink[] = [];
@@ -182,7 +203,7 @@ function parseOpds2NavigationLinks(jsonData: any, baseUrl: string): CatalogNavig
       if (!catalogEntry) return;
       const meta = catalogEntry.metadata || {};
       const title = meta.title || meta.name || catalogEntry.title || 'Catalog';
-      const links = Array.isArray(catalogEntry.links) ? catalogEntry.links as Opds2Link[] : [];
+      const links = normalizeOpdsLinkCollection(catalogEntry.links || catalogEntry.link);
       const pickCatalogLink = () => {
         const relContainsCatalog = (rel: unknown) => toLowerSafe(rel).includes('catalog');
         // Prefer explicit catalog rel, then any OPDS link
@@ -190,7 +211,9 @@ function parseOpds2NavigationLinks(jsonData: any, baseUrl: string): CatalogNavig
         if (byRel) return byRel;
         const byRelArray = links.find((l) => Array.isArray(l.rel) && l.rel.some((r) => typeof r === 'string' && relContainsCatalog(r)));
         if (byRelArray) return byRelArray;
-        return links.find((l) => typeof l.type === 'string' && l.type.includes('opds'));
+        const byType = links.find((l) => typeof l.type === 'string' && l.type.includes('opds'));
+        if (byType) return byType;
+        return links.find((l) => typeof l.href === 'string' && l.href.length > 0);
       };
       const link = pickCatalogLink();
       if (link && link.href) {
