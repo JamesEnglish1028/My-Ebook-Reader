@@ -13,6 +13,7 @@ import {
   useToast,
 } from './components';
 import { GlobalModals, ViewRenderer } from './components/app';
+import PwaUpdateNotice from './components/app/PwaUpdateNotice';
 import PdfReaderView from './components/PdfReaderView';
 import { useAuthAcquisitionCoordinator } from './components/app/useAuthAcquisitionCoordinator';
 import { useImportCoordinator } from './components/app/useImportCoordinator';
@@ -436,6 +437,7 @@ const App: React.FC = () => (
               )}
             />
           </Routes>
+          <PwaUpdateNotice />
         </HashRouter>
       )}
     </QueryErrorResetBoundary>
